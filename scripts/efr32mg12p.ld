@@ -173,9 +173,8 @@ SECTIONS
 		__GUARD_REGION__end = . ;
 	} > RAM
 
-	.CSTACK :
+	.CSTACK ALIGN(8) :
 	{
-		. = ALIGN(8);
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
 		KEEP(*(CSTACK));

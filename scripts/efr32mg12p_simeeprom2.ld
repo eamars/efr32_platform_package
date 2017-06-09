@@ -164,7 +164,7 @@ SECTIONS
 		}
 	} > RAM
 
-	.GUARD_REGION 0x20000f20 (NOLOAD) :
+	.GUARD_REGION 0x200017a0 (NOLOAD) :
 	{
 		__GUARD_REGION__begin = . ;
 		KEEP(*(GUARD_REGION));
@@ -173,9 +173,8 @@ SECTIONS
 		__GUARD_REGION__end = . ;
 	} > RAM
 
-	.CSTACK :
+	.CSTACK ALIGN(8) :
 	{
-		. = ALIGN(8);
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
 		KEEP(*(CSTACK));
