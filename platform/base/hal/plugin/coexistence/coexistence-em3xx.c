@@ -1,24 +1,18 @@
-// -----------------------------------------------------------------------------
-// @file
-// @brief EFM micro specific full HAL functions
-//
-// @author Silicon Laboratories Inc.
-// @version 1.0.0
-//
-// @section License
-// <b>(C) Copyright 2014 Silicon Laboratories, http://www.silabs.com</b>
-//
-// This file is licensed under the Silabs License Agreement. See the file
-// "Silabs_License_Agreement.txt" for details. Before using this software for
-// any purpose, you must agree to the terms of that agreement.
-//
-// -----------------------------------------------------------------------------
-#include PLATFORM_HEADER
-#include "gpiointerrupt.h"
+/*
+ * File: micro.c
+ * Description: EM3XX micro specific full HAL functions
+ *
+ *
+ * Copyright 2008, 2009 by Ember Corporation. All rights reserved.          *80*
+ */
+//[[ Author(s): Brooks Barrett, Lee Taylor ]]
 
+
+#include PLATFORM_HEADER
 #include "stack/include/ember.h"
 #include "stack/include/ember-types.h"
 #include "include/error.h"
+
 #include "hal/hal.h"
 
 #ifdef RTOS
@@ -33,6 +27,7 @@
 #endif
 
 HalPtaOptions halPtaOptions = DEFAULT_PTA_OPTIONS;
+
 extern void emPhyCancelTransmit (void);
 void halStackRadioHoldOffPowerDown(void); // fwd ref
 void halStackRadioHoldOffPowerUp(void);   // fwd ref
@@ -40,18 +35,6 @@ void halStackRadioHoldOffPowerUp(void);   // fwd ref
 static inline void setBitMask(uint32_t * src, uint32_t mask, bool value) {
   if (src != NULL) {
     *src = value ? ((*src) | mask) : ((*src) & (~mask));
-  }
-}
-
-static void GPIOINT_InitSafe(void)
-{
-  // Enable GPIO clock for configuring interrupts
-  CMU_ClockEnable(cmuClock_GPIO, true);
-
-  // Turn on GPIO interrupts only if they weren't enabled elsewhere
-  if (CORE_NvicIRQDisabled(GPIO_ODD_IRQn)
-      || CORE_NvicIRQDisabled(GPIO_EVEN_IRQn)) {
-    GPIOINT_Init();
   }
 }
 
@@ -82,7 +65,7 @@ EmberStatus halPtaSetOptions(HalPtaOptions options)
     halPtaOptions = options;
   }
   if ((~oldOptions) & options & PTA_OPT_FORCE_HOLDOFF) {
-    //Cancel all requests if request option is disabled
+    //Cancel all requests if force holdoff option is enabled
     (void) halPtaSetTxRequest(PTA_REQ_OFF, NULL);
     (void) halPtaSetRxRequest(PTA_REQ_OFF, NULL);
   }
@@ -99,34 +82,38 @@ EmberStatus halPtaSetOptions(HalPtaOptions options)
   return status;
 }
 
-#ifdef PTA_REQ_MAX_BACKOFF_MASK
-static void ptaReqRandomBackoff()
-{
-  halCommonDelayMicroseconds(halCommonGetRandom() & PTA_REQ_MAX_BACKOFF_MASK);
-}
-#else //PTA_REQ_MAX_BACKOFF_MASK
-#define ptaReqRandomBackoff()
-#endif //PTA_REQ_MAX_BACKOFF_MASK
-
   // halPta Implementation:
 
   // Board header is expected to define:
   // PTA REQUEST signal (OUT or OUT_OD): [optional]
-  // #define PTA_REQ_GPIO       // PORTx_PIN(y) (x=A/B/C/D/E/F/..., y=0-15)
-  // #define PTA_REQ_GPIOCFG_NORMAL // gpioModePushPull
-  // #define PTA_REQ_GPIOCFG_SHARED // gpioModeWiredAnd/Or
+  // #define PTA_REQ_GPIO       // PORTx_PIN(y) (x=A/B/C, y=0-7)
+  // #define PTA_REQ_GPIOCFG_NORMAL // GPIOCFG_OUT
+  // #define PTA_REQ_GPIOCFG_SHARED // GPIOCFG_OUT_OD (_ASSERTED must be 0)
   // #define PTA_REQ_GPIOCFG    // PTA_REQ_GPIOCFG_NORMAL or _SHARED as above
+  // #define PTA_REQ_GPIOCFG    // GPIOCFG_OUT or GPIOCFG_OUT_OD if shared
   // #define PTA_REQ_ASSERTED   // 0 if negated logic; 1 if positive logic
+  // #define PTA_REQ_FLAG_BIT   // INT_IRQnFLAG (n=A/B/C/D) [only if shared]
+  // #define PTA_REQ_MISS_BIT   // INT_MISSIRQn (n=A/B/C/D) [only if shared]
+  // #define PTA_REQ_INTCFG     // GPIO_INTCFGn (n=A/B/C/D) [only if shared]
+  // #define PTA_REQ_INT_EN_BIT // INT_IRQn     (n=A/B/C/D) [only if shared]
+  // #define PTA_REQ_SEL()      // do { GPIO_IRQnSEL = PTA_REQ_GPIO; } while (0)
+  //                            // (n=C/D or empty if n=A/B)[only if shared]
   //
   // PTA GRANT signal (IN): [optional]
-  // #define PTA_GNT_GPIO       // PORTx_PIN(y) (x=A/B/C/D/E/F/..., y=0-15)
-  // #define PTA_GNT_GPIOCFG    // gpioModeInputPull[ASSERTED] or gpioModeInput
+  // #define PTA_GNT_GPIO       // PORTx_PIN(y) (x=A/B/C, y=0-7)
+  // #define PTA_GNT_GPIOCFG    // GPIOCFG_IN_PUD[ASSERTED] or GPIOCFG_IN
   // #define PTA_GNT_ASSERTED   // 0 if negated logic; 1 if positive logic
+  // #define PTA_GNT_FLAG_BIT   // INT_IRQnFLAG (n=A/B/C/D)
+  // #define PTA_GNT_MISS_BIT   // INT_MISSIRQn (n=A/B/C/D)
+  // #define PTA_GNT_INTCFG     // GPIO_INTCFGn (n=A/B/C/D)
+  // #define PTA_GNT_INT_EN_BIT // INT_IRQn     (n=A/B/C/D)
+  // #define PTA_GNT_SEL()      // do { GPIO_IRQnSEL = PTA_GNT_GPIO; } while (0)
+  //                            // (n=C/D or empty if n=A/B)
   // Note that REQ and GNT can share the same IRQn if necessary
   //
   // PTA PRIORITY signal (OUT): [optional]
-  // #define PTA_PRI_GPIO       // PORTx_PIN(y) (x=A/B/C/D/E/F/..., y=0-15)
-  // #define PTA_PRI_GPIOCFG    // gpioModePushPull or gpioModeWiredOr/And if shared
+  // #define PTA_PRI_GPIO       // PORTx_PIN(y) (x=A/B/C, y=0-7)
+  // #define PTA_PRI_GPIOCFG    // GPIOCFG_OUT or GPIOCFG_OUT_OD if shared
   // #define PTA_PRI_ASSERTED   // 0 if negated logic; 1 if positive logic
 
  #ifdef  PTA_REQ_GPIO
@@ -154,16 +141,7 @@ static void ptaReqRandomBackoff()
 
   static inline void ptaReqGpioCfg(void)
   {
-    // Only configure GPIO if it was not set up prior
-    if (halGpioGetConfig(PTA_REQ_GPIO) == gpioModeDisabled)
-    {
-     #if     PTA_REQ_ASSERTED
-      halGpioClear(PTA_REQ_GPIO);
-     #else//!PTA_REQ_ASSERTED
-      halGpioSet(PTA_REQ_GPIO);
-     #endif//PTA_REQ_ASSERTED
-      halGpioSetConfig(PTA_REQ_GPIO, PTA_REQ_GPIOCFG);
-    }
+    // GPIO must have been set up prior.
     // Here we sense asserted state is opposite of its current output state.
     ptaReqAsserted = !halGpioReadOutput(PTA_REQ_GPIO);
   }
@@ -179,35 +157,29 @@ static void ptaReqRandomBackoff()
 
   #define ptaReqAndGntIrqShared() \
             ( (defined(PTA_GNT_GPIO))                          /*Have GNT*/ \
-            &&(GPIO_PIN(PTA_REQ_GPIO) == GPIO_PIN(PTA_GNT_GPIO)) )/*Shared IRQ*/
-
- #if     (ptaReqAndGntIrqShared())
-  #define PTA_REQ_ISR PTA_GNT_ISR // REQUEST and GRANT share same IRQ & ISR
- #endif//(ptaReqAndGntIrqShared())
-
-  static void PTA_REQ_ISR(uint8_t pin);
+            &&(PTA_REQ_INT_EN_BIT == PTA_GNT_INT_EN_BIT) )     /*Shared IRQ*/
 
   static inline void ptaReqGpioIntAcknowledge(void)
   {
-    GPIO_IntClear(GPIO_FLAG(PTA_REQ_GPIO));
+    INT_MISS = PTA_REQ_MISS_BIT;
+    INT_GPIOFLAG = PTA_REQ_FLAG_BIT;
   }
 
   static inline void ptaReqGpioIntDisable(void)
   {
-    GPIO_IntDisable(GPIO_FLAG(PTA_REQ_GPIO));
+    INT_CFGCLR = PTA_REQ_INT_EN_BIT;  //clear top level int enable
+    INT_PENDCLR = PTA_REQ_INT_EN_BIT; //clear any pended event
     ptaReqGpioIntAcknowledge();
   }
 
   static inline void ptaReqGpioIntEnable(void)
   {
-    // Disable triggering and clear any stale events
-    GPIO_IntConfig(GPIO_PORT(PTA_REQ_GPIO), GPIO_PIN(PTA_REQ_GPIO),
-                   false, false, false);
-    // Register callback before setting up and enabling pin interrupt
-    GPIOINT_CallbackRegister(GPIO_PIN(PTA_REQ_GPIO), PTA_REQ_ISR);
-    // Enable deasserting edge interrupt only
-    GPIO_IntConfig(GPIO_PORT(PTA_REQ_GPIO), GPIO_PIN(PTA_REQ_GPIO),
-                   !ptaReqAsserted, ptaReqAsserted, true);
+    PTA_REQ_INTCFG = 0;               //disable triggering
+    ptaReqGpioIntDisable();           //clear any stale events
+    PTA_REQ_INTCFG  = (0 << GPIO_INTFILT_BIT) /* 0 = no filter  */
+                    | ((GPIOINTMOD_RISING_EDGE+ptaReqAsserted) << GPIO_INTMOD_BIT); /* deassert edge */
+    PTA_REQ_SEL(); //point IRQ to the desired pin
+    INT_CFGSET = PTA_REQ_INT_EN_BIT;  //set top level interrupt enable
   }
 
  #else//!PTA_REQ_GPIO
@@ -227,23 +199,14 @@ static void ptaReqRandomBackoff()
 
  #ifdef  PTA_GNT_GPIO
 
-  static void PTA_GNT_ISR(uint8_t pin);
+  void PTA_GNT_ISR(void);
 
   static bool ptaGntAsserted = PTA_GNT_ASSERTED;
   static bool gntWasAsserted = false;
 
   static inline void ptaGntGpioCfg(void)
   {
-    // Only configure GPIO if it was not set up prior
-    if (halGpioGetConfig(PTA_GNT_GPIO) == gpioModeDisabled)
-    {
-     #if     PTA_GNT_ASSERTED
-      halGpioSet(PTA_GNT_GPIO); // pull up
-     #else//!PTA_GNT_ASSERTED
-      halGpioClear(PTA_GNT_GPIO); // pull down
-     #endif//PTA_GNT_ASSERTED
-      halGpioSetConfig(PTA_GNT_GPIO, PTA_GNT_GPIOCFG);
-    }
+    // GPIO must have been set up prior.
     // Here we sense asserted state is same as its current output state.
     ptaGntAsserted = !!halGpioReadOutput(PTA_GNT_GPIO);
   }
@@ -253,31 +216,31 @@ static void ptaReqRandomBackoff()
 
   static inline void ptaGntGpioIntAcknowledge(void)
   {
-    GPIO_IntClear(GPIO_FLAG(PTA_GNT_GPIO));
+    INT_MISS = PTA_GNT_MISS_BIT;
+    INT_GPIOFLAG = PTA_GNT_FLAG_BIT;
   }
 
   static inline void ptaGntGpioIntDisable(void)
   {
-    GPIO_IntDisable(GPIO_FLAG(PTA_GNT_GPIO));
+    INT_CFGCLR = PTA_GNT_INT_EN_BIT;  //clear top level int enable
+    INT_PENDCLR = PTA_GNT_INT_EN_BIT; //clear any pended event
     ptaGntGpioIntAcknowledge();
   }
 
   static inline void ptaGntGpioIntEnable(void)
   {
-    // Disable triggering and clear any stale events
-    GPIO_IntConfig(GPIO_PORT(PTA_GNT_GPIO), GPIO_PIN(PTA_GNT_GPIO),
-                   false, false, false);
+    PTA_GNT_INTCFG = 0;               //disable triggering
+    ptaGntGpioIntDisable();           //clear any stale events
     gntWasAsserted = false; // Ensures we won't miss GNT assertion
-    // Register callbacks before setting up and enabling pin interrupt
-    GPIOINT_CallbackRegister(GPIO_PIN(PTA_GNT_GPIO), PTA_GNT_ISR);
-    // Enable both edges' interrupt
-    GPIO_IntConfig(GPIO_PORT(PTA_GNT_GPIO), GPIO_PIN(PTA_GNT_GPIO),
-                   true, true, true);
+    PTA_GNT_INTCFG  = (0 << GPIO_INTFILT_BIT) /* 0 = no filter  */
+                    | (GPIOINTMOD_BOTH_EDGES << GPIO_INTMOD_BIT);
+    PTA_GNT_SEL(); //point IRQ to the desired pin
+    INT_CFGSET = PTA_GNT_INT_EN_BIT;  //set top level interrupt enable
   }
 
   static inline void ptaGntGpioIntPend(void)
   {
-    GPIO_IntSet(GPIO_FLAG(PTA_GNT_GPIO));
+    INT_PENDSET = PTA_GNT_INT_EN_BIT;
   }
 
  #else//!PTA_GNT_GPIO
@@ -310,16 +273,7 @@ static void ptaReqRandomBackoff()
 
   static inline void ptaPriGpioCfg(void)
   {
-    // Only configure GPIO if it was not set up prior
-    if (halGpioGetConfig(PTA_PRI_GPIO) == gpioModeDisabled)
-    {
-     #if     PTA_PRI_ASSERTED
-      halGpioClear(PTA_PRI_GPIO);
-     #else//!PTA_PRI_ASSERTED
-      halGpioSet(PTA_PRI_GPIO);
-     #endif//PTA_PRI_ASSERTED
-      halGpioSetConfig(PTA_PRI_GPIO, PTA_PRI_GPIOCFG);
-    }
+    // GPIO must have been set up prior.
     // Here we sense asserted state is opposite of its current output state.
     ptaPriAsserted = !halGpioReadOutput(PTA_PRI_GPIO);
   }
@@ -397,7 +351,7 @@ static void ptaReqRandomBackoff()
 
  #ifdef  PTA_GNT_GPIO
   // Triggered on both GRANT edges
-  static void PTA_GNT_ISR(uint8_t pin)
+  void PTA_GNT_ISR(void)
   {
     ptaGntGpioIntAcknowledge();
     if (ptaReqGpioOutAsserted()) {  // GRANT phase
@@ -414,20 +368,14 @@ static void ptaReqRandomBackoff()
         if ((txCb != NULL) && (txReq & newState)) {
           (*txCb)(newState);
         }
-        // Do we need this to meet GRANT -> REQUEST timing?
+        //Do we need this to meet GRANT -> REQUEST timing?
         // On GNT deassertion, pulse REQUEST to keep us going.
         // Don't want to revert to REQUEST phase here but stay in GRANT phase.
         // This seems dangerous in that it could allow a peer to assert their
         // REQUEST causing a conflict/race.
 
         if (!newGnt) {
-          // If grant is lost mid transmit,
-          // cancel request if we are transmitting
-          // or if ack hold off is enabled and we are receiving
-          if ((halPtaOptions & PTA_OPT_ABORT_TX)
-             && ((txReq != PTA_REQ_OFF)
-             || ((halPtaGetOptions() & PTA_OPT_ACK_HOLDOFF)
-             && (rxReq != PTA_REQ_OFF)))) {
+          if (halPtaOptions & PTA_OPT_ABORT_TX) {
             halPtaCounter(TX_ABORTED, 1);
             emPhyCancelTransmit();
           }
@@ -443,7 +391,6 @@ static void ptaReqRandomBackoff()
         // External REQUEST deasserted so we can assert ours
         ptaReqGpioIntDisable(); // This is a one-shot event
         //TODO: Perform some random backoff before claiming REQUEST??
-        ptaReqRandomBackoff();
         ptaUpdateReqIsr();
       } else {
         // Ignore GRANT changes unless we are REQUESTing
@@ -451,23 +398,18 @@ static void ptaReqRandomBackoff()
      #endif//(ptaReqAndGntIrqShared())
     }
   }
-  // Certain radios may want to override this with their own
-  WEAK(void emPhyCancelTransmit(void))
-  {
-  }
  #endif//PTA_GNT_GPIO
 
  #if     ( defined(PTA_REQ_GPIO) && (!ptaReqAndGntIrqShared()) )
   // This IRQ is triggered on the negate REQUEST edge,
   // needed only when REQUEST signal is shared,
   // and not piggybacking GNT and REQ on same IRQ.
-  static void PTA_REQ_ISR(uint8_t pin)
+  void PTA_REQ_ISR(void)
   {
     // External REQUEST deasserted so we can assert ours
     //ptaReqGpioIntAcknowledge(); // Covered within ptaReqGpioIntDisable()
     ptaReqGpioIntDisable(); // This is a one-shot event
     //TODO: Perform some random backoff before claiming REQUEST??
-    ptaReqRandomBackoff();
     ptaUpdateReqIsr();
   }
  #endif//( defined(PTA_REQ_GPIO) && (!ptaReqAndGntIrqShared()) )
@@ -563,9 +505,6 @@ static void ptaReqRandomBackoff()
   {
     if (enabled != ptaEnabled) {
       if (enabled) {
-        // Safely turn on GPIO interrupts
-        GPIOINT_InitSafe();
-
         ptaReqGpioCfg();
         ptaPriGpioCfg();
         ptaGntGpioCfg();
@@ -592,6 +531,10 @@ static void ptaReqRandomBackoff()
 
 #ifdef  RHO_GPIO // BOARD_HEADER supports Radio HoldOff
 
+#ifdef  WAKE_ON_DFL_RHO_VAR // Only define this if needed per board header
+uint8_t WAKE_ON_DFL_RHO_VAR = WAKE_ON_DFL_RHO;
+#endif//WAKE_ON_DFL_RHO_VAR
+
 #define RHO_ENABLED_MASK  0x01u // RHO is enabled
 #define RHO_RADIO_ON_MASK 0x02u // Radio is on (not sleeping)
 static uint8_t rhoState;
@@ -609,29 +552,22 @@ static bool halInternalRhoPinIsActive(void)
          &&(((bool)halGpioRead(RHO_GPIO)) == rhoAsserted) );
 }
 
-#if defined(PTA_REQ_PULSE_ON_RHO_DEASSERT) && defined(PTA_GNT_GPIO) && defined(PTA_REQ_GPIO)
-static void halInternalTogglePtaReq()
+void RHO_ISR(void)
 {
-  if( ptaEnabled                      // PTA is enabled and
-      && ptaReqGpioOutAsserted()      // REQUESTing and
-      && !halInternalRhoPinIsActive() // RHO not asserted
-      && !ptaGntGpioInAsserted()) {   // GRANT not asserted
-    ptaReqGpioSet(false);
-    ptaReqGpioSet(true);
- }
-}
-#else //defined(PTA_REQ_PULSE_ON_RHO_DEASSERT) && defined(PTA_GNT_GPIO) && defined(PTA_REQ_GPIO)
-#define halInternalTogglePtaReq()
-#endif //defined(PTA_REQ_PULSE_ON_RHO_DEASSERT) && defined(PTA_GNT_GPIO) && defined(PTA_REQ_GPIO)
-
-static void RHO_ISR(uint8_t pin)
-{
-  // Ack interrupt before reading GPIO to avoid potential of missing int
-  GPIO_IntClear(GPIO_FLAG(RHO_GPIO));
   if (rhoState & RHO_ENABLED_MASK) {
+    // Ack interrupt before reading GPIO to avoid potential of missing int
+    INT_MISS = RHO_MISS_BIT;
+    INT_GPIOFLAG = RHO_FLAG_BIT; // acknowledge the interrupt
     // Notify Radio land of state change
-    halInternalTogglePtaReq();
     halInternalPtaOrRhoNotifyRadio();
+  } else {
+   #ifdef  RHO_ISR_FOR_DFL
+    // Defer to default GPIO config's ISR
+    extern void RHO_ISR_FOR_DFL(void);
+    RHO_ISR_FOR_DFL(); // This ISR is expected to acknowledge the interrupt
+   #else//!RHO_ISR_FOR_DFL
+    INT_GPIOFLAG = RHO_FLAG_BIT; // acknowledge the interrupt
+   #endif//RHO_ISR_FOR_DFL
   }
 }
 
@@ -639,37 +575,29 @@ EmberStatus halSetRadioHoldOff(bool enabled)
 {
   // If enabling afresh or disabling after having been enabled
   // restart from a fresh state just in case.
+  // Otherwise don't touch a setup that might already have been
+  // put into place by the default 'DFL' use (e.g. a button).
+  // When disabling after having been enabled, it is up to the
+  // board header caller to reinit the default 'DFL' use if needed.
   if (enabled || (rhoState & RHO_ENABLED_MASK)) {
-    // Disable RHO interrupt & callback
-    GPIO_IntConfig(GPIO_PORT(RHO_GPIO), GPIO_PIN(RHO_GPIO),
-                   false, false, false);
-    GPIOINT_CallbackUnRegister(GPIO_PIN(RHO_GPIO));
+    RHO_INTCFG = 0;              //disable RHO triggering
+    INT_CFGCLR = RHO_INT_EN_BIT; //clear RHO top level int enable
+    INT_GPIOFLAG = RHO_FLAG_BIT; //clear stale RHO interrupt
+    INT_MISS = RHO_MISS_BIT;     //clear stale missed RHO interrupt
   }
 
   rhoState = (rhoState & ~RHO_ENABLED_MASK) | (enabled ? RHO_ENABLED_MASK : 0);
 
-  if (enabled) {
-    // Safely turn on GPIO interrupts
-    GPIOINT_InitSafe();
+  // Reconfigure GPIOs for desired state
+  ADJUST_GPIO_CONFIG_DFL_RHO(enabled);
 
-    // Only configure GPIO if it was not set up prior
-    if (halGpioGetConfig(RHO_GPIO) == gpioModeDisabled) {
-      // Configure GPIO as input and if pulling, pull it toward deasserted state
-      GPIO_PinModeSet(GPIO_PORT(RHO_GPIO), GPIO_PIN(RHO_GPIO),
-                      RHO_GPIOCFG, !RHO_ASSERTED);
-    }
+  if (enabled) {
     // Here we sense asserted state is opposite of its current output state.
     rhoAsserted = !halGpioReadOutput(RHO_GPIO);
-    // Register callbacks before setting up and enabling pin interrupt.
-    GPIOINT_CallbackRegister(GPIO_PIN(RHO_GPIO), RHO_ISR);
-    // Set rising and falling edge interrupts; don't enable interrupt yet
-    GPIO_IntConfig(GPIO_PORT(RHO_GPIO), GPIO_PIN(RHO_GPIO),
-                   true, true, false);
-
     // Only update radio if it's on, otherwise defer to when it gets turned on
     if (rhoState & RHO_RADIO_ON_MASK) {
       halInternalPtaOrRhoNotifyRadio(); //Notify Radio land of current state
-      GPIO_IntEnable(GPIO_FLAG(RHO_GPIO));
+      INT_CFGSET = RHO_INT_EN_BIT; //set top level interrupt enable
       // Interrupt on now, ISR will maintain proper state
     }
   } else {
@@ -685,7 +613,7 @@ void halStackRadioHoldOffPowerDown(void)
   rhoState &= ~RHO_RADIO_ON_MASK;
   if (rhoState & RHO_ENABLED_MASK) {
     // When sleeping radio, no need to monitor RHO anymore
-    GPIO_IntDisable(GPIO_FLAG(RHO_GPIO)); //clear RHO top level int enable
+    INT_CFGCLR = RHO_INT_EN_BIT; //clear RHO top level int enable
   }
 }
 
@@ -694,9 +622,9 @@ void halStackRadioHoldOffPowerUp(void)
   rhoState |= RHO_RADIO_ON_MASK;
   if (rhoState & RHO_ENABLED_MASK) {
     // When waking radio, set up initial state and resume monitoring
-    GPIO_IntDisable(GPIO_FLAG(RHO_GPIO)); //ensure RHO interrupt is off
-    RHO_ISR(0); // Manually call ISR to assess current state
-    GPIO_IntEnable(GPIO_FLAG(RHO_GPIO)); //enable RHO interrupt
+    INT_CFGCLR = RHO_INT_EN_BIT; //ensure RHO interrupt is off
+    RHO_ISR(); // Manually call ISR to assess current state
+    INT_CFGSET = RHO_INT_EN_BIT; //enable RHO interrupt
   }
 }
 
