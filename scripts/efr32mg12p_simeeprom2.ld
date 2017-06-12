@@ -131,11 +131,11 @@ SECTIONS
 	/* Simulated ROM space */
 	.NVM_SIMEE 0x000f7000 (NOLOAD) :
 	{
-	    __SIMEE$$Base = . ;
+	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
 		KEEP(*(SIMEE .simee));
 		__SIMEE__end = . ;
-		__SIMEE$$Limit = . ;
+		SIMEE$$Limit = . ;
 	} > FLASH
 
 	/* RAM segment */
