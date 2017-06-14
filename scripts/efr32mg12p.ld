@@ -65,7 +65,6 @@ SECTIONS
 	.VECTORS 0x100 :
 	{
 		KEEP(*(.vectors));
-		KEEP(*(.AAT));
 	} > FLASH
 
 	.text :
@@ -133,7 +132,7 @@ SECTIONS
 	{
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
-		KEEP(*(SIMEE .simee));
+		KEEP(*(.simee));
 		__SIMEE__end = . ;
 		SIMEE$$Limit = . ;
 	} > FLASH
@@ -147,7 +146,6 @@ SECTIONS
 		{
 		    EMHEAP$$Base = . ;
 			__EMHEAP__begin = . ;
-			KEEP(*(EMHEAP_overlay));
 			KEEP(*(.emheap*));
 			__EMHEAP__end = . ;
 			EMHEAP_overlay$$Limit = . ;
@@ -157,7 +155,6 @@ SECTIONS
 		{
 		    RESETINFO$$Base = . ;
 			__RESETINFO__begin = . ;
-			KEEP(*(RESETINFO));
 			KEEP(*(.resetinfo*));
 			__RESETINFO__end = . ;
 			RESETINFO$$Limit = . ;
@@ -167,7 +164,6 @@ SECTIONS
 	.GUARD_REGION 0x20000f20 (NOLOAD) :
 	{
 		__GUARD_REGION__begin = . ;
-		KEEP(*(GUARD_REGION));
 		KEEP(*(.guard_region));
 		. += 0x20;
 		__GUARD_REGION__end = . ;
@@ -177,7 +173,6 @@ SECTIONS
 	{
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
-		KEEP(*(CSTACK));
 		KEEP(*(.cstack .cstack.*));
 		__CSTACK__end = . ;
 		CSTACK$$Limit = . ;
