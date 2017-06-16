@@ -1,6 +1,6 @@
 /***************************************************************************//**
- * @file spidrv_config.h
- * @brief SPIDRV configuration file.
+ * @file rtcdrv_config.h
+ * @brief RTCDRV configuration file.
  * @version 5.2.1
  *******************************************************************************
  * # License
@@ -12,8 +12,8 @@
  * any purpose, you must agree to the terms of that agreement.
  *
  ******************************************************************************/
-#ifndef __SILICON_LABS_SPIDRV_CONFIG_H__
-#define __SILICON_LABS_SPIDRV_CONFIG_H__
+#ifndef __SILICON_LABS_RTCDRV_CONFIG_H__
+#define __SILICON_LABS_RTCDRV_CONFIG_H__
 
 /***************************************************************************//**
  * @addtogroup emdrv
@@ -21,14 +21,22 @@
  ******************************************************************************/
 
 /***************************************************************************//**
- * @addtogroup SPIDRV
+ * @addtogroup RTCDRV
  * @{
  ******************************************************************************/
 
-/// SPIDRV configuration option. Use this define to include the slave part of the SPIDRV API.
-#define EMDRV_SPIDRV_INCLUDE_SLAVE
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\rtcdrv\config instead."
 
-/** @} (end addtogroup SPIDRV) */
+/// @brief Define the number of timers the application needs.
+#define EMDRV_RTCDRV_NUM_TIMERS     (4)
+
+/// @brief Define to include wallclock functionality.
+//#define EMDRV_RTCDRV_WALLCLOCK_CONFIG
+
+/// @brief Define to enable integration with SLEEP driver.
+//#define EMDRV_RTCDRV_SLEEPDRV_INTEGRATION
+
+/** @} (end addtogroup RTCDRV) */
 /** @} (end addtogroup emdrv) */
 
-#endif /* __SILICON_LABS_SPIDRV_CONFIG_H__ */
+#endif /* __SILICON_LABS_RTCDRV_CONFIG_H__ */

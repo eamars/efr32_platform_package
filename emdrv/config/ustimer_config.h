@@ -1,6 +1,6 @@
 /***************************************************************************//**
- * @file spidrv_config.h
- * @brief SPIDRV configuration file.
+ * @file ustimer_config.h
+ * @brief USTIMER configuration file.
  * @version 5.2.1
  *******************************************************************************
  * # License
@@ -12,8 +12,8 @@
  * any purpose, you must agree to the terms of that agreement.
  *
  ******************************************************************************/
-#ifndef __SILICON_LABS_SPIDRV_CONFIG_H__
-#define __SILICON_LABS_SPIDRV_CONFIG_H__
+#ifndef __SILICON_LABS_USTIMER_CONFIG_H__
+#define __SILICON_LABS_USTIMER_CONFIG_H__
 
 /***************************************************************************//**
  * @addtogroup emdrv
@@ -21,14 +21,16 @@
  ******************************************************************************/
 
 /***************************************************************************//**
- * @addtogroup SPIDRV
+ * @addtogroup USTIMER
  * @{
  ******************************************************************************/
 
-/// SPIDRV configuration option. Use this define to include the slave part of the SPIDRV API.
-#define EMDRV_SPIDRV_INCLUDE_SLAVE
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\ustimer\config instead."
 
-/** @} (end addtogroup SPIDRV) */
+/// USTIMER configuration option. Use this define to select a TIMER resource.
+#define USTIMER_TIMER USTIMER_TIMER0
+
+/** @} (end addtogroup USTIMER) */
 /** @} (end addtogroup emdrv) */
 
-#endif /* __SILICON_LABS_SPIDRV_CONFIG_H__ */
+#endif /* __SILICON_LABS_USTIMER_CONFIG_H__ */

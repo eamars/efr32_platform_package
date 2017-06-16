@@ -42,6 +42,8 @@
  * @{
  ******************************************************************************/
 
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\tempdrv\config instead."
+
 // Callback table depth (for high and low callbacks each)
 #ifndef TEMPDRV_CUSTOM_CALLBACK_DEPTH
 #define TEMPDRV_CUSTOM_CALLBACK_DEPTH 5

@@ -33,6 +33,8 @@ extern "C" {
  * @{
  ******************************************************************************/
 
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\nvn\config instead."
+
 /*******************************************************************************
  ****************************   CONFIGURATION   ********************************
  ******************************************************************************/

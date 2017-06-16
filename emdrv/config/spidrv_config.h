@@ -25,6 +25,8 @@
  * @{
  ******************************************************************************/
 
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\spidrv\config instead."
+
 /// SPIDRV configuration option. Use this define to include the slave part of the SPIDRV API.
 #define EMDRV_SPIDRV_INCLUDE_SLAVE
 

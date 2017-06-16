@@ -42,6 +42,8 @@
  * @{
  ******************************************************************************/
 
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\ezradiodrv\config instead."
+
 /// @brief Number of wait-for-CTS retries.
 #define EZRADIODRV_COMM_CTS_RETRY 10000
 

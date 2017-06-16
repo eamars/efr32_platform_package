@@ -27,6 +27,8 @@
  * @{
  ******************************************************************************/
 
+#warning "This configuration file is deprecated and marked for removal in a later release. Please use the new configuration template file in emdrv\dmadrv\config instead."
+
 /// DMADRV DMA interrupt priority configuration option.
 /// Set DMA interrupt priority. Range is 0..7, 0 is highest priority.
 #ifndef EMDRV_DMADRV_DMA_IRQ_PRIORITY
