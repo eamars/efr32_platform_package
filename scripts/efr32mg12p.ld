@@ -141,27 +141,27 @@ SECTIONS
 	/* RAM segment */
 	. = ORIGIN(RAM);
 
-	OVERLAY 0x20000000 :
+	OVERLAY :
 	{
 		.EMHEAP
 		{
-		    EMHEAP$$Base = . ;
-			__EMHEAP__begin = . ;
-			KEEP(*(.emheap*));
+		    EMHEAP$$Base = ORIGIN(RAM) ;
+			__EMHEAP__begin = ORIGIN(RAM) ;
+			KEEP(*(.emheap));
 			*(EMHEAP);
 			*(EMHEAP_overlay);
-			__EMHEAP__end = . ;
-			EMHEAP_overlay$$Limit = . ;
+			__EMHEAP__end =  __EMHEAP__begin + SIZEOF( .EMHEAP ) ;
+			EMHEAP_overlay$$Limit = EMHEAP$$Base + SIZEOF( .EMHEAP ) ;
 		}
 
 		.RESETINFO
 		{
-		    RESETINFO$$Base = . ;
-			__RESETINFO__begin = . ;
-			KEEP(*(.resetinfo*));
+		    RESETINFO$$Base = ORIGIN(RAM) ;
+			__RESETINFO__begin = ORIGIN(RAM) ;
+			KEEP(*(.resetinfo));
 			*(RESETINFO);
-			__RESETINFO__end = . ;
-			RESETINFO$$Limit = . ;
+			__RESETINFO__end = __RESETINFO__begin +  SIZEOF( .RESETINFO ) ;
+			RESETINFO$$Limit = RESETINFO$$Base +  SIZEOF( .RESETINFO ) ;
 		}
 	} > RAM
 
@@ -174,7 +174,7 @@ SECTIONS
 		__GUARD_REGION__end = . ;
 	} > RAM
 
-	.CSTACK ALIGN(8) :
+	.CSTACK ALIGN(8) (NOLOAD) :
 	{
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
