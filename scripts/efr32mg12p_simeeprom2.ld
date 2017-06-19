@@ -133,6 +133,7 @@ SECTIONS
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
 		KEEP(*(.simee));
+		*(SIMEE);
 		__SIMEE__end = . ;
 		SIMEE$$Limit = . ;
 	} > FLASH
@@ -147,6 +148,8 @@ SECTIONS
 		    EMHEAP$$Base = . ;
 			__EMHEAP__begin = . ;
 			KEEP(*(.emheap*));
+			*(EMHEAP);
+            *(EMHEAP_overlay);
 			__EMHEAP__end = . ;
 			EMHEAP_overlay$$Limit = . ;
 		}
@@ -156,6 +159,7 @@ SECTIONS
 		    RESETINFO$$Base = . ;
 			__RESETINFO__begin = . ;
 			KEEP(*(.resetinfo*));
+            *(RESETINFO);
 			__RESETINFO__end = . ;
 			RESETINFO$$Limit = . ;
 		}
@@ -165,6 +169,7 @@ SECTIONS
 	{
 		__GUARD_REGION__begin = . ;
 		KEEP(*(.guard_region));
+	    *(GUARD_REGION);
 		. += 0x20;
 		__GUARD_REGION__end = . ;
 	} > RAM
@@ -174,6 +179,7 @@ SECTIONS
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
 		KEEP(*(.cstack .cstack.*));
+		*(CSTACK);
 		__CSTACK__end = . ;
 		CSTACK$$Limit = . ;
 	} > RAM
@@ -234,11 +240,17 @@ SECTIONS
 		*(COMMON)
 		. = ALIGN(4);
 		__bss_end__ = .;
-
-		__end__ = .;
-		end = __end__;
-		_end = __end__;
 	} > RAM
+
+	.heap (COPY):
+    {
+        __HeapBase = .;
+        __end__ = .;
+        end = __end__;
+        _end = __end__;
+        KEEP(*(.heap*))
+        __HeapLimit = .;
+    } > RAM
 
 	/* Set stack top to end of RAM, and stack limit move down by
    	* size of stack_dummy section */
