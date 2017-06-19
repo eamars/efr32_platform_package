@@ -84,6 +84,7 @@ ADD_SUBDIRECTORY(rail)
 ADD_SUBDIRECTORY(emlib)
 ADD_SUBDIRECTORY(emdrv)
 ADD_SUBDIRECTORY(middleware)
+ADD_SUBDIRECTORY(freertos)
 
 # build sam4s library
 ADD_LIBRARY(${LIB_NAME} ${EFR32_SRC})
@@ -94,6 +95,7 @@ ADD_DEPENDENCIES(${LIB_NAME}
 		emlib
 		emdrv
 		middleware
+		freertos
 		)
 
 TARGET_LINK_LIBRARIES(${LIB_NAME}
@@ -102,6 +104,7 @@ TARGET_LINK_LIBRARIES(${LIB_NAME}
 		emlib
 		emdrv
 		middleware
+		freertos
 		)
 
 # set those variables visible to parents
