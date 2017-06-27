@@ -139,8 +139,6 @@ SECTIONS
 	} > FLASH
 
 	/* RAM segment */
-	. = ORIGIN(RAM);
-
 	OVERLAY :
     {
         .EMHEAP
