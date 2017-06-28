@@ -64,8 +64,10 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base/hal/plugin"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base/hal/plugin/serial"
 
-		"${CMAKE_CURRENT_SOURCE_DIR}/hardware/kit/common/bsp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/platform/bootloader/api"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/bootloader"
+
+		"${CMAKE_CURRENT_SOURCE_DIR}/hardware/kit/common/bsp"
 		)
 
 SET(BOARD_SPECIFIC_INCLUDE_DIRECTORY
