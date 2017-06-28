@@ -1,6 +1,0 @@
-
-What's new in EmberZNet 5.10.0.0:
-  * MISRA Analysis for stack and application layer
-  * EM4 power mode support for EFR32
-  * Support for MG13
-  * Reference designs upgraded to zigbee 3.0
