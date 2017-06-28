@@ -52,6 +52,7 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.9/app/util/common"
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.9/app/framework/plugin/interpan"
 
+		"${CMAKE_CURRENT_SOURCE_DIR}/platform"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base/hal"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base/hal/micro"
