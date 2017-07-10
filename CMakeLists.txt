@@ -52,6 +52,9 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.9/app/util/common"
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.9/app/framework/plugin/interpan"
 
+        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.3/ble_stack/inc/common"
+        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.3/ble_stack/inc/soc"
+
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base/hal"
@@ -69,6 +72,7 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/bootloader"
 
 		"${CMAKE_CURRENT_SOURCE_DIR}/hardware/kit/common/bsp"
+		"${CMAKE_CURRENT_SOURCE_DIR}/hardware/kit/common/drivers"
 		)
 
 SET(BOARD_SPECIFIC_INCLUDE_DIRECTORY
