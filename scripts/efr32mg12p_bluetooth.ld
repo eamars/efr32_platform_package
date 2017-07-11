@@ -1,19 +1,17 @@
-/* Linker script for Silicon Labs EFR32MG1P devices                      */
-/*                                                                     */
-/* This file is subject to the license terms as defined in ARM's       */
-/* CMSIS END USER LICENSE AGREEMENT.pdf, governing the use of          */
-/* Example Code.                                                       */
-/*                                                                     */
-/* Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com     */
-/*                                                                     */
-/* Version 4.4.0 */
-/*                                                                     */
-
-
+/* Linker script for Silicon Labs EFR32MG1P devices */
+/*                                                                  */
+/* This file is subject to the license terms as defined in ARM's    */
+/* CMSIS END USER LICENSE AGREEMENT.pdf, governing the use of       */
+/* Example Code.                                                    */
+/*                                                                  */
+/* Silicon Laboratories, Inc. 2015                                  */
+/*                                                                  */
+/* Version 4.1.1 */
+/*                                                                  */
 MEMORY
 {
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1M
-	RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
+  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1M
+  RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -52,87 +50,74 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-	/* FLASH segment */
-	. = ORIGIN(FLASH);
+  .LOADER 0x0 :
+  	{
+  		KEEP(*(.tiny_loader*));
 
-	.LOADER 0x0 :
-	{
-		KEEP(*(.tiny_loader*));
+  		KEEP(*(.loader*));
+  	} > FLASH
 
-		KEEP(*(.loader*));
-	} > FLASH
+  	.VECTORS 0x100 :
+  	{
+  		KEEP(*(.vectors));
+  	} > FLASH
 
-	.VECTORS 0x100 :
-	{
-		KEEP(*(.vectors));
-	} > FLASH
 
-	.text :
-	{
-		__TEXT__begin = .;
-		__end__ = .;
-
-		. = ALIGN(4);
-		*(.textrw_init .textrw_init*)
-
-		. = ALIGN(4);
-		*(.text*)
-
-		. = ALIGN(4);
-		KEEP(*(.init))
-
-		. = ALIGN(4);
-		KEEP(*(.fini))
-
-		/* .ctors */
-		. = ALIGN(4);
-		*crtbegin.o(.ctors)
-		*crtbegin?.o(.ctors)
-		*(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
-		*(SORT(.ctors.*))
-		*(.ctors)
-
-		/* .dtors */
-		. = ALIGN(4);
-		*crtbegin.o(.dtors)
-		*crtbegin?.o(.dtors)
-		*(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
-		*(SORT(.dtors.*))
-		*(.dtors)
-
-		/* global constants */
-		. = ALIGN(4);
-		*(.rodata*)
-
-		. = ALIGN(4);
-		*(.data_init*)
-
-		. = ALIGN(4);
-		KEEP(*(.eh_frame*))
-		__TEXT__end = .;
-	} > FLASH
-
-	.ARM.extab :
-	{
-		*(.ARM.extab* .gnu.linkonce.armextab.*)
-	} > FLASH
-
-	__exidx_start = .;
-	.ARM.exidx :
-	{
-		*(.ARM.exidx* .gnu.linkonce.armexidx.*)
-	} > FLASH
-	__exidx_end = .;
-
-	/* End of text */
-	__etext = .;
-
-  .crashinfo (NOLOAD) :
+  .text_stack_bin :
   {
-    . += 256;
-  } > RAM
+	KEEP(*(.binstack*))
+    . = ALIGN(2048);
+  }> FLASH
 
-  .data : AT (__etext)
+  __text_start__ = .;
+
+  .text_app :
+  {
+    __end__ = .;
+	KEEP(*(.gecko_configuration))
+	KEEP(*(.xo_configuration))
+	KEEP(*(.gatt_header))
+	KEEP(*(.gatt_data))
+    *(.text*)
+
+    KEEP(*(.init))
+    KEEP(*(.fini))
+
+    /* .ctors */
+    *crtbegin.o(.ctors)
+    *crtbegin?.o(.ctors)
+    *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+    *(SORT(.ctors.*))
+    *(.ctors)
+
+    /* .dtors */
+    *crtbegin.o(.dtors)
+    *crtbegin?.o(.dtors)
+    *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+    *(SORT(.dtors.*))
+    *(.dtors)
+
+    *(.rodata*)
+
+    KEEP(*(.eh_frame*))
+	. = ALIGN(4);
+  } > FLASH
+
+  .text_app_ARM.extab :
+  {
+    *(.ARM.extab* .gnu.linkonce.armextab.*)
+  } > FLASH
+
+  __exidx_start = .;
+  .text_app_ARM.exidx :
+  {
+    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+  } > FLASH
+  __exidx_end = .;
+
+  __etext = .;
+
+  .text_app_data : AT (__etext)
   {
     __data_start__ = .;
     KEEP(*(.dynamic_vectors))
@@ -166,8 +151,6 @@ SECTIONS
     __data_end__ = .;
 
   } > RAM
-
-  __rom_end__ = __etext + SIZEOF(.data);
 
   .bss :
   {
@@ -207,5 +190,5 @@ SECTIONS
   ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
 
   /* Check if FLASH usage exceeds FLASH size */
-  ASSERT( (LENGTH(FLASH) - 0x4) >= (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
+  /*ASSERT( LENGTH(FLASH) >= (__etext + SIZEOF(.data)), "FLASH memory overflowed !")*/
 }
