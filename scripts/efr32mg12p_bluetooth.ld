@@ -50,20 +50,22 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-  .LOADER 0x0 :
-  	{
-  		KEEP(*(.tiny_loader*));
+    /* FLASH segment */
+	. = ORIGIN(FLASH);
 
-  		KEEP(*(.loader*));
-  	} > FLASH
+	.LOADER 0x0 :
+	{
+		KEEP(*(.tiny_loader*));
 
-  	.VECTORS 0x100 :
-  	{
-  		KEEP(*(.vectors));
-  	} > FLASH
+		KEEP(*(.loader*));
+	} > FLASH
 
+	.VECTORS 0x100 :
+	{
+		KEEP(*(.vectors));
+	} > FLASH
 
-  .text_stack_bin :
+  .text_stack_bin 0x4000 :
   {
 	KEEP(*(.binstack*))
     . = ALIGN(2048);
