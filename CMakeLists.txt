@@ -14,7 +14,7 @@ SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g3 -W -gdwarf-2 -mcpu=corte
 SET(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -gdwarf-2 -mcpu=cortex-m4 -mthumb -c -x assembler-with-cpp")
 
 # DEBUG LD FLAGS
-SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -mthumb -Wl,--no-wchar-size-warning,--no-enum-size-warning -gdwarf-2 -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -lc -lm")
+SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -mthumb -Wl,--no-wchar-size-warning,--no-enum-size-warning -gdwarf-2 -mcpu=cortex-m4 -mfpu=fpv4-sp-d16")
 
 SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${TARGET_SPECIFIC_INCLUDE_DIRECTORY}"

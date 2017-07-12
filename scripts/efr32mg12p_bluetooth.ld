@@ -10,8 +10,8 @@
 /*                                                                  */
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1M
-  RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
+  FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 0x00100000-2048*2
+  RAM (rwx)  : ORIGIN = 0x20000000 + 0x3000, LENGTH = 0x00040000-0x3000-4
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -50,22 +50,9 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-    /* FLASH segment */
-	. = ORIGIN(FLASH);
+  . = ALIGN(0x4000);
 
-	.LOADER 0x0 :
-	{
-		KEEP(*(.tiny_loader*));
-
-		KEEP(*(.loader*));
-	} > FLASH
-
-	.VECTORS 0x100 :
-	{
-		KEEP(*(.vectors));
-	} > FLASH
-
-  .text_stack_bin 0x4000 :
+  .text_stack_bin :
   {
 	KEEP(*(.binstack*))
     . = ALIGN(2048);
@@ -76,6 +63,12 @@ SECTIONS
   .text_app :
   {
     __end__ = .;
+    KEEP(*(.tiny_loader*));
+    KEEP(*(.loader*));
+
+    . = ALIGN(256);
+    KEEP(*(.vectors));
+
 	KEEP(*(.gecko_configuration))
 	KEEP(*(.xo_configuration))
 	KEEP(*(.gatt_header))
@@ -122,7 +115,11 @@ SECTIONS
   .text_app_data : AT (__etext)
   {
     __data_start__ = .;
-    KEEP(*(.dynamic_vectors))
+
+    . = ALIGN(256);
+    KEEP(*(.dynamic_vectors));
+
+    . = ALIGN (4);
     *(.data*)
     . = ALIGN (4);
     *(.ram)
