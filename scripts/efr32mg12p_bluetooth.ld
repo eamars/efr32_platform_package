@@ -50,9 +50,7 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-  . = ALIGN(0x4000);
-
-  .text_stack_bin :
+  .text_stack_bin 0x0 :
   {
 	KEEP(*(.binstack*))
     . = ALIGN(2048);
@@ -62,13 +60,12 @@ SECTIONS
 
   .text_app :
   {
-    __end__ = .;
-    KEEP(*(.tiny_loader*));
-    KEEP(*(.loader*));
+    KEEP(*(.AAT))
 
     . = ALIGN(256);
-    KEEP(*(.vectors));
+    KEEP(*(.vectors))
 
+    __end__ = .;
 	KEEP(*(.gecko_configuration))
 	KEEP(*(.xo_configuration))
 	KEEP(*(.gatt_header))
@@ -117,9 +114,8 @@ SECTIONS
     __data_start__ = .;
 
     . = ALIGN(256);
-    KEEP(*(.dynamic_vectors));
+    KEEP(*(.dynamic_vectors))
 
-    . = ALIGN (4);
     *(.data*)
     . = ALIGN (4);
     *(.ram)
