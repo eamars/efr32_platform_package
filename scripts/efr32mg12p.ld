@@ -185,6 +185,8 @@ SECTIONS
 	.data ALIGN(256) : AT (__etext)
 	{
 		__data_start__ = .;
+
+		. = ALIGN(256);
 		KEEP(*(.dynamic_vectors))
 
 		. = ALIGN(4);
