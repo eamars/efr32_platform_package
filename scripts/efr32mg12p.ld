@@ -132,8 +132,8 @@ SECTIONS
 	{
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
-		KEEP(*(.simee));
 		*(SIMEE);
+		KEEP(*(.simee));
 		__SIMEE__end = . ;
 		SIMEE$$Limit = . ;
 	} > FLASH
