@@ -132,8 +132,8 @@ SECTIONS
 	{
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
-		KEEP(*(.simee));
 		*(SIMEE);
+		KEEP(*(.simee));
 		__SIMEE__end = . ;
 		SIMEE$$Limit = . ;
 	} > FLASH
@@ -185,6 +185,8 @@ SECTIONS
 	.data ALIGN(256) : AT (__etext)
 	{
 		__data_start__ = .;
+
+		. = ALIGN(256);
 		KEEP(*(.dynamic_vectors))
 
 		. = ALIGN(4);
