@@ -139,15 +139,15 @@ SECTIONS
 	} > FLASH
 
 	/* RAM segment */
-	OVERLAY :
+	OVERLAY 0x20000000 : AT (0xf0000)
 	{
 		.EMHEAP
 		{
 		    EMHEAP$$Base = ORIGIN(RAM) ;
 			__EMHEAP__begin = ORIGIN(RAM) ;
-			KEEP(*(.emheap));
 			*(EMHEAP);
 			*(EMHEAP_overlay);
+			KEEP(*(.emheap));
 			__EMHEAP__end =  __EMHEAP__begin + SIZEOF( .EMHEAP ) ;
 			EMHEAP_overlay$$Limit = EMHEAP$$Base + SIZEOF( .EMHEAP ) ;
 		}
@@ -156,28 +156,28 @@ SECTIONS
 		{
 		    RESETINFO$$Base = ORIGIN(RAM) ;
 			__RESETINFO__begin = ORIGIN(RAM) ;
-			KEEP(*(.resetinfo));
 			*(RESETINFO);
+			KEEP(*(.resetinfo));
 			__RESETINFO__end = __RESETINFO__begin +  SIZEOF( .RESETINFO ) ;
 			RESETINFO$$Limit = RESETINFO$$Base +  SIZEOF( .RESETINFO ) ;
 		}
 	} > RAM
 
-	.GUARD_REGION 0x20000f20 (NOLOAD) :
+	.GUARD_REGION 0x20000f20 :
 	{
 		__GUARD_REGION__begin = . ;
-		KEEP(*(.guard_region));
 		*(GUARD_REGION);
+		KEEP(*(.guard_region));
 		. += 0x20;
 		__GUARD_REGION__end = . ;
 	} > RAM
 
-	.CSTACK ALIGN(8) (NOLOAD) :
+	.CSTACK ALIGN(8) :
 	{
 		CSTACK$$Base = . ;
 		__CSTACK__begin = . ;
-		KEEP(*(.cstack .cstack.*));
 		*(CSTACK);
+		KEEP(*(.cstack .cstack.*));
 		__CSTACK__end = . ;
 		CSTACK$$Limit = . ;
 	} > RAM
@@ -242,7 +242,7 @@ SECTIONS
 		__bss_end__ = .;
 	} > RAM
 
-	.heap (COPY):
+	.heap :
     {
         __HeapBase = .;
         __end__ = .;
