@@ -1,43 +1,44 @@
 /*
- * @file second_stage_btl_startup.c
+ * @file main_btl_startup.c
  * @brief CMSIS Compatible bootloader startup file in C.
  *        Should be used with GCC 'GNU Tools ARM Embedded'
- * @version 1.0.0
+ * @version 1.1.0
  * Date:    12 June 2014
  *
  */
-/* Copyright (c) 2011 - 2014 ARM LIMITED
 
-   All rights reserved.
-   Redistribution and use in source and binary forms, with or without
-   modification, are permitted provided that the following conditions are met:
-   - Redistributions of source code must retain the above copyright
-     notice, this list of conditions and the following disclaimer.
-   - Redistributions in binary form must reproduce the above copyright
-     notice, this list of conditions and the following disclaimer in the
-     documentation and/or other materials provided with the distribution.
-   - Neither the name of ARM nor the names of its contributors may be used
-     to endorse or promote products derived from this software without
-     specific prior written permission.
-   *
-   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-   ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
-   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-   POSSIBILITY OF SUCH DAMAGE.
-   ---------------------------------------------------------------------------*/
+/* Copyright (c) 2011 - 2014 ARM LIMITED
+ *
+ * All rights reserved.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * - Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * - Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ * - Neither the name of ARM nor the names of its contributors may be used
+ *   to endorse or promote products derived from this software without
+ *   specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * ---------------------------------------------------------------------------*/
 
 #include <stdint.h>
 #include "api/btl_interface.h"
 
 /*----------------------------------------------------------------------------
-  Linker generated Symbols
+ * Linker generated Symbols
  *----------------------------------------------------------------------------*/
 extern uint32_t __etext;
 extern uint32_t __data_start__;
@@ -53,13 +54,12 @@ extern uint32_t __StackTop;
 extern MainBootloaderTable_t mainStageTable;
 
 /*----------------------------------------------------------------------------
-  Exception / Interrupt Handler Function Prototype
+ * Exception / Interrupt Handler Function Prototype
  *----------------------------------------------------------------------------*/
-typedef void( *pFunc )( void );
-
+typedef void( *pFunc )(void);
 
 /*----------------------------------------------------------------------------
-  External References
+ * External References
  *----------------------------------------------------------------------------*/
 #ifndef __START
 extern void  _start(void) __attribute__((noreturn));    /* Pre Main (C library entry point) */
@@ -70,17 +70,17 @@ extern int  __START(void) __attribute__((noreturn));    /* main entry point */
 #ifndef __NO_SYSTEM_INIT
 extern void SystemInit (void);            /* CMSIS System Initialization      */
 #endif
+
 extern void SystemInit2 (void);
 
 /*----------------------------------------------------------------------------
-  Internal References
+ * Internal References
  *----------------------------------------------------------------------------*/
 void Default_Handler(void);                          /* Default empty handler */
 void Reset_Handler(void);                            /* Reset Handler */
 
-
 /*----------------------------------------------------------------------------
-  User Initial Stack & Heap
+ * User Initial Stack & Heap
  *----------------------------------------------------------------------------*/
 #ifndef __STACK_SIZE
 #define __STACK_SIZE  0x00001000
@@ -94,10 +94,10 @@ static uint8_t stack[__STACK_SIZE] __attribute__ ((aligned(8), used, section(".s
 static uint8_t heap[__HEAP_SIZE]   __attribute__ ((aligned(8), used, section(".heap")));
 #endif
 
-
 /*----------------------------------------------------------------------------
-  Exception / Interrupt Handler
+ * Exception / Interrupt Handler
  *----------------------------------------------------------------------------*/
+
 /* Cortex-M Processor Exceptions */
 void NMI_Handler         (void) __attribute__ ((weak, alias("Default_Handler")));
 void HardFault_Handler   (void) __attribute__ ((weak, alias("Default_Handler")));
@@ -253,11 +253,11 @@ void TRNG0_IRQHandler(void) __attribute__ ((weak, alias("Default_Handler")));
 #endif
 
 /*----------------------------------------------------------------------------
-  Exception / Interrupt Vector table
+ * Exception / Interrupt Vector table
  *----------------------------------------------------------------------------*/
 const pFunc __Vectors[] __attribute__ ((section(".vectors"))) = {
   /* Cortex-M Exception Handlers */
-  (pFunc)&__StackTop,                       /*      Initial Stack Pointer     */
+  (pFunc) & __StackTop,                      /*      Initial Stack Pointer     */
   Reset_Handler,                            /*      Reset Handler             */
   NMI_Handler,                              /*      NMI Handler               */
   HardFault_Handler,                        /*      Hard Fault Handler        */
@@ -267,7 +267,7 @@ const pFunc __Vectors[] __attribute__ ((section(".vectors"))) = {
   Default_Handler,                          /*      Reserved                  */
   Default_Handler,                          /*      Reserved                  */
   Default_Handler,                          /*      Reserved                  */
-  (pFunc)&mainStageTable,
+  (pFunc) & mainStageTable,
   SVC_Handler,                              /*      SVCall Handler            */
   DebugMon_Handler,                         /*      Debug Monitor Handler     */
   Default_Handler,                          /*      Reserved                  */
@@ -421,9 +421,10 @@ const pFunc __Vectors[] __attribute__ ((section(".vectors"))) = {
 };
 
 /*----------------------------------------------------------------------------
-  Reset Handler called on controller reset
+ * Reset Handler called on controller reset
  *----------------------------------------------------------------------------*/
-void Reset_Handler(void) {
+void Reset_Handler(void)
+{
   uint32_t *pSrc, *pDest;
   uint32_t *pTable __attribute__((unused));
 
@@ -439,6 +440,7 @@ void Reset_Handler(void) {
  *  Macro __STARTUP_COPY_MULTIPLE is used to choose between two schemes.  */
 
 #ifdef __STARTUP_COPY_MULTIPLE
+
 /*  Multiple sections scheme.
  *
  *  Between symbol address __copy_table_start__ and __copy_table_end__,
@@ -451,16 +453,15 @@ void Reset_Handler(void) {
  */
   pTable = &__copy_table_start__;
 
-  for (; pTable < &__copy_table_end__; pTable = pTable + 3)
-  {
+  for (; pTable < &__copy_table_end__; pTable = pTable + 3) {
     pSrc  = (uint32_t*)*(pTable + 0);
     pDest = (uint32_t*)*(pTable + 1);
-    for (; pDest < (uint32_t*)(*(pTable + 1) + *(pTable + 2)) ; )
-    {
+    for (; pDest < (uint32_t*)(*(pTable + 1) + *(pTable + 2)); ) {
       *pDest++ = *pSrc++;
     }
   }
 #else
+
 /*  Single section scheme.
  *
  *  The ranges of copy from/to are specified by following symbols
@@ -473,8 +474,7 @@ void Reset_Handler(void) {
   pSrc  = &__etext;
   pDest = &__data_start__;
 
-  for ( ; pDest < &__data_end__ ; )
-  {
+  for (; pDest < &__data_end__; ) {
     *pDest++ = *pSrc++;
   }
 #endif /*__STARTUP_COPY_MULTIPLE */
@@ -490,6 +490,7 @@ void Reset_Handler(void) {
  *  Otherwise efine macro __STARTUP_CLEAR_BSS to choose the later.
  */
 #ifdef __STARTUP_CLEAR_BSS_MULTIPLE
+
 /*  Multiple sections scheme.
  *
  *  Between symbol address __copy_table_start__ and __copy_table_end__,
@@ -499,15 +500,14 @@ void Reset_Handler(void) {
  */
   pTable = &__zero_table_start__;
 
-  for (; pTable < &__zero_table_end__; pTable = pTable + 2)
-  {
+  for (; pTable < &__zero_table_end__; pTable = pTable + 2) {
     pDest = (uint32_t*)*(pTable + 0);
-    for (; pDest < (uint32_t*)(*(pTable + 0) + *(pTable + 1)) ; )
-    {
+    for (; pDest < (uint32_t*)(*(pTable + 0) + *(pTable + 1)); ) {
       *pDest++ = 0;
     }
   }
 #elif defined (__STARTUP_CLEAR_BSS)
+
 /*  Single BSS section scheme.
  *
  *  The BSS section is specified by following symbols
@@ -518,8 +518,7 @@ void Reset_Handler(void) {
  */
   pDest = &__bss_start__;
 
-  for ( ; pDest < &__bss_end__ ; )
-  {
+  for (; pDest < &__bss_end__; ) {
     *pDest++ = 0ul;
   }
 #endif /* __STARTUP_CLEAR_BSS_MULTIPLE || __STARTUP_CLEAR_BSS */
@@ -530,12 +529,10 @@ void Reset_Handler(void) {
   __START();
 }
 
-
 /*----------------------------------------------------------------------------
-  Default Handler for Exceptions / Interrupts
+ * Default Handler for Exceptions / Interrupts
  *----------------------------------------------------------------------------*/
 void Default_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
-

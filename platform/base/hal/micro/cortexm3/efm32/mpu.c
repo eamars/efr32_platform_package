@@ -13,7 +13,6 @@
 #include "em_mpu.h"
 #include "hal/micro/cortexm3/efm32/mpu.h"
 #include "hal/micro/micro.h"
-#include "interrupts-efm32.h"
 
 #if __MPU_PRESENT
 // Define MPU regions - note that the default vector table at address 0 and
@@ -55,23 +54,21 @@ static MPU_RegionInit_TypeDef mpuConfig[NUM_MPU_REGIONS] =
 void halInternalEnableMPU(void)
 {
   ATOMIC(
-  MPU_Disable();
-  halInternalLoadMPU(mpuConfig);
-  MPU_Enable(MPU_CTRL_PRIVDEFENA);
-  )
+    MPU_Disable();
+    halInternalLoadMPU(mpuConfig);
+    MPU_Enable(MPU_CTRL_PRIVDEFENA);
+    )
 }
 
 void halInternalLoadMPU(MPU_RegionInit_TypeDef *mp)
 {
-
   uint8_t i;
 
-  for (i = 0; i < NUM_MPU_REGIONS; i++)
-  {
+  for (i = 0; i < NUM_MPU_REGIONS; i++) {
     MPU_ConfigureRegion(mp);
     mp++;
   }
-   _executeBarrierInstructions();
+  _executeBarrierInstructions();
 }
 
 void halInternalDisableMPU(void)
@@ -82,7 +79,6 @@ void halInternalDisableMPU(void)
 
 void halInternalSetMPUGuardRegionStart(uint32_t baseAddress)
 {
-
   uint32_t enable = false;
 
   // Clear the lower 5 bits of the base address to be sure that it's
@@ -91,7 +87,7 @@ void halInternalSetMPUGuardRegionStart(uint32_t baseAddress)
 
   // If the base address is below the reset info then something weird is
   // going on so just turn off the guard region
-  if(baseAddress < (uint32_t)_RESETINFO_SEGMENT_END) {
+  if (baseAddress < (uint32_t)_RESETINFO_SEGMENT_END) {
     enable = false;
   }
 
@@ -109,4 +105,5 @@ bool halInternalIAmAnEmulator(void)
 {
   return 0;
 }
+
 #endif //__MPU_PRESENT

@@ -1,7 +1,7 @@
 /**************************************************************************//**
  * @file second_stage_btl_startup.c
  * @brief CMSIS Compatible bootloader startup file in C for IAR EWARM
- * @version 1.0.0
+ * @version 1.1.0
  ******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -38,6 +38,7 @@
 
 /* IAR start function */
 extern void __iar_program_start(void);
+
 /* CMSIS init function */
 extern void SystemInit(void);
 
@@ -57,47 +58,47 @@ __weak void Reset_Handler(void)
 
 __weak void NMI_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void HardFault_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MemManage_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void BusFault_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void UsageFault_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SVC_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void DebugMon_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PendSV_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SysTick_Handler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 #if defined(BOOTLOADER_USE_INTERRUPTS)
@@ -105,655 +106,658 @@ __weak void SysTick_Handler(void)
 // EFR32xG1
 __weak void EMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_PRI_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WDOG0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MODEM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_SEQ_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_RSM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void BUFC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LDMA_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_EVEN_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ACMP0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ADC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void IDAC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void I2C0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_ODD_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LEUART0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PCNT0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MSC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYPTO_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LETIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void AGC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PROTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RTCC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SYNTH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYOTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RFSENSE_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FPUEH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
+
 #elif defined(_EFR_DEVICE) && defined(_SILICON_LABS_32B_SERIES_1_CONFIG_2)
 // EFR32xG12
 __weak void EMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_PRI_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WDOG0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WDOG1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MODEM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_SEQ_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_RSM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void BUFC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LDMA_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_EVEN_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ACMP0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ADC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void IDAC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void I2C0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_ODD_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LEUART0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PCNT0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MSC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYPTO0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LETIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void AGC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PROTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RTCC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SYNTH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYOTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RFSENSE_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FPUEH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WTIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WTIMER1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PCNT1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PCNT2_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART2_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART2_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void I2C1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART3_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART3_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void VDAC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CSEN_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LESENSE_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYPTO1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TRNG0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
+
 #elif defined(_EFR_DEVICE) && defined(_SILICON_LABS_32B_SERIES_1_CONFIG_3)
 // EFR32xG13
 __weak void EMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_PRI_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WDOG0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WDOG1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FRC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MODEM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_SEQ_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RAC_RSM_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void BUFC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LDMA_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_EVEN_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART0_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ACMP0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void ADC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void IDAC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void I2C0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void GPIO_ODD_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TIMER1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART1_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LEUART0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PCNT0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void MSC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYPTO0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LETIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void AGC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PROTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void PRORTC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RTCC_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SYNTH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYOTIMER_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void RFSENSE_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void FPUEH_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void SMU_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void WTIMER0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART2_RX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void USART2_TX_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void I2C1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void VDAC0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CSEN_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void LESENSE_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void CRYPTO1_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
 
 __weak void TRNG0_IRQHandler(void)
 {
-  while(1);
+  while (1) ;
 }
+
 #else
 #error "Bootloader needs interrupts, but no ISRs are defined."
 #endif
@@ -762,7 +766,7 @@ __weak void TRNG0_IRQHandler(void)
 /* With IAR, the CSTACK is defined via project options settings */
 #pragma data_alignment=256
 #pragma location = ".intvec"
-const void * const __vector_table[]=  {
+const void * const __vector_table[] =  {
   &CSTACK$$Limit,
   (void *) Reset_Handler,           /*  1 - Reset (start instruction) */
   (void *) NMI_Handler,             /*  2 - NMI */

@@ -7,7 +7,6 @@
  * Copyright 2009 by Ember Corporation. All rights reserved.                *80*
  */
 
-#include "interrupts-efm32.h"
 #include PLATFORM_HEADER
 #include "stack/include/ember.h"
 #include "hal/hal.h"
@@ -21,8 +20,8 @@
   #define freeRTOS 1
 #else  // RTOS
   #define freeRTOS 0
-  // extern uint32_t* xTaskGetCurrentTaskStackTop(void);
-  // extern uint32_t* xTaskGetCurrentTaskStackBottom(void);
+// extern uint32_t* xTaskGetCurrentTaskStackTop(void);
+// extern uint32_t* xTaskGetCurrentTaskStackBottom(void);
 #endif // RTOS
 
 //------------------------------------------------------------------------------
@@ -47,9 +46,7 @@ static void halInternalAssertFault(PGM_P filename, int linenumber)
   // the fault handler with then decode this, grab the filename and linenumber
   // parameters from R0 and R1 and save the information for display after
   // a reset
-  // asm("DC16 0DE42h");
-
-  __builtin_trap();
+  asm ("DC16 0DE42h");
 }
 
 void halInternalAssertFailed(PGM_P filename, int linenumber)
@@ -61,33 +58,33 @@ void halInternalAssertFailed(PGM_P filename, int linenumber)
   INTERRUPTS_OFF();
 
   #if DEBUG_LEVEL >= BASIC_DEBUG
-    emberDebugAssert(filename, linenumber);
+  emberDebugAssert(filename, linenumber);
   #endif
 
   #if !defined(EMBER_ASSERT_OUTPUT_DISABLED)
-    emberSerialGuaranteedPrintf(EMBER_ASSERT_SERIAL_PORT,
-                                "\r\n[ASSERT:%p:%d]\r\n",
-                                filename,
-                                linenumber);
+  emberSerialGuaranteedPrintf(EMBER_ASSERT_SERIAL_PORT,
+                              "\r\n[ASSERT:%p:%d]\r\n",
+                              filename,
+                              linenumber);
   #endif
 
   #if defined (__ICCARM__)
-    // With IAR, we can use the special fault mechanism to preserve more assert
-    //  information for display after a crash
-    halInternalAssertFault(filename, linenumber);
+  // With IAR, we can use the special fault mechanism to preserve more assert
+  //  information for display after a crash
+  halInternalAssertFault(filename, linenumber);
   #else
-    // Other toolchains don't handle the inline assembly correctly, so
-    // we just call the internal reset
-    halResetInfo.crash.data.assertInfo.file = filename;
-    halResetInfo.crash.data.assertInfo.line = linenumber;
-    halInternalSysReset(RESET_CRASH_ASSERT);
+  // Other toolchains don't handle the inline assembly correctly, so
+  // we just call the internal reset
+  halResetInfo.crash.data.assertInfo.file = filename;
+  halResetInfo.crash.data.assertInfo.line = linenumber;
+  halInternalSysReset(RESET_CRASH_ASSERT);
   #endif
 }
 
 // Returns the bytes used in the main stack area.
 static uint32_t halInternalGetMainStackBytesUsed(uint32_t *p)
 {
-  for ( ; p < (uint32_t *)_CSTACK_SEGMENT_END; p++) {
+  for (; p < (uint32_t *)_CSTACK_SEGMENT_END; p++) {
     if (*p != STACK_FILL_VALUE) {
       break;
     }
@@ -128,7 +125,7 @@ uint16_t halInternalCrashHandler(void)
 #else
   // No IABR on Cortex-M0+
   uint32_t icsr_reg = (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) >= 16 ? (SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) : 0;
-  if(icsr_reg > 0) {
+  if (icsr_reg > 0) {
     uint64_t activeVector = 1 << (icsr_reg - 16);
     c->intActive.word[0] = (uint32_t) (activeVector & 0xFFFFFFFF);
     c->intActive.word[1] = (activeVector >> 32) & 0xFFFFFFFF;
@@ -152,7 +149,7 @@ uint16_t halInternalCrashHandler(void)
 
   // If we're running FreeRTOS and this is a process stack then add
   // extra diagnostic information
-  if(freeRTOS && (c->LR & 4)) {
+  if (freeRTOS && (c->LR & 4)) {
     // FreeRTOS doesn't provide the diagnostic functions we need
     // so for now just lie to get some diagnostics
     // stackBottom = (uint32_t*)xTaskGetCurrentTaskStackBottom();
@@ -167,18 +164,18 @@ uint16_t halInternalCrashHandler(void)
   }
 
   // If the stack pointer is valid, read and save the stacked PC and xPSR
-  if ( (sp >= stackBottom)
-       && (sp <= (stackTop - 8)) ) {
+  if ((sp >= stackBottom)
+      && (sp <= (stackTop - 8))) {
     sp += 6; // Skip over R0,R1,R2,R3,R12,LR
     c->PC = *sp++;
     c->xPSR.word = *sp++;
 
     // See if fault was due to a failed assert. This is indicated by
     // a usage fault caused by executing a reserved instruction.
-   if ( c->icsr.bits.VECTACTIVE == USAGE_FAULT_VECTOR_INDEX &&
-        ((void *)c->PC >= (void*)_TEXT_SEGMENT_BEGIN) &&
-        ((void *)c->PC < (void*)_TEXT_SEGMENT_END) &&
-        *(uint16_t *)(c->PC) == ASSERT_USAGE_OPCODE ) {
+    if ( c->icsr.bits.VECTACTIVE == USAGE_FAULT_VECTOR_INDEX
+         && ((void *)c->PC >= (void*)_TEXT_SEGMENT_BEGIN)
+         && ((void *)c->PC < (void*)_TEXT_SEGMENT_END)
+         && *(uint16_t *)(c->PC) == ASSERT_USAGE_OPCODE ) {
       // Copy halInternalAssertFailed() arguments into data member specific
       // to asserts.
       c->data.assertInfo.file = (const char *)c->R0;
@@ -193,7 +190,7 @@ uint16_t halInternalCrashHandler(void)
 #endif
       reason = RESET_CRASH_ASSERT;
     }
-  // If a bad stack pointer, PC and xPSR to 0 to indicate they are not known.
+    // If a bad stack pointer, PC and xPSR to 0 to indicate they are not known.
   } else {
     c->PC = 0;
     c->xPSR.word = 0;
@@ -219,14 +216,14 @@ uint16_t halInternalCrashHandler(void)
   // (since we're in Thumb mode).
   for (i = 0, s = stackTop; s > sEnd; ) {
     data = *(--s);
-    if ( ((void *)data >= (void*)_TEXT_SEGMENT_BEGIN) &&
-         ((void *)data < (void*)_TEXT_SEGMENT_END) &&
-         (data & 1) ) {
+    if (((void *)data >= (void*)_TEXT_SEGMENT_BEGIN)
+        && ((void *)data < (void*)_TEXT_SEGMENT_END)
+        && (data & 1)) {
       // Only record the first occurrence of a return - other copies could
       // have been in registers that then were pushed.
       for (j = 0; j < NUM_RETURNS; j++) {
         if (c->returns[j] == data) {
-            break;
+          break;
         }
       }
       if (j != NUM_RETURNS) {
@@ -234,7 +231,7 @@ uint16_t halInternalCrashHandler(void)
       }
       // Save the return in the returns array managed as a circular buffer.
       // This keeps only the last NUM_RETURNS in the event that there are more.
-      i = i ? i-1 : NUM_RETURNS - 1;
+      i = i ? i - 1 : NUM_RETURNS - 1;
       c->returns[i] = data;
     }
   }
@@ -243,7 +240,7 @@ uint16_t halInternalCrashHandler(void)
   while (i--) {
     data = c->returns[0];
     for (j = 0; j < NUM_RETURNS - 1; j++ ) {
-      c->returns[j] = c->returns[j+1];
+      c->returns[j] = c->returns[j + 1];
     }
     c->returns[NUM_RETURNS - 1] = data;
   }
@@ -251,36 +248,36 @@ uint16_t halInternalCrashHandler(void)
   // Read the highest priority active exception to get reason for fault
   activeException = c->icsr.bits.VECTACTIVE;
   switch (activeException) {
-  // case NMI_VECTOR_INDEX:
-  //   if (INT_NMIFLAG_REG & INT_NMICLK24M_MASK) {
-  //     reason = RESET_FATAL_CRYSTAL;
-  //   } else if (INT_NMIFLAG_REG & INT_NMIWDOG_MASK) {
-  //     reason = RESET_WATCHDOG_CAUGHT;
-  //   }
-  //   break;
-  case HARD_FAULT_VECTOR_INDEX:
-    reason = RESET_FAULT_HARD;
-    break;
-  case MEMORY_FAULT_VECTOR_INDEX:
-    reason = RESET_FAULT_MEM;
-    break;
-  case BUS_FAULT_VECTOR_INDEX:
-    reason = RESET_FAULT_BUS;
-    break;
-  case USAGE_FAULT_VECTOR_INDEX:
-    // make sure we didn't already identify the usage fault as an assert
-    if (reason == RESET_FAULT_UNKNOWN) {
-      reason = RESET_FAULT_USAGE;
-    }
-    break;
-  case DEBUG_MONITOR_VECTOR_INDEX:
-    reason = RESET_FAULT_DBGMON;
-    break;
-  default:
-    if (activeException && (activeException < VECTOR_TABLE_LENGTH) ) {
-      reason = RESET_FAULT_BADVECTOR;
-    }
-    break;
+    // case NMI_VECTOR_INDEX:
+    //   if (INT_NMIFLAG_REG & INT_NMICLK24M_MASK) {
+    //     reason = RESET_FATAL_CRYSTAL;
+    //   } else if (INT_NMIFLAG_REG & INT_NMIWDOG_MASK) {
+    //     reason = RESET_WATCHDOG_CAUGHT;
+    //   }
+    //   break;
+    case HARD_FAULT_VECTOR_INDEX:
+      reason = RESET_FAULT_HARD;
+      break;
+    case MEMORY_FAULT_VECTOR_INDEX:
+      reason = RESET_FAULT_MEM;
+      break;
+    case BUS_FAULT_VECTOR_INDEX:
+      reason = RESET_FAULT_BUS;
+      break;
+    case USAGE_FAULT_VECTOR_INDEX:
+      // make sure we didn't already identify the usage fault as an assert
+      if (reason == RESET_FAULT_UNKNOWN) {
+        reason = RESET_FAULT_USAGE;
+      }
+      break;
+    case DEBUG_MONITOR_VECTOR_INDEX:
+      reason = RESET_FAULT_DBGMON;
+      break;
+    default:
+      if (activeException && (activeException < VECTOR_TABLE_LENGTH)) {
+        reason = RESET_FAULT_BADVECTOR;
+      }
+      break;
   }
   return reason;
 }
