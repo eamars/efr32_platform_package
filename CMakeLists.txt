@@ -52,8 +52,8 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.10/app/util/common"
 		"${CMAKE_CURRENT_SOURCE_DIR}/protocol/zigbee_5.10/app/framework/plugin/interpan"
 
-        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.3/ble_stack/inc/common"
-        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.3/ble_stack/inc/soc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.4/ble_stack/inc/common"
+        "${CMAKE_CURRENT_SOURCE_DIR}/protocol/bluetooth_2.4/ble_stack/inc/soc"
 
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform"
 		"${CMAKE_CURRENT_SOURCE_DIR}/platform/base"

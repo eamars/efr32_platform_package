@@ -238,8 +238,9 @@ enum test_packet_type
     test_pkt_prbs9                                               = 0x0,
     test_pkt_11110000                                            = 0x1,
     test_pkt_10101010                                            = 0x2,
-    test_pkt_carrier                                             = 0x3,
-    test_pkt_pn9                                                 = 0x4
+    test_pkt_carrier_deprecated                                  = 0x3,
+    test_pkt_pn9                                                 = 0xfd,
+    test_pkt_carrier                                             = 0xfe
 };
 
 enum test_phy

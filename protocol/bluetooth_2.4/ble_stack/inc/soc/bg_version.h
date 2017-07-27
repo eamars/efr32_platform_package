@@ -5,7 +5,7 @@
 
 #define BG_VERSION_MAJOR 2
 #define BG_VERSION_MINOR 4
-#define BG_VERSION_PATCH 0
-#define BG_VERSION_BUILD 2328
+#define BG_VERSION_PATCH 1
+#define BG_VERSION_BUILD 2394
 
 #endif
