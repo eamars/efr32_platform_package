@@ -14,7 +14,7 @@ MEMORY
 {
 	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 384K
 	SIMEE (rx) : ORIGIN = 0x000FE000, LENGTH = 8K
-	RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
+	RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 24K
 }
 
 /* Linker script to place sections and symbol values. Should be used together
@@ -256,16 +256,8 @@ SECTIONS
         __HeapLimit = .;
     } > RAM
 
-    /* Fill the gap between the end of load data and end of flash region */
-    .dummy :
-    {
-        . = ORIGIN(FLASH) + LENGTH(FLASH);
-        __zstack_end__ = . ;
-    } > FLASH
-
-	/* Set stack top to end of RAM, and stack limit move down by
-   	* size of stack_dummy section */
-	__StackTop = ORIGIN(RAM) + LENGTH(RAM);
+    __zstack_text_end__ = ORIGIN(FLASH) + LENGTH(FLASH);
+    __zstack_ram_end__ = ORIGIN(RAM) + LENGTH(RAM);
 
 	/* Check if FLASH usage exceeds FLASH size */
 	ASSERT( (LENGTH(FLASH) - 0x4) > (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
