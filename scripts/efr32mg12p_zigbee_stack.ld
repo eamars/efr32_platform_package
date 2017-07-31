@@ -49,7 +49,7 @@ MEMORY
  *   __Vectors_End
  *   __Vectors_Size
  */
-ENTRY(Reset_Handler)
+ENTRY(ZStackInit)
 
 SECTIONS
 {
@@ -255,6 +255,13 @@ SECTIONS
         KEEP(*(.heap*))
         __HeapLimit = .;
     } > RAM
+
+    /* Fill the gap between the end of load data and end of flash region */
+    .dummy :
+    {
+        . = ORIGIN(FLASH) + LENGTH(FLASH);
+        __zstack_end__ = . ;
+    } > FLASH
 
 	/* Set stack top to end of RAM, and stack limit move down by
    	* size of stack_dummy section */
