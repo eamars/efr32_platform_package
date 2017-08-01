@@ -128,7 +128,7 @@ SECTIONS
 	__etext = .;
 
 	/* Simulated ROM space, placed at lma and loaded to 0xfe000 */
-	.NVM_SIMEE 0xfe000 (NOLOAD) : AT(__etext)
+	.NVM_SIMEE 0xfe000 :
 	{
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
@@ -139,10 +139,10 @@ SECTIONS
 	} > FLASH
 
 	/* End of load address of SIMEE */
-	__load_stop_simee = LOADADDR(.NVM_SIMEE) + SIZEOF(.NVM_SIMEE);
+	/* __load_stop_simee = LOADADDR(.NVM_SIMEE) + SIZEOF(.NVM_SIMEE); */
 
 	/* RAM segment */
-	OVERLAY 0x20000000 : AT (__load_stop_simee)
+	OVERLAY 0x20000000 : AT (__etext)
 	{
 		.EMHEAP
 		{
