@@ -52,15 +52,18 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
-  .loader :
-  {
-    KEEP(*(.loader))
-  } >FLASH
+    .LOADER ORIGIN(FLASH) + 0x0 :
+	{
+		KEEP(*(.loader*));
+	} > FLASH
 
-  . = ALIGN(4);
+	.VECTORS ORIGIN(FLASH) + 0x100 :
+    {
+        KEEP(*(.vectors));
+    } > FLASH
+
   .text :
   {
-    KEEP(*(.vectors))
     __end__ = .;
 
     *(.text*)
@@ -143,7 +146,10 @@ SECTIONS
   .data : AT (__etext)
   {
     __data_start__ = .;
-    KEEP(*(.dynamic_vectors))
+
+    . = ALIGN(256);
+    KEEP(*(.dynamic_vectors));
+
     *(.data*)
     . = ALIGN (4);
     *(.ram)
@@ -185,14 +191,15 @@ SECTIONS
     *(COMMON)
     . = ALIGN(4);
     __bss_end__ = .;
+
+    __end__ = .;
+    end = __end__;
+    _end = __end__;
   } > RAM
 
   .heap (COPY):
   {
     __HeapBase = .;
-    __end__ = .;
-    end = __end__;
-    _end = __end__;
     KEEP(*(.heap*))
     __HeapLimit = .;
   } > RAM
