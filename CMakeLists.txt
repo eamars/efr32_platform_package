@@ -16,6 +16,12 @@ SET(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -gdwarf-2 -mcpu=cortex-m4 -m
 # DEBUG LD FLAGS
 SET(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -mthumb -Wl,--no-wchar-size-warning,--no-enum-size-warning -gdwarf-2 -mcpu=cortex-m4 -mfpu=fpv4-sp-d16")
 
+SET(BOARD_SPECIFIC_INCLUDE_DIRECTORY
+		${BOARD_SPECIFIC_INCLUDE_DIRECTORY}
+		${CMAKE_CURRENT_SOURCE_DIR}/bsp/common
+		${CMAKE_CURRENT_SOURCE_DIR}/bsp/board
+		)
+
 SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${TARGET_SPECIFIC_INCLUDE_DIRECTORY}"
 
@@ -26,12 +32,6 @@ SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY
 		"${CMAKE_CURRENT_SOURCE_DIR}/rail/inc"
 		"${CMAKE_CURRENT_SOURCE_DIR}/efr32mg12p"
 		"${CMAKE_CURRENT_SOURCE_DIR}/common"
-		)
-
-SET(BOARD_SPECIFIC_INCLUDE_DIRECTORY
-		${BOARD_SPECIFIC_INCLUDE_DIRECTORY}
-		${CMAKE_CURRENT_SOURCE_DIR}/bsp/common
-		${CMAKE_CURRENT_SOURCE_DIR}/bsp/board
 		)
 
 # include essential driver headers
@@ -46,6 +46,7 @@ ADD_SUBDIRECTORY(emdrv)
 ADD_SUBDIRECTORY(middleware)
 ADD_SUBDIRECTORY(freertos)
 ADD_SUBDIRECTORY(common)
+ADD_SUBDIRECTORY(drivers)
 
 # build sam4s library
 ADD_LIBRARY(${LIB_NAME} ${EFR32_SRC})
@@ -58,6 +59,7 @@ ADD_DEPENDENCIES(${LIB_NAME}
 		middleware
 		freertos
 		common
+		drivers
 		)
 
 TARGET_LINK_LIBRARIES(${LIB_NAME}
@@ -68,6 +70,7 @@ TARGET_LINK_LIBRARIES(${LIB_NAME}
 		middleware
 		freertos
 		common
+		drivers
 		)
 
 # set those variables visible to parents
