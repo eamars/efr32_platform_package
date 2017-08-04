@@ -16,15 +16,6 @@ void reboot_to_bootloader(bool reboot_now)
 
 }
 
-/**
- * Reboot to any given region on FLASH
- * @param region @see bootloader.h
- */
-void reboot_to_region(bootloader_partition_t partition, bool reboot_now)
-{
-
-}
-
 void reboot_to_addr(uint32_t vtor_addr, bool reboot_now)
 {
 
