@@ -77,8 +77,9 @@ extern "C" {
 #endif
 
 void reboot_to_bootloader(bool reboot_now);
-
 void reboot_to_addr(uint32_t vtor_addr, bool reboot_now);
+
+void branch_to_addr(uint32_t vtor_addr);
 
 
 #ifdef __cplusplus

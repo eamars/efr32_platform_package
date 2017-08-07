@@ -54,6 +54,7 @@ SECTIONS
 {
     .LOADER ORIGIN(FLASH) + 0x0 :
 	{
+	    KEEP(*(.tiny_loader*));
 		KEEP(*(.loader*));
 	} > FLASH
 
@@ -138,9 +139,11 @@ SECTIONS
 
   __etext = .;
 
-  .crashinfo (NOLOAD) :
+  .crashinfo :
   {
+    __CRASHINFO__begin = . ;
     . += 256;
+    __CRASHINFO__end = . ;
   } > RAM
 
   .data : AT (__etext)
@@ -212,9 +215,17 @@ SECTIONS
     KEEP(*(.stack*))
   } > RAM
 
+  /* Simulated GPBR section */
+  .simgpbr ORIGIN(RAM) + LENGTH(RAM) - 18 :
+  {
+    __SIMGPBR__begin = . ;
+    . += 18;
+    __SIMGPBR__end = . ;
+  } > RAM
+
   /* Set stack top to end of RAM, and stack limit move down by
    * size of stack_dummy section */
-  __StackTop = ORIGIN(RAM) + LENGTH(RAM);
+  __StackTop = ORIGIN(RAM) + LENGTH(RAM) - 18;
   __StackLimit = __StackTop - SIZEOF(.stack_dummy);
   PROVIDE(__stack = __StackTop);
 
