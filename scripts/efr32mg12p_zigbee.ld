@@ -58,13 +58,12 @@ SECTIONS
 	.LOADER 0x0 :
 	{
 		KEEP(*(.tiny_loader*));
-
 		KEEP(*(.loader*));
 	} > FLASH
 
 	.VECTORS 0x100 :
 	{
-		KEEP(*(.vectors));
+		KEEP(*(.header));
 	} > FLASH
 
 	.text :
