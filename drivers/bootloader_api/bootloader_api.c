@@ -1,19 +1,20 @@
 /**
- * @file bootloader.c
+ * @file bootloader_api.c
  * @brief Bootloader calls that is used to integrate with other applications
  * @author Ran Bao
  * @date March, 2017
  */
+
 #include <stdbool.h>
-#include <platform/bootloader/api/btl_reset_info.h>
-#include "bootloader_api.h"
 
 #include "em_device.h"
 
 #include "btl_reset.h"
 #include "btl_reset_info.h"
 
-#include "simgpbr.h"
+#include "bootloader_api.h"
+#include "application_header.h"
+
 
 extern uint32_t __CRASHINFO__begin;
 
@@ -88,26 +89,24 @@ void reboot_to_bootloader(bool reboot_now)
 	NVIC_SystemReset();
 }
 
-void reboot_to_addr(uint32_t vtor_addr, bool reboot_now)
+void reboot_to_addr(uint32_t app_addr, bool reboot_now)
 {
 	// set field in reset info indicates that we want to boot to application
 	// map reset cause structure to the begin of crash info memory
-	BootloaderResetCause_t * reset_cause = (BootloaderResetCause_t *) &__CRASHINFO__begin;
+	ExtendedBootloaderResetCause_t * reset_cause = (ExtendedBootloaderResetCause_t *) &__CRASHINFO__begin;
 
-	reset_cause->signature = BOOTLOADER_RESET_SIGNATURE_VALID;
-	reset_cause->reason = BOOTLOADER_RESET_REASON_GO;
+	reset_cause->basicResetCause.signature = BOOTLOADER_RESET_SIGNATURE_VALID;
+	reset_cause->basicResetCause.reason = BOOTLOADER_RESET_REASON_GO;
 
 	// store the address that we want to run
-	if (!simgbpr_is_valid())
+	reset_cause->app_signature = APP_SIGNATURE;
+	reset_cause->app_addr = app_addr;
+
+	if (reboot_now)
 	{
-		simgpbr_rebuild();
+		// software reset, SRAM is retained
+		NVIC_SystemReset();
 	}
-
-	simgpbr_set(0UL, 1UL);
-	simgpbr_set(1UL, vtor_addr);
-
-	// software reset
-	NVIC_SystemReset();
 }
 
 void branch_to_addr(uint32_t vtor_addr)

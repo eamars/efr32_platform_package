@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 #include "simgpbr.h"
 
 #define SIMGPBR_MAGIC_NUM_1 0x52d98c18
@@ -47,6 +48,8 @@ bool simgbpr_is_valid(void)
 
 uint32_t simgpbr_get(uint32_t index)
 {
+	assert(index < SIMGPBR_DATA_SIZE);
+
 	// map struct to memory address
 	SIMGPBR_t * simgpbr = (SIMGPBR_t *) &__SIMGPBR__begin;
 
@@ -55,6 +58,8 @@ uint32_t simgpbr_get(uint32_t index)
 
 void simgpbr_set(uint32_t index, uint32_t data)
 {
+	assert(index < SIMGPBR_DATA_SIZE);
+
 	// map struct to memory address
 	SIMGPBR_t * simgpbr = (SIMGPBR_t *) &__SIMGPBR__begin;
 

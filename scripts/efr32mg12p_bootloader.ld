@@ -60,7 +60,7 @@ SECTIONS
 
 	.VECTORS ORIGIN(FLASH) + 0x100 :
     {
-        KEEP(*(.vectors));
+        KEEP(*(.header));
     } > FLASH
 
   .text :
@@ -215,17 +215,9 @@ SECTIONS
     KEEP(*(.stack*))
   } > RAM
 
-  /* Simulated GPBR section */
-  .simgpbr ORIGIN(RAM) + LENGTH(RAM) - 18 :
-  {
-    __SIMGPBR__begin = . ;
-    . += 18;
-    __SIMGPBR__end = . ;
-  } > RAM
-
   /* Set stack top to end of RAM, and stack limit move down by
    * size of stack_dummy section */
-  __StackTop = ORIGIN(RAM) + LENGTH(RAM) - 18;
+  __StackTop = ORIGIN(RAM) + LENGTH(RAM);
   __StackLimit = __StackTop - SIZEOF(.stack_dummy);
   PROVIDE(__stack = __StackTop);
 
