@@ -17,6 +17,7 @@
 
 
 extern uint32_t __CRASHINFO__begin;
+extern uint32_t __AAT__end;
 
 /**
  * @brief Execute interrupt vector table aligned at specific address
@@ -172,7 +173,7 @@ BlBaseType halBootloaderGetType(void)
 
 uint16_t halGetBootloaderVersion(void)
 {
-	return 0x23;
+	return BL_PROTO_VER;
 }
 
 EmberStatus halAppBootloaderInstallNewImage(void)
@@ -198,4 +199,35 @@ uint16_t halAppBootloaderImageIsValid(void)
 uint8_t halAppBootloaderReadRawStorage(uint32_t address, uint8_t *data, uint16_t len)
 {
 	return EEPROM_SUCCESS;
+}
+
+
+void emberAfOtaClientVersionInfoCallback(EmberAfOtaImageId* currentImageInfo,
+                                         uint16_t* hardwareVersion)
+{
+	// This callback is fired when a new query and download is initiated.
+	// The application will fill in the currentImageInfo with their manufacturer
+	// ID, image type ID, and current software version number to use in that
+	// query. The deviceSpecificFileEui64 can be ignored.
+
+	// It may be necessary to dynamically determine this data by talking to
+	// another device, as is the case with a host talking to an NCP device.
+
+	// The OTA client plugin will cache the data returned by this callback
+	// and use it for the subsequent transaction, which could be a query
+	// or a query and download.  Therefore it is possible to instruct the
+	// OTA client cluster code to query about multiple images by returning
+	// different values.
+
+	// read version number from application header
+	ExtendedApplicationHeaderTable_t * header = (ExtendedApplicationHeaderTable_t *) &__AAT__begin;
+
+	memset(currentImageInfo, 0, sizeof(EmberAfOtaImageId));
+	currentImageInfo->manufacturerId  = EMBER_AF_MANUFACTURER_CODE;
+	currentImageInfo->imageTypeId     = EMBER_AF_PLUGIN_OTA_CLIENT_POLICY_IMAGE_TYPE_ID;
+	currentImageInfo->firmwareVersion = header->app_version;
+
+	if (hardwareVersion != NULL) {
+		*hardwareVersion = 0xFFFF;
+	}
 }

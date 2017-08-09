@@ -63,7 +63,9 @@ SECTIONS
 
 	.VECTORS 0x100 :
 	{
-		KEEP(*(.header));
+	    __AAT__begin = . ;
+		KEEP(*(.aat));
+		__AAT__end = . ;
 	} > FLASH
 
 	.text :
