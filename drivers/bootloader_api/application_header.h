@@ -57,12 +57,14 @@ typedef struct
 	union
 	{
 		uint32_t app_version;
+
+		// TODO: the byte order is important!
 		struct __attribute__ ((packed))
 		{
-			uint8_t app_version_major;
-			uint8_t app_version_minor;
-			uint8_t app_version_patch;
 			uint8_t app_version_build;
+			uint8_t app_version_patch;
+			uint8_t app_version_minor;
+			uint8_t app_version_major;
 		};
 	};
 

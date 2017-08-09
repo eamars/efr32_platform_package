@@ -17,7 +17,7 @@
 
 
 extern uint32_t __CRASHINFO__begin;
-extern uint32_t __AAT__end;
+extern uint32_t __AAT__begin;
 
 /**
  * @brief Execute interrupt vector table aligned at specific address
