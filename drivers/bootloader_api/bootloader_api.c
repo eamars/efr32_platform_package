@@ -120,6 +120,7 @@ void branch_to_addr(uint32_t vtor_addr)
  * @brief As required by ZStack OTA plugins
  */
 #include PLATFORM_HEADER
+#include "app/framework/include/af.h"
 #include "stack/include/ember-types.h"
 #include "stack/include/error.h"
 #include "hal/hal.h"
@@ -142,6 +143,7 @@ uint8_t halAppBootloaderInit(void)
 
 uint8_t halAppBootloaderWriteRawStorage(uint32_t address, const uint8_t *data, uint16_t len)
 {
+	emberAfCorePrint("WriteAddr: %ld, Len: %d\r\n", address, len);
 	return EEPROM_SUCCESS;
 }
 
@@ -198,6 +200,7 @@ uint16_t halAppBootloaderImageIsValid(void)
 
 uint8_t halAppBootloaderReadRawStorage(uint32_t address, uint8_t *data, uint16_t len)
 {
+	emberAfCorePrint("ReadAddr: %ld, Len: %d\r\n", address, len);
 	return EEPROM_SUCCESS;
 }
 
@@ -205,20 +208,6 @@ uint8_t halAppBootloaderReadRawStorage(uint32_t address, uint8_t *data, uint16_t
 void emberAfOtaClientVersionInfoCallback(EmberAfOtaImageId* currentImageInfo,
                                          uint16_t* hardwareVersion)
 {
-	// This callback is fired when a new query and download is initiated.
-	// The application will fill in the currentImageInfo with their manufacturer
-	// ID, image type ID, and current software version number to use in that
-	// query. The deviceSpecificFileEui64 can be ignored.
-
-	// It may be necessary to dynamically determine this data by talking to
-	// another device, as is the case with a host talking to an NCP device.
-
-	// The OTA client plugin will cache the data returned by this callback
-	// and use it for the subsequent transaction, which could be a query
-	// or a query and download.  Therefore it is possible to instruct the
-	// OTA client cluster code to query about multiple images by returning
-	// different values.
-
 	// read version number from application header
 	ExtendedApplicationHeaderTable_t * header = (ExtendedApplicationHeaderTable_t *) &__AAT__begin;
 
