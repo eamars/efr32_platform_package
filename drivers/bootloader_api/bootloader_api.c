@@ -25,7 +25,7 @@ extern uint32_t __CRASHINFO__begin;
 __attribute__ ((naked))
 static void _binary_exec(void *addr __attribute__((unused)))
 {
-	asm volatile (
+	__ASM (
 		"mov r1, r0\n"			// r0 is the first argument
 		"ldr r0, [r1, #4]\n"	// load the address of static interrupt vector with offset 4 (Reset_handler)
 		"ldr sp, [r1]\n"		// reset stack pointer
@@ -112,4 +112,90 @@ void reboot_to_addr(uint32_t app_addr, bool reboot_now)
 void branch_to_addr(uint32_t vtor_addr)
 {
 	binary_exec((void *) vtor_addr);
+}
+
+
+/**
+ * @brief As required by ZStack OTA plugins
+ */
+#include PLATFORM_HEADER
+#include "stack/include/ember-types.h"
+#include "stack/include/error.h"
+#include "hal/hal.h"
+#include "hal/micro/cortexm3/common/bootloader-common.h"
+#include "hal/micro/cortexm3/common/ebl.h"
+#include "hal/micro/cortexm3/memmap.h"
+
+// Common bootloader interface
+#include "api/btl_interface.h"
+
+const HalEepromInformationType * halAppBootloaderInfo(void)
+{
+	return NULL;
+}
+
+uint8_t halAppBootloaderInit(void)
+{
+	return EEPROM_SUCCESS;
+}
+
+uint8_t halAppBootloaderWriteRawStorage(uint32_t address, const uint8_t *data, uint16_t len)
+{
+	return EEPROM_SUCCESS;
+}
+
+bool halAppBootloaderStorageBusy(void)
+{
+	return false;
+}
+
+void halAppBootloaderShutdown(void)
+{
+
+}
+
+
+BlExtendedType halBootloaderGetInstalledType(void)
+{
+	return BL_EXT_TYPE_NULL;
+}
+
+void halGetExtendedBootloaderVersion(uint32_t* getEmberVersion, uint32_t* customerVersion)
+{
+
+}
+
+BlBaseType halBootloaderGetType(void)
+{
+	return BL_TYPE_STANDALONE;
+}
+
+uint16_t halGetBootloaderVersion(void)
+{
+	return 0x23;
+}
+
+EmberStatus halAppBootloaderInstallNewImage(void)
+{
+	while (1)
+	{
+
+	}
+
+	return EMBER_ERR_FATAL;
+}
+
+void halAppBootloaderImageIsValidReset(void)
+{
+
+}
+
+uint16_t halAppBootloaderImageIsValid(void)
+{
+	return BL_IMAGE_IS_VALID_CONTINUE;
+}
+
+uint8_t halAppBootloaderReadRawStorage(uint32_t address, uint8_t *data, uint16_t len)
+{
+	return EEPROM_SUCCESS;
 }
