@@ -14,12 +14,14 @@
 #include "irq.h"
 
 #define APPLICATION_HEADER_VERSION_1 0x1UL
+#define BASIC_HEADER_VERSION 0x0001
+#define EXTENDED_HEADER_VERSION 0x00000001UL
 
 #define APP_ADDRESS_TABLE_TYPE          (0x0AA7)
 #define BOOTLOADER_ADDRESS_TABLE_TYPE   (0x0BA7)
 #define RAMEXE_ADDRESS_TABLE_TYPE       (0x0EA7)
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
 	uint32_t * stack_top;
 	irq_handler_t reset_handler;
@@ -36,7 +38,7 @@ typedef struct
 	irq_handler_t * vector_table;
 } BasicApplicationHeaderTable_t;
 
-typedef struct
+typedef struct __attribute__ ((packed))
 {
 	// Same structure for every application header shared across Silicon Labs product
 	BasicApplicationHeaderTable_t basic_application_header_table;
