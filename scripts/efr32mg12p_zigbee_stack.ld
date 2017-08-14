@@ -12,7 +12,8 @@
 
 MEMORY
 {
-	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 384K
+	FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 512K
+	SIMEE (r)  : ORIGIN = 0x000FE000, LENGTH = 8K
 	RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 64K
 }
 
@@ -129,7 +130,7 @@ SECTIONS
 	__etext = .;
 
 	/* Simulated ROM space, placed at lma and loaded to 0xfe000 */
-	.NVM_SIMEE : AT(__etext)
+	.NVM_SIMEE 0xfe000 : AT(__etext)
 	{
 	    SIMEE$$Base = . ;
 		__SIMEE__begin = . ;
@@ -137,7 +138,7 @@ SECTIONS
 		KEEP(*(.simee));
 		__SIMEE__end = . ;
 		SIMEE$$Limit = . ;
-	} > FLASH
+	} > SIMEE
 
 	/* End of load address of SIMEE */
 	__load_stop_simee = LOADADDR(.NVM_SIMEE) + SIZEOF(.NVM_SIMEE);
@@ -190,9 +191,6 @@ SECTIONS
 	{
 		__data_start__ = .;
 
-		. = ALIGN(256);
-		KEEP(*(.dynamic_vectors))
-
 		. = ALIGN(4);
 		*(.textrw .textrw*);
 
@@ -232,9 +230,8 @@ SECTIONS
 		/* All data end */
 		__data_end__ = .;
 	} > RAM
-	__load_start_data = LOADADDR(.data);
 
-	__rom_end__ = __etext + SIZEOF(.data);
+	__load_start_data = LOADADDR(.data);
 
 	.bss :
 	{
