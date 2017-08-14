@@ -8,6 +8,7 @@ GET_FILENAME_COMPONENT(LIB_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 SET(ENABLED_DRIVERS
 		bootloader_api
 		stack_struct
+		dynamic_callbacks
 		# simgbpr
 		)
 

@@ -16,11 +16,17 @@
 #define SIMGPBR_SIZE (SIMGPBR_DATA_SIZE + SIMGPBR_MAGIC_DATA_SIZE)
 #define SIMGPBR_WORD_LEN 4
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void simgpbr_rebuild(void);
 bool simgbpr_is_valid(void);
 uint32_t simgpbr_get(uint32_t index);
 void simgpbr_set(uint32_t index, uint32_t data);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
