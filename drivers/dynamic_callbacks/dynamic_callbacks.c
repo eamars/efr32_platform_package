@@ -39,7 +39,7 @@ bool dynamic_callback_table_set(char * key, void * callback)
 
 		// otherwise find the next empty slot
 		if (next_empty == DYNAMIC_CALLBACK_TABLE_ENTRIES &&     // cond1: empty slot is not found
-				node->key == 0)                                 // cond2: empty key
+				node->key[0] == 0)                                 // cond2: empty key
 		{
 			// found next empty slot
 			next_empty = i;
