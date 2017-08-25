@@ -21,6 +21,12 @@
 #define BOOTLOADER_ADDRESS_TABLE_TYPE   (0x0BA7)
 #define RAMEXE_ADDRESS_TABLE_TYPE       (0x0EA7)
 
+/**
+ * @brief Symbols from Linker
+ */
+extern uint32_t __AAT__begin;
+extern uint32_t __AAT__end;
+
 typedef struct __attribute__ ((packed))
 {
 	uint32_t * stack_top;
