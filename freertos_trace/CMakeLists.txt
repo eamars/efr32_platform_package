@@ -1,0 +1,33 @@
+# configuration for target
+MESSAGE("ENTER ${CMAKE_CURRENT_SOURCE_DIR}")
+
+# get module name
+GET_FILENAME_COMPONENT(LIB_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+
+# append freertos include to target specific include directory
+SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY ${TARGET_SPECIFIC_INCLUDE_DIRECTORY} "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+# include configuration for the board
+INCLUDE_DIRECTORIES("${BOARD_SPECIFIC_INCLUDE_DIRECTORY}")
+
+# include target specific directory
+INCLUDE_DIRECTORIES("${TARGET_SPECIFIC_INCLUDE_DIRECTORY}")
+
+
+# Collect all source file
+FILE (GLOB FREERTOS_TRACE_SRC *.c)
+
+# build library for peripherals
+ADD_LIBRARY(${LIB_NAME}
+        ${FREERTOS_TRACE_SRC}
+        )
+
+# ADD_DEPENDENCIES(${LIB_NAME})
+# TARGET_LINK_LIBRARIES(${LIB_NAME})
+
+# forward include header files
+SET(TARGET_SPECIFIC_INCLUDE_DIRECTORY ${TARGET_SPECIFIC_INCLUDE_DIRECTORY} PARENT_SCOPE)
+
+# append current library to the linked libraries
+SET(LINKED_LIBRARIES ${LINKED_LIBRARIES} ${LIB_NAME})
+SET(LINKED_LIBRARIES ${LINKED_LIBRARIES} PARENT_SCOPE)

@@ -45,8 +45,10 @@ ADD_SUBDIRECTORY(emlib)
 ADD_SUBDIRECTORY(emdrv)
 ADD_SUBDIRECTORY(middleware)
 ADD_SUBDIRECTORY(freertos)
+ADD_SUBDIRECTORY(freertos_trace)
 ADD_SUBDIRECTORY(common)
 ADD_SUBDIRECTORY(drivers)
+
 
 # build sam4s library
 ADD_LIBRARY(${LIB_NAME} ${EFR32_SRC})
@@ -58,6 +60,7 @@ ADD_DEPENDENCIES(${LIB_NAME}
 		emdrv
 		middleware
 		freertos
+		freertos_trace
 		common
 		drivers
 		)
@@ -69,6 +72,7 @@ TARGET_LINK_LIBRARIES(${LIB_NAME}
 		emdrv
 		middleware
 		freertos
+		freertos_trace
 		common
 		drivers
 		)
