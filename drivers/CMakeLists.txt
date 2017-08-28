@@ -9,6 +9,7 @@ SET(ENABLED_DRIVERS
 		bootloader_api
 		stack_struct
 		dynamic_callbacks
+		short_poll_manager
 		# simgbpr
 		)
 
