@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#define SHORT_POLL_HIGH_FREQ_MS 200
+#define SHORT_POLL_HIGH_FREQ_MS 100
 
 typedef struct
 {
