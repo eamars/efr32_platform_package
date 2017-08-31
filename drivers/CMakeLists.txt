@@ -10,6 +10,7 @@ SET(ENABLED_DRIVERS
 		stack_struct
 		dynamic_callbacks
 		short_poll_manager
+		i2cdrv
 		# simgbpr
 		)
 
