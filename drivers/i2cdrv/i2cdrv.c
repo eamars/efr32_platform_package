@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stddef.h>
+#include <emlib/inc/em_i2c.h>
 
 #include "em_i2c.h"
 
@@ -14,6 +15,9 @@
 
 #include "i2cdrv.h"
 #include "pio_defs.h"
+
+
+#define I2CDRV_TRANSFER_TIMEOUT 300000
 
 
 extern bool halConfigRegisterGpio(GPIO_Port_TypeDef port,
@@ -168,6 +172,7 @@ const pio_map_t i2c_sda_map[] = {
 
 void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 {
+	// do not reinitialize the I2C driver
 	if (obj->initialized)
 	{
 		return;
@@ -266,7 +271,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	// apply configuration to low level driver
 	I2C_Init(obj->base, &i2c_init_config);
 
-#ifdef ENABLE_I2C_DMA
+#if I2C_USE_DMA == 1
 	// initialize DMA controller
 	DMADRV_Init();
 
@@ -276,5 +281,120 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	ret = DMADRV_AllocateChannel(&obj->rx_dma_ch, NULL);
 	assert(ret != ECODE_OK);
 #endif
+
+#if I2C_USE_MUTEX == 1
+	// initialize mutex
+	obj->access_mutex = xSemaphoreCreateMutex();
+	assert(obj->access_mutex);
+#endif
+
+
 	obj->initialized = true;
+}
+
+
+static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_TransferSeq_TypeDef * seq)
+{
+	I2C_TransferReturn_TypeDef ret;
+	uint32_t timeout_cnt = I2CDRV_TRANSFER_TIMEOUT;
+
+	assert(obj);
+	assert(seq);
+
+#if I2C_USE_MUTEX == 1
+	// enter mutex section
+	xSemaphoreTake(obj->access_mutex, portMAX_DELAY);
+#endif
+
+	// start transfer
+	ret = I2C_TransferInit(obj->base, seq);
+
+	// wait until finish, error or timeout
+	while (ret == i2cTransferInProgress && timeout_cnt--)
+	{
+		ret = I2C_Transfer(obj->base);
+	}
+
+#if I2C_USE_MUTEX == 1
+	// exit mutex section
+	xSemaphoreGive(obj->access_mutex);
+#endif
+
+	return ret;
+}
+
+
+I2C_TransferReturn_TypeDef i2cdrv_master_write(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length)
+{
+	I2C_TransferSeq_TypeDef seq;
+	I2C_TransferReturn_TypeDef ret;
+
+	// setup transfer parameters
+	seq.addr = slave_addr;
+	seq.flags = I2C_FLAG_WRITE;
+	seq.buf[0].data = buffer;
+	seq.buf[0].len = length;
+
+	ret = i2cdrv_transfer_pri(obj, &seq);
+
+	return ret;
+}
+
+I2C_TransferReturn_TypeDef i2cdrv_master_read(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length)
+{
+	I2C_TransferSeq_TypeDef seq;
+	I2C_TransferReturn_TypeDef ret;
+
+	// setup transfer parameters
+	seq.addr = slave_addr;
+	seq.flags = I2C_FLAG_READ;
+	seq.buf[0].data = buffer;
+	seq.buf[0].len = length;
+
+	ret = i2cdrv_transfer_pri(obj, &seq);
+
+	return ret;
+}
+
+I2C_TransferReturn_TypeDef i2cdrv_master_write_read(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * write_buffer,
+                                                    uint16_t write_length, uint8_t * read_buffer, uint16_t read_length)
+{
+	I2C_TransferSeq_TypeDef seq;
+	I2C_TransferReturn_TypeDef ret;
+
+	// setup transfer parameters
+	seq.addr = slave_addr;
+	seq.flags = I2C_FLAG_WRITE_READ;
+	seq.buf[0].data = write_buffer;
+	seq.buf[0].len = write_length;
+	seq.buf[1].data = read_buffer;
+	seq.buf[1].len = read_length;
+
+	ret = i2cdrv_transfer_pri(obj, &seq);
+
+	return ret;
+}
+
+I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, uint8_t *buffer, uint16_t length)
+{
+	I2C_TransferSeq_TypeDef seq;
+	I2C_TransferReturn_TypeDef ret;
+
+	// copy internal address from register to SRAM
+	static uint8_t internal_address_on_stack = 0;
+	internal_address_on_stack = internal_addr;
+
+	// setup transfer parameters
+	seq.addr = slave_addr;
+	seq.flags = I2C_FLAG_WRITE_WRITE;
+
+	// internal address can be implemented by setting first byte followed by slave address
+	seq.buf[0].data = &internal_address_on_stack;
+	seq.buf[0].len = 1;
+	seq.buf[1].data = buffer;
+	seq.buf[1].len = length;
+
+	ret = i2cdrv_transfer_pri(obj , &seq);
+
+	return ret;
 }
