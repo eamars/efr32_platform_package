@@ -13,16 +13,35 @@
 #define _CAT24C16_I2C_ADDR_SHIFT 3
 #define CAT24C16_I2C_BASE_ADDR (_CAT24C16_I2C_ADDR_MASK << _CAT24C16_I2C_ADDR_SHIFT)
 
+/**
+ * @brief Enable load switch for EEPROM chip
+ *
+ * Note: Need to invoke @see eeprom_cat24c16_ack_polling_pri before writing to the chip
+ * @param obj EEPROM device object
+ */
 static void eeprom_cat24c16_enable_pri(eeprom_cat24c16_t * obj)
 {
 	GPIO_PinOutSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable));
 }
 
+/**
+ * @brief Disable load switch for EEPROM chip
+ *
+ * Note: Need to invoke @eeprom_cat24c16_ack_polling_pri to make sure the write cycle is complete before shutting
+ * down EEPROM chip
+ * @param obj EEPROM device object
+ */
 static void eeprom_cat24c16_disable_pri(eeprom_cat24c16_t * obj)
 {
 	GPIO_PinOutClear(PIO_PORT(obj->enable), PIO_PIN(obj->enable));
 }
 
+/**
+ * @brief Calculate slave address and internal register address with given data address
+ * @param eeprom_addr input eeprom data address
+ * @param slave_addr output i2c slave address
+ * @param internal_addr output internal register address
+ */
 static void eeprom_cat24c16_get_address_pri(uint16_t eeprom_addr, uint8_t *slave_addr, uint8_t *internal_addr)
 {
 	/**
@@ -51,6 +70,11 @@ static void eeprom_cat24c16_get_address_pri(uint16_t eeprom_addr, uint8_t *slave
 	*internal_addr = (uint8_t) section_reg_index;
 }
 
+/**
+ * @brief Polling the I2C slave until ACK is received
+ * @param obj EEPROM device object
+ * @param slave_addr i2c slave address
+ */
 static void eeprom_cat24c16_ack_polling_pri(eeprom_cat24c16_t * obj, uint8_t slave_addr)
 {
 	I2C_TransferReturn_TypeDef ret;
@@ -79,7 +103,7 @@ void eeprom_cat24c16_init(eeprom_cat24c16_t * obj, i2cdrv_t * i2c_device, pio_t 
 	GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 0);
 }
 
-void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, uint8_t buffer[EEPROM_CAT24C16_BLOCK_SIZE])
+void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, void * buffer)
 {
 	I2C_TransferReturn_TypeDef ret;
 
@@ -154,7 +178,7 @@ void eeprom_cat24c16_byte_write(eeprom_cat24c16_t * obj, uint16_t location, uint
 	assert(ret == i2cTransferDone);
 }
 
-void eeprom_cat24c16_selective_read(eeprom_cat24c16_t * obj, uint16_t location, uint16_t length, uint8_t * buffer)
+void eeprom_cat24c16_selective_read(eeprom_cat24c16_t * obj, uint16_t location, uint16_t length, void * buffer)
 {
 	I2C_TransferReturn_TypeDef ret;
 

@@ -33,11 +33,38 @@ typedef struct
 extern "C" {
 #endif
 
-
+/**
+ * @brief Initialize CAT24C16 EEPROM chip
+ * @param obj EEPROM device object
+ * @param i2c_device I2C device instance
+ * @param enable load switch pin
+ */
 void eeprom_cat24c16_init(eeprom_cat24c16_t * obj, i2cdrv_t * i2c_device, pio_t enable);
-void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, uint8_t buffer[EEPROM_CAT24C16_BLOCK_SIZE]);
+
+/**
+ * @brief Write a page to EEPROM chip, block if writing is not complete. The page size is defined in @see EEPROM_CAT24C16_PAGE_SIZE
+ * @param obj EEPROM device object
+ * @param location internal address of EEPROM (0-2048 bytes)
+ * @param buffer pointer to the data
+ */
+void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, void * buffer);
+
+/**
+ * @brief Write a byte to EEPROM chip
+ * @param obj EEPROM device object
+ * @param location internal address of EEPROM (0-2048 bytes)
+ * @param byte 1 byte data
+ */
 void eeprom_cat24c16_byte_write(eeprom_cat24c16_t * obj, uint16_t location, uint8_t byte);
-void eeprom_cat24c16_selective_read(eeprom_cat24c16_t * obj, uint16_t location, uint16_t length, uint8_t buffer[EEPROM_CAT24C16_BLOCK_SIZE]);
+
+/**
+ * @brief Read data from random location in EEPROM
+ * @param obj EEPROM device object
+ * @param location internal address of EEPROM (0-2048 bytes)
+ * @param length number of bytes expected to read
+ * @param buffer received data buffer
+ */
+void eeprom_cat24c16_selective_read(eeprom_cat24c16_t * obj, uint16_t location, uint16_t length, void * buffer);
 
 #ifdef __cplusplus
 }
