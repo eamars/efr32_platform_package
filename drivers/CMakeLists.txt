@@ -11,6 +11,7 @@ SET(ENABLED_DRIVERS
 		dynamic_callbacks
 		short_poll_manager
 		i2cdrv
+		eeprom_cat24c16
 		# simgbpr
 		)
 
