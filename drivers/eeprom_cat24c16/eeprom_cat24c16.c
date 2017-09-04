@@ -102,6 +102,9 @@ void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, uint
 	// start transferring data
 	ret = i2cdrv_master_write_iaddr(obj->i2c_device, slave_addr, internal_addr, buffer, EEPROM_CAT24C16_BLOCK_SIZE);
 
+	// poll the eeprom until chip is ready (allow data to be written into the memory)
+	eeprom_cat24c16_ack_polling_pri(obj, slave_addr);
+
 	// transfer complete
 	eeprom_cat24c16_disable_pri(obj);
 
@@ -136,6 +139,9 @@ void eeprom_cat24c16_byte_write(eeprom_cat24c16_t * obj, uint16_t location, uint
 
 	// start transferring data
 	ret = i2cdrv_master_write_iaddr(obj->i2c_device, slave_addr, internal_addr, &byte, 1);
+
+	// poll the eeprom until chip is ready (allow data to be written into the memory)
+	eeprom_cat24c16_ack_polling_pri(obj, slave_addr);
 
 	// transfer complete
 	eeprom_cat24c16_disable_pri(obj);
