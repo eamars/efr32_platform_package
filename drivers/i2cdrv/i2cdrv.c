@@ -23,7 +23,7 @@ extern bool halConfigRegisterGpio(GPIO_Port_TypeDef port,
 
 
 /************I2C SCL***********/
-const pio_map_t i2c_scl_map[] = {
+static const pio_map_t i2c_scl_map[] = {
 		/* I2C0 */
 		{PA1,  I2C0,  0},
 		{PA2,  I2C0,  1},
@@ -93,7 +93,7 @@ const pio_map_t i2c_scl_map[] = {
 };
 
 /************I2C SDA***********/
-const pio_map_t i2c_sda_map[] = {
+static const pio_map_t i2c_sda_map[] = {
 		/* I2C0 */
 		{PA0,  I2C0,  0},
 		{PA1,  I2C0,  1},
@@ -283,7 +283,13 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	obj->initialized = true;
 }
 
-
+/**
+ * @brief Transfer data over i2c bus
+ * @param obj i2c device object
+ * @param seq determines transfer direction, data, etc...
+ * @param timeout_cnt counter for timeout, 0 indicates no timeout
+ * @return
+ */
 static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_TransferSeq_TypeDef * seq, uint32_t timeout_cnt)
 {
 	I2C_TransferReturn_TypeDef ret;
@@ -326,7 +332,7 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 }
 
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length, uint32_t timeout_cnt)
+I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -342,7 +348,7 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t sl
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length, uint32_t timeout_cnt)
+I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -358,8 +364,8 @@ I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t sla
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * write_buffer,
-                                                    uint16_t write_length, uint8_t * read_buffer, uint16_t read_length,
+I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * write_buffer,
+                                                    uint16_t write_length, void * read_buffer, uint16_t read_length,
                                                     uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
@@ -378,7 +384,7 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, uint8_t *buffer, uint16_t length, uint32_t timeout_cnt)
+I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, void *buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -388,7 +394,7 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint
 	seq.flags = I2C_FLAG_WRITE_WRITE;
 
 	// internal address can be implemented by setting first byte followed by slave address
-	seq.buf[0].data = &internal_addr;
+	seq.buf[0].data = &internal_addr; // internal address is only used in current function scope
 	seq.buf[0].len = 1;
 	seq.buf[1].data = buffer;
 	seq.buf[1].len = length;
