@@ -9,7 +9,6 @@ SET(ENABLED_DRIVERS
 		bootloader_api
 		stack_struct
 		dynamic_callbacks
-		short_poll_manager
 		i2cdrv
 		eeprom_cat24c16
 		# simgbpr
