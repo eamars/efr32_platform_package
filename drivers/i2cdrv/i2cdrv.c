@@ -4,20 +4,14 @@
 #include <stdint.h>
 #include <assert.h>
 #include <stddef.h>
-#include <emlib/inc/em_i2c.h>
-
-#include "em_i2c.h"
 
 #include "em_device.h"
 #include "em_cmu.h"
-
-#include "dmadrv.h"
+#include "em_i2c.h"
+#include "ecode.h"
 
 #include "i2cdrv.h"
 #include "pio_defs.h"
-
-
-#define I2CDRV_TRANSFER_TIMEOUT 300000
 
 
 extern bool halConfigRegisterGpio(GPIO_Port_TypeDef port,
@@ -179,21 +173,29 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	}
 
 	Ecode_t ret;
+	CMU_Clock_TypeDef clock;
+
+	GPIO_Port_TypeDef sda_port;
+	uint8_t sda_pin;
+	GPIO_Port_TypeDef scl_port;
+	uint8_t scl_pin;
+
+	I2C_TypeDef *scl_base, *sda_base, *base;
+	uint32_t sda_loc, scl_loc;
 
 	// sanity check
 	assert(obj);
 
-	CMU_Clock_TypeDef clock = cmuClock_HFPER;
+	// store pins
+	obj->sda = sda;
+	obj->scl = scl;
+	obj->enable = enable;
 
 	// read port and pins
-	GPIO_Port_TypeDef sda_port = PIO_PORT(sda);
-	uint8_t sda_pin = PIO_PIN(sda);
-	GPIO_Port_TypeDef scl_port = PIO_PORT(scl);
-	uint8_t scl_pin = PIO_PIN(scl);
-
-	// find base and location
-	I2C_TypeDef *scl_base, *sda_base, *base;
-	uint32_t sda_loc, scl_loc;
+	sda_port = PIO_PORT(sda);
+	sda_pin = PIO_PIN(sda);
+	scl_port = PIO_PORT(scl);
+	scl_pin = PIO_PIN(scl);
 
 	// find base and pin location
 	find_pin_function(i2c_scl_map, scl, (void **) &scl_base, &scl_loc);
@@ -215,7 +217,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 			clock = cmuClock_I2C0;
 			break;
 		case (uint32_t) I2C1:
-			clock = cmuClock_I2C0;
+			clock = cmuClock_I2C1;
 			break;
 		default:
 			assert(false);
@@ -226,25 +228,13 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	CMU_ClockEnable(clock, true);
 
 	// set open drain ports for sda and scl
-	halConfigRegisterGpio(sda_port, sda_pin,
-	                      gpioModeWiredAndPullUp, 1,
-	                      gpioModeWiredAndPullUp, 1
-	                      // gpioModeDisabled, 0
-	);
-	halConfigRegisterGpio(scl_port, scl_pin,
-	                      gpioModeWiredAndPullUp, 1,
-	                      gpioModeWiredAndPullUp, 1
-	                      // gpioModeDisabled, 0
-	);
+	GPIO_PinModeSet(sda_port, sda_pin, gpioModeWiredAndPullUp, 1);
+	GPIO_PinModeSet(scl_port, scl_pin, gpioModeWiredAndPullUp, 1);
 
 	// set enable pin output high when idle and output low when sleep, if enable pin is used
 	if (enable != NC)
 	{
-		halConfigRegisterGpio(PIO_PORT(enable), PIO_PIN(enable),
-		                      gpioModePushPull, 1,
-		                      gpioModePushPull, 1
-		                      // gpioModePushPull, 0
-		);
+		GPIO_PinModeSet(PIO_PORT(enable), PIO_PIN(enable), gpioModePushPull, 1);
 	}
 
 	// reset all slaves
@@ -293,13 +283,19 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 }
 
 
-static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_TransferSeq_TypeDef * seq)
+static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_TransferSeq_TypeDef * seq, uint32_t timeout_cnt)
 {
 	I2C_TransferReturn_TypeDef ret;
-	uint32_t timeout_cnt = I2CDRV_TRANSFER_TIMEOUT;
+	bool is_timeout_enabled = (timeout_cnt != 0);
 
 	assert(obj);
 	assert(seq);
+
+	// shift addr to the left by one
+	// Layout details, A = address bit, X = don't care bit (set to 0):
+	// 7 bit address - use format AAAA AAAX.
+	// 10 bit address - use format XXXX XAAX AAAA AAAA
+	seq->addr <<= 1;
 
 #if I2C_USE_MUTEX == 1
 	// enter mutex section
@@ -310,8 +306,13 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 	ret = I2C_TransferInit(obj->base, seq);
 
 	// wait until finish, error or timeout
-	while (ret == i2cTransferInProgress && timeout_cnt--)
+	while (ret == i2cTransferInProgress)
 	{
+		if (is_timeout_enabled)
+		{
+			timeout_cnt -= 1;
+			if (timeout_cnt == 0) break;
+		}
 		ret = I2C_Transfer(obj->base);
 	}
 
@@ -324,7 +325,7 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 }
 
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length)
+I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -335,12 +336,12 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write(i2cdrv_t *obj, uint8_t slave_addr
 	seq.buf[0].data = buffer;
 	seq.buf[0].len = length;
 
-	ret = i2cdrv_transfer_pri(obj, &seq);
+	ret = i2cdrv_transfer_pri(obj, &seq, timeout_cnt);
 
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_read(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length)
+I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -351,13 +352,14 @@ I2C_TransferReturn_TypeDef i2cdrv_master_read(i2cdrv_t *obj, uint8_t slave_addr,
 	seq.buf[0].data = buffer;
 	seq.buf[0].len = length;
 
-	ret = i2cdrv_transfer_pri(obj, &seq);
+	ret = i2cdrv_transfer_pri(obj, &seq, timeout_cnt);
 
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write_read(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * write_buffer,
-                                                    uint16_t write_length, uint8_t * read_buffer, uint16_t read_length)
+I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t * write_buffer,
+                                                    uint16_t write_length, uint8_t * read_buffer, uint16_t read_length,
+                                                    uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
@@ -370,31 +372,27 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_read(i2cdrv_t *obj, uint8_t slave
 	seq.buf[1].data = read_buffer;
 	seq.buf[1].len = read_length;
 
-	ret = i2cdrv_transfer_pri(obj, &seq);
+	ret = i2cdrv_transfer_pri(obj, &seq, timeout_cnt);
 
 	return ret;
 }
 
-I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, uint8_t *buffer, uint16_t length)
+I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, uint8_t *buffer, uint16_t length, uint32_t timeout_cnt)
 {
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
-
-	// copy internal address from register to SRAM
-	static uint8_t internal_address_on_stack = 0;
-	internal_address_on_stack = internal_addr;
 
 	// setup transfer parameters
 	seq.addr = slave_addr;
 	seq.flags = I2C_FLAG_WRITE_WRITE;
 
 	// internal address can be implemented by setting first byte followed by slave address
-	seq.buf[0].data = &internal_address_on_stack;
+	seq.buf[0].data = &internal_addr;
 	seq.buf[0].len = 1;
 	seq.buf[1].data = buffer;
 	seq.buf[1].len = length;
 
-	ret = i2cdrv_transfer_pri(obj , &seq);
+	ret = i2cdrv_transfer_pri(obj , &seq, timeout_cnt);
 
 	return ret;
 }
