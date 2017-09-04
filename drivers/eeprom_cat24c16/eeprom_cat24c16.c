@@ -3,6 +3,8 @@
 //
 #include <assert.h>
 #include <stdint.h>
+#include <stddef.h>
+
 #include "i2cdrv.h"
 
 #include "eeprom_cat24c16.h"

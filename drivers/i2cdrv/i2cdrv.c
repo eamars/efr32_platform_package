@@ -180,7 +180,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	GPIO_Port_TypeDef scl_port;
 	uint8_t scl_pin;
 
-	I2C_TypeDef *scl_base, *sda_base, *base;
+	I2C_TypeDef *scl_base, *sda_base;
 	uint32_t sda_loc, scl_loc;
 
 	// sanity check
@@ -202,16 +202,13 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	find_pin_function(i2c_sda_map, sda, (void **) &sda_base, &sda_loc);
 
 	assert(scl_base == sda_base);
-
-	// assign base
-	base = scl_base;
-	assert(base);
+	assert(scl_base);
 
 	// acquire base
-	obj->base = base;
+	obj->base = scl_base;
 
 	// acquire clock
-	switch((uint32_t) base)
+	switch((uint32_t) scl_base)
 	{
 		case (uint32_t) I2C0:
 			clock = cmuClock_I2C0;
@@ -224,8 +221,11 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 			break;
 	}
 
-	// enable the clock
+	// enable I2C clock
 	CMU_ClockEnable(clock, true);
+
+	// enable GPIO clock
+	CMU_ClockEnable(cmuClock_GPIO, true);
 
 	// set open drain ports for sda and scl
 	GPIO_PinModeSet(sda_port, sda_pin, gpioModeWiredAndPullUp, 1);
@@ -234,6 +234,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	// set enable pin output high when idle and output low when sleep, if enable pin is used
 	if (enable != NC)
 	{
+		// set I2C pull up source
 		GPIO_PinModeSet(PIO_PORT(enable), PIO_PIN(enable), gpioModePushPull, 1);
 	}
 
