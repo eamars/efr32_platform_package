@@ -1,5 +1,8 @@
 /**
  * @brief Pin definitions for EFR32
+ * @file pio_defs.h
+ * @author ARM Mbed, Ran Bao
+ * @date Aug, 2017
  */
 
 #ifndef PIO_DEFS

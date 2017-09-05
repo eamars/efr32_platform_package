@@ -7,9 +7,10 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <assert.h>
+
 #include "stack32.h"
 #include "stack_private.h"
+#include "drv_debug.h"
 
 /**
  * @brief Initialize stack structure
@@ -18,12 +19,12 @@
  */
 void stack32_init(stack_t *stack, size_t size)
 {
-	assert(stack);
+	DRV_ASSERT(stack);
 
 	// dynamically allocate memory for the stack
 	stack->array = malloc(sizeof(uint32_t) * size);
 
-	assert(stack->array);
+	DRV_ASSERT(stack->array);
 
 	// initialize stack pointer
 	stack->stack_pointer = 0;
@@ -37,8 +38,8 @@ void stack32_init(stack_t *stack, size_t size)
  */
 void stack32_del(stack_t *stack)
 {
-	assert(stack);
-	assert(stack->array);
+	DRV_ASSERT(stack);
+	DRV_ASSERT(stack->array);
 
 	free(stack->array);
 }
@@ -50,11 +51,11 @@ void stack32_del(stack_t *stack)
  */
 void stack32_push(stack_t *stack, uint32_t data)
 {
-	assert(stack);
+	DRV_ASSERT(stack);
 
 	uint32_t * ptr = (uint32_t *) stack->array;
 
-	assert(stack->stack_pointer < stack->size);
+	DRV_ASSERT(stack->stack_pointer < stack->size);
 
 	ptr[stack->stack_pointer++] = data;
 }
@@ -66,11 +67,11 @@ void stack32_push(stack_t *stack, uint32_t data)
  */
 uint32_t stack32_pop(stack_t *stack)
 {
-	assert(stack);
+	DRV_ASSERT(stack);
 
 	uint32_t * ptr = (uint32_t *) stack->array;
 
-	assert((stack->stack_pointer - 1) >= 0);
+	DRV_ASSERT((stack->stack_pointer - 1) >= 0);
 
 	return ptr[--stack->stack_pointer];
 }
@@ -82,11 +83,11 @@ uint32_t stack32_pop(stack_t *stack)
  */
 uint32_t stack32_top(stack_t *stack)
 {
-	assert(stack);
+	DRV_ASSERT(stack);
 
 	uint32_t * ptr = (uint32_t *) stack->array;
 
-	assert((stack->stack_pointer - 1) >= 0);
+	DRV_ASSERT((stack->stack_pointer - 1) >= 0);
 
 	return ptr[stack->stack_pointer - 1];
 }

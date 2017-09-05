@@ -1,11 +1,16 @@
-//
-// Created by Ran Bao on 1/09/17.
-//
+/**
+ * @brief Implementation of I2C EEPROM driver
+ * @file eeprom_cat24c16.h
+ * @author Ran Bao
+ * @date Sept, 2017
+ */
 
 #ifndef EEPROM_CAT24C16_H
 #define EEPROM_CAT24C16_H
 
 #include <stdint.h>
+#include <stdbool.h>
+
 #include "i2cdrv.h"
 #include "pio_defs.h"
 
@@ -22,6 +27,7 @@ typedef struct
 {
 	i2cdrv_t * i2c_device;
 	pio_t enable;
+	bool initialized;
 
 #if EEPROM_CAT24C16_USE_MUTEX == 1
 	SemaphoreHandle_t access_mutex;
@@ -40,6 +46,12 @@ extern "C" {
  * @param enable load switch pin
  */
 void eeprom_cat24c16_init(eeprom_cat24c16_t * obj, i2cdrv_t * i2c_device, pio_t enable);
+
+/**
+ * @brief Deinitialize CAT24C16 EEPROM
+ * @param obj EEPROM device object
+ */
+void eeprom_cat24c16_deinit(eeprom_cat24c16_t * obj);
 
 /**
  * @brief Write a page to EEPROM chip, block if writing is not complete. The page size is defined in @see EEPROM_CAT24C16_PAGE_SIZE

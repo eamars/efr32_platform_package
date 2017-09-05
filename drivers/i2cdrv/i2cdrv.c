@@ -1,8 +1,11 @@
-//
-// Created by Ran Bao on 31/08/17.
-//
+/**
+ * @brief Implementation of I2C driver on EFR32 devices
+ * @file i2cdrv.c
+ * @author Ran Bao
+ * @date Sept, 2017
+ */
+
 #include <stdint.h>
-#include <assert.h>
 #include <stddef.h>
 
 #include "em_device.h"
@@ -12,15 +15,7 @@
 
 #include "i2cdrv.h"
 #include "pio_defs.h"
-
-
-extern bool halConfigRegisterGpio(GPIO_Port_TypeDef port,
-                                  uint8_t pin,
-                                  GPIO_Mode_TypeDef pUpMode,
-                                  uint8_t pUpOut,
-                                  GPIO_Mode_TypeDef pDownMode,
-                                  uint8_t pDownOut);
-
+#include "drv_debug.h"
 
 /************I2C SCL***********/
 static const pio_map_t i2c_scl_map[] = {
@@ -88,7 +83,6 @@ static const pio_map_t i2c_scl_map[] = {
 		{PK1, I2C1, 29},
 		{PK2, I2C1, 30},
 		{PA6, I2C1, 31},
-
 		{NC  , 0   , 0}
 };
 
@@ -158,14 +152,14 @@ static const pio_map_t i2c_sda_map[] = {
 		{PK0, I2C1, 29},
 		{PK1, I2C1, 30},
 		{PK2, I2C1, 31},
-
-		/* Not connected */
-
 		{NC  , 0   , 0}
 };
 
 void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 {
+	// sanity check
+	DRV_ASSERT(obj);
+
 	// do not reinitialize the I2C driver
 	if (obj->initialized)
 	{
@@ -180,11 +174,8 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	GPIO_Port_TypeDef scl_port;
 	uint8_t scl_pin;
 
-	I2C_TypeDef *scl_base, *sda_base;
-	uint32_t sda_loc, scl_loc;
-
-	// sanity check
-	assert(obj);
+	I2C_TypeDef *scl_base = NULL, *sda_base = NULL;
+	uint32_t sda_loc = 0, scl_loc = 0;
 
 	// store pins
 	obj->sda = sda;
@@ -201,8 +192,8 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	find_pin_function(i2c_scl_map, scl, (void **) &scl_base, &scl_loc);
 	find_pin_function(i2c_sda_map, sda, (void **) &sda_base, &sda_loc);
 
-	assert(scl_base == sda_base);
-	assert(scl_base);
+	DRV_ASSERT(scl_base == sda_base);
+	DRV_ASSERT(scl_base);
 
 	// acquire base
 	obj->base = scl_base;
@@ -217,7 +208,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 			clock = cmuClock_I2C1;
 			break;
 		default:
-			assert(false);
+			DRV_ASSERT(false);
 			break;
 	}
 
@@ -231,7 +222,6 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	GPIO_PinModeSet(sda_port, sda_pin, gpioModeWiredAndPullUp, 1);
 	GPIO_PinModeSet(scl_port, scl_pin, gpioModeWiredAndPullUp, 1);
 
-	// set enable pin output high when idle and output low when sleep, if enable pin is used
 	if (enable != NC)
 	{
 		// set I2C pull up source
@@ -248,7 +238,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	// set pin routing location
 	obj->base->ROUTEPEN = (I2C_ROUTEPEN_SDAPEN | I2C_ROUTEPEN_SCLPEN);
 	obj->base->ROUTELOC0 = (sda_loc << _I2C_ROUTELOC0_SDALOC_SHIFT) |
-			(scl_loc << _I2C_ROUTELOC0_SCLLOC_SHIFT);
+	                       (scl_loc << _I2C_ROUTELOC0_SCLLOC_SHIFT);
 
 	// setup low level driver
 	I2C_Init_TypeDef i2c_init_config;
@@ -279,9 +269,117 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	assert(obj->access_mutex);
 #endif
 
-
 	obj->initialized = true;
 }
+
+void i2cdrv_deinit(i2cdrv_t *obj)
+{
+	// disable i2c peripheral
+	i2cdrv_disable(obj);
+
+	// reset pin location
+	obj->base->ROUTEPEN = (I2C_ROUTEPEN_SCLPEN_DEFAULT | I2C_ROUTEPEN_SDAPEN_DEFAULT);
+	obj->base->ROUTELOC0 = (I2C_ROUTELOC0_SCLLOC_DEFAULT | I2C_ROUTELOC0_SDALOC_DEFAULT);
+
+	// revoke variables
+	obj->sda = NC;
+	obj->scl = NC;
+	obj->enable = NC;
+	obj->base = NULL;
+	obj->initialized = false;
+
+#if I2C_USE_DMA == 1
+	DMADRV_DeInit();
+#endif
+
+#if I2C_USE_MUTEX == 1
+	// initialize mutex
+	assert(obj->access_mutex);
+	xSemaphoreDelete(obj->access_mutex);
+
+	obj->access_mutex = NULL;
+#endif
+}
+
+
+void i2cdrv_enable(i2cdrv_t *obj)
+{
+	DRV_ASSERT(obj);
+	DRV_ASSERT(obj->initialized);
+
+	// acquire clock
+	CMU_Clock_TypeDef clock;
+	switch((uint32_t) obj->base)
+	{
+		case (uint32_t) I2C0:
+			clock = cmuClock_I2C0;
+			break;
+		case (uint32_t) I2C1:
+			clock = cmuClock_I2C1;
+			break;
+		default:
+			DRV_ASSERT(false);
+			break;
+	}
+
+	// enable I2C clock
+	CMU_ClockEnable(clock, true);
+
+	// enable GPIO clock
+	CMU_ClockEnable(cmuClock_GPIO, true);
+
+	// set open drain ports for sda and scl
+	GPIO_PinModeSet(PIO_PORT(obj->sda), PIO_PIN(obj->sda), gpioModeWiredAndPullUp, 1);
+	GPIO_PinModeSet(PIO_PORT(obj->scl), PIO_PIN(obj->scl), gpioModeWiredAndPullUp, 1);
+
+	if (obj->enable != NC)
+	{
+		// set I2C pull up source
+		GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 1);
+	}
+
+	// enable I2C engine
+	I2C_Enable(obj->base, true);
+}
+
+
+void i2cdrv_disable(i2cdrv_t *obj)
+{
+	DRV_ASSERT(obj);
+	DRV_ASSERT(obj->initialized);
+
+	// acquire clock
+	CMU_Clock_TypeDef clock;
+	switch((uint32_t) obj->base)
+	{
+		case (uint32_t) I2C0:
+			clock = cmuClock_I2C0;
+			break;
+		case (uint32_t) I2C1:
+			clock = cmuClock_I2C1;
+			break;
+		default:
+			DRV_ASSERT(false);
+			break;
+	}
+
+	// disable I2C clock
+	CMU_ClockEnable(clock, false);
+
+	// disable sda and scl, leave master pull down
+	GPIO_PinModeSet(PIO_PORT(obj->sda), PIO_PIN(obj->sda), gpioModeDisabled, 0);
+	GPIO_PinModeSet(PIO_PORT(obj->scl), PIO_PIN(obj->scl), gpioModeDisabled, 0);
+
+	if (obj->enable != NC)
+	{
+		// set I2C pull up source
+		GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModeDisabled, 0);
+	}
+
+	// disable I2C engine
+	I2C_Enable(obj->base, false);
+}
+
 
 /**
  * @brief Transfer data over i2c bus
@@ -295,12 +393,12 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 	I2C_TransferReturn_TypeDef ret;
 	bool is_timeout_enabled = (timeout_cnt != 0);
 
-	assert(obj);
-	assert(seq);
+	DRV_ASSERT(obj);
+	DRV_ASSERT(seq);
 
 	// shift addr to the left by one
 	// Layout details, A = address bit, X = don't care bit (set to 0):
-	// 7 bit address - use format AAAA AAAX.
+	// 7 bit address - use format AAAA AAAX. (X -> R/W bits)
 	// 10 bit address - use format XXXX XAAX AAAA AAAA
 	seq->addr <<= 1;
 

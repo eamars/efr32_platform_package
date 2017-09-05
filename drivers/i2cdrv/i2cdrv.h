@@ -1,6 +1,9 @@
-//
-// Created by Ran Bao on 31/08/17.
-//
+/**
+ * @brief Implementation of I2C driver on EFR32 devices
+ * @file i2cdrv.h
+ * @author Ran Bao
+ * @date Sept, 2017
+ */
 
 #ifndef I2CDRV_H
 #define I2CDRV_H
@@ -56,6 +59,24 @@ extern "C" {
  * @param enable enable pin
  */
 void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable);
+
+/**
+ * @brief Deinitialize I2C driver
+ * @param obj I2C instance
+ */
+void i2cdrv_deinit(i2cdrv_t *obj);
+
+/**
+ * @brief Enable I2C peripheral
+ * @param obj I2C instance
+ */
+void i2cdrv_enable(i2cdrv_t *obj);
+
+/**
+ * @brief Disable I2C peripheral
+ * @param obj I2C instance
+ */
+void i2cdrv_disable(i2cdrv_t *obj);
 
 /**
  * @brief Initialize a write transfer to I2C slave
