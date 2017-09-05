@@ -199,7 +199,7 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	obj->base = scl_base;
 
 	// acquire clock
-	switch((uint32_t) scl_base)
+	switch((uint32_t) obj->base)
 	{
 		case (uint32_t) I2C0:
 			clock = cmuClock_I2C0;
