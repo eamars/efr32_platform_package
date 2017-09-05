@@ -281,24 +281,23 @@ void i2cdrv_deinit(i2cdrv_t *obj)
 	obj->base->ROUTEPEN = (I2C_ROUTEPEN_SCLPEN_DEFAULT | I2C_ROUTEPEN_SDAPEN_DEFAULT);
 	obj->base->ROUTELOC0 = (I2C_ROUTELOC0_SCLLOC_DEFAULT | I2C_ROUTELOC0_SDALOC_DEFAULT);
 
+#if I2C_USE_DMA == 1
+	DMADRV_DeInit();
+#endif
+
+#if I2C_USE_MUTEX == 1
+	assert(obj->access_mutex);
+	vSemaphoreDelete(obj->access_mutex);
+
+	obj->access_mutex = NULL;
+#endif
+
 	// revoke variables
 	obj->sda = NC;
 	obj->scl = NC;
 	obj->enable = NC;
 	obj->base = NULL;
 	obj->initialized = false;
-
-#if I2C_USE_DMA == 1
-	DMADRV_DeInit();
-#endif
-
-#if I2C_USE_MUTEX == 1
-	// initialize mutex
-	assert(obj->access_mutex);
-	xSemaphoreDelete(obj->access_mutex);
-
-	obj->access_mutex = NULL;
-#endif
 }
 
 
