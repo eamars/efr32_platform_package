@@ -14,12 +14,19 @@
 #include "i2cdrv.h"
 #include "pio_defs.h"
 
-
+/**
+ * @brief Thread safe read/write operation guarded by mutex
+ *
+ * If this module is included in a FreeRTOS working environment, please set EEPROM_CAT24C16_USE_MUTEX to 1 in build script
+ */
 #if EEPROM_CAT24C16_USE_MUTEX == 1
 	#include "FreeRTOS.h"
 	#include "semphr.h"
 #endif
 
+/**
+ * @brief Each page have 16 bytes, as specified in datasheet
+ */
 #define EEPROM_CAT24C16_BLOCK_SIZE 16
 #define EEPROM_CAT24C16_PAGE_SIZE EEPROM_CAT24C16_BLOCK_SIZE
 
