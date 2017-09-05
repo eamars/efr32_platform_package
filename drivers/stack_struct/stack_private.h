@@ -13,8 +13,8 @@
 typedef struct
 {
 	void * array;
-	size_t stack_pointer;
-	size_t size;
+	int32_t stack_pointer;
+	int32_t size;
 } stack_t;
 
 
