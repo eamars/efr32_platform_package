@@ -85,7 +85,7 @@ void i2cdrv_disable(i2cdrv_t *obj);
  * @param buffer data to transmit
  * @param length length of data in bytes
  * @param timeout_cnt timeout counter, 0 for no timeout
- * @return
+ * @return standard I2C errors, defined in @see em_i2c.c
  */
 I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length,
                                                        uint32_t timeout_cnt);
@@ -99,7 +99,7 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t sl
  * @param buffer data to receive
  * @param length expected number of bytes to receive
  * @param timeout_cnt timeout counter, 0 for no timeout
- * @return
+ * @return standard I2C errors, defined in @see em_i2c.c
  */
 I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length,
                                                       uint32_t timeout_cnt);
@@ -119,7 +119,7 @@ I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t sla
  * @param read_buffer data to receive
  * @param read_length expected number of bytes to receive
  * @param timeout_cnt timeout counter, 0 for no timeout
- * @return
+ * @return standard I2C errors, defined in @see em_i2c.c
  */
 I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * write_buffer,
                                                             uint16_t write_length, void * read_buffer, uint16_t read_length,
@@ -135,12 +135,28 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8
  * @param buffer data to transmit
  * @param length length of data in bytes
  * @param timeout_cnt timeout counter, 0 for no timeout
- * @return
+ * @return standard I2C errors, defined in @see em_i2c.c
  */
 I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr,
                                                              void * buffer, uint16_t length, uint32_t timeout_cnt);
 #define i2cdrv_master_write_iaddr(obj, slave_addr, internal_addr, buffer, length) \
 		i2cdrv_master_write_iaddr_timeout((obj), (slave_addr), (internal_addr), (buffer), (length), I2CDRV_DEFAULT_TRANSFER_TIMEOUT)
+
+/**
+ * @brief Initialize a read transfer to slave with internal address specified (required by some i2c slaves)
+ * @param obj I2C instance
+ * @param slave_addr slave address, 7 bit, not shifted
+ * @param internal_addr internal register address
+ * @param buffer data to receive
+ * @param length expected number of bytes to receive
+ * @param timeout_cnt timeout counter, 0 for no timeout
+ * @return standard I2C errors, defined in @see em_i2c.c
+ */
+I2C_TransferReturn_TypeDef i2cdrv_master_read_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr,
+                                                             void * buffer, uint16_t length, uint32_t timeout_cnt);
+#define i2cdrv_master_read_iaddr(obj, slave_addr, internal_addr, buffer, length) \
+		i2cdrv_master_read_iaddr_timeout((obj), (slave_addr), (internal_addr), (buffer), (length), I2CDRV_DEFAULT_TRANSFER_TIMEOUT)
+
 
 #ifdef __cplusplus
 }

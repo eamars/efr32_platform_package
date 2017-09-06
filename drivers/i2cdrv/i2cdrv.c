@@ -500,3 +500,9 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint
 
 	return ret;
 }
+
+I2C_TransferReturn_TypeDef i2cdrv_master_read_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr,
+                                                            void * buffer, uint16_t length, uint32_t timeout_cnt)
+{
+	return i2cdrv_master_write_read_timeout(obj, slave_addr, &internal_addr, 1, buffer, length, timeout_cnt);
+}
