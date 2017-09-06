@@ -11,6 +11,7 @@ SET(ENABLED_DRIVERS
 		dynamic_callbacks
 		i2cdrv
 		eeprom_cat24c16
+		temperature_tmp116
 		# simgbpr
 		)
 
