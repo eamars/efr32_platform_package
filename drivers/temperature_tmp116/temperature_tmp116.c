@@ -6,6 +6,11 @@
  */
 
 #include <stddef.h>
+
+#include "em_device.h"
+#include "em_gpio.h"
+#include "em_cmu.h"
+
 #include "i2cdrv.h"
 #include "temperature_tmp116.h"
 #include "gpiointerrupt.h"
