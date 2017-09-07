@@ -165,27 +165,26 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	                  false, true, true
 	);
 
+	obj->initialized = true;
+
+	// apply default settings
 	// read configuration from sensor
-	uint16_t config = 0;
-	temperature_tmp116_read_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION);
+	temperature_tmp116_pull_config(obj);
 
 	// set default high threshold
 	temperature_tmp116_set_high_limit(obj, TEMPERATURE_TMP116_HIGH_LIMIT_DEFAULT);
 	temperature_tmp116_set_low_limit(obj, TEMPERATURE_TMP116_LOW_LIMIT_DEFAULT);
 
 	// enable alert mode (ALERT is then used to notify when temperature exceeded the threshold)
-	BITS_CLEAR(config, 1 << _TMP116_REG_CONFIGURATION_TNA_SHIFT);
+	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_TNA_SHIFT);
 
 	// set ALERT line active low
-	BITS_CLEAR(config, 1 << _TMP116_REG_CONFIGURATION_POL_SHIFT);
+	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_POL_SHIFT);
 
 	// configure ALERT to represent alert event
-	BITS_CLEAR(config, 1 << _TMP116_REG_CONFIGURATION_DRALERT_SHIFT);
+	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_DRALERT_SHIFT);
 
-
-	float temp = temperature_tmp116_get_high_limit(obj);
-
-	obj->initialized = true;
+	temperature_tmp116_push_config(obj);
 }
 
 void temperature_tmp116_deinit(temperature_tmp116_t * obj)
