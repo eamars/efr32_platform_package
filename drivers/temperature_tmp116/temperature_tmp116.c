@@ -17,8 +17,6 @@
 #include "drv_debug.h"
 #include "bits.h"
 
-#define TMP116_TEMPERATURE_RESOLUTION 0.0078125f
-
 /**
  * @brief Depending on ADD0 configuration, four possible slave address can be configured
  *
