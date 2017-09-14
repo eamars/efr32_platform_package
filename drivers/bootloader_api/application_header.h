@@ -76,6 +76,20 @@ typedef struct __attribute__ ((packed))
 		};
 	};
 
+	// Hardware version
+	union
+	{
+		uint16_t hw_version;
+
+		// TODO: the byte order is important!
+		struct __attribute__ ((packed))
+		{
+			uint8_t hw_version_revision;
+			uint8_t hw_version_product_id;
+		};
+	};
+
+
 	// timestamp for build
 	uint32_t timestamp;
 
