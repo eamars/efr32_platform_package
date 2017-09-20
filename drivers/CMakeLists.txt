@@ -12,6 +12,7 @@ SET(ENABLED_DRIVERS
 		i2cdrv
 		eeprom_cat24c16
 		temperature_tmp116
+		pa_sky66112
 		# simgbpr
 		)
 
