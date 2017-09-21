@@ -51,8 +51,21 @@ void pa_sky66112_set_mode(pa_sky66112_t * obj, pa_mode_t mode)
 	{
 		case PA_SLEEP_MODE_0:
 		{
+			// As specified in datasheet, all controls must be at Vdd or 0v to achieve t the specified sleep current
 			// clear csd
 			GPIO_PinOutClear(PIO_PORT(obj->csd), PIO_PIN(obj->csd));
+
+			// clear cps
+			GPIO_PinOutClear(PIO_PORT(obj->cps), PIO_PIN(obj->cps));
+
+			// clear crx
+			GPIO_PinOutClear(PIO_PORT(obj->crx), PIO_PIN(obj->crx));
+
+			// clear ctx
+			GPIO_PinOutClear(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx));
+
+			// clear chl
+			GPIO_PinOutClear(PIO_PORT(obj->chl), PIO_PIN(obj->chl));
 			break;
 		}
 		case PA_RECEIVE_LNA_MODE:
