@@ -7,6 +7,7 @@
 
 #include "pa_sky66112.h"
 #include "drv_debug.h"
+#include "prs.h"
 #include "em_cmu.h"
 
 void pa_sky66112_init(pa_sky66112_t * obj, pio_t ant_sel, pio_t csd, pio_t cps, pio_t crx, pio_t ctx, pio_t chl)
@@ -32,11 +33,31 @@ void pa_sky66112_init(pa_sky66112_t * obj, pio_t ant_sel, pio_t csd, pio_t cps, 
 	GPIO_PinModeSet(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx), gpioModePushPull, 0);
 	GPIO_PinModeSet(PIO_PORT(obj->chl), PIO_PIN(obj->chl), gpioModePushPull, 0);
 
-	// set operation mode
-	pa_sky66112_set_mode(obj, PA_SLEEP_MODE_0);
-
 	// select antenna
-	pa_sky66112_set_antenna(obj, PA_ANT1);
+	pa_sky66112_set_antenna(obj, PA_ANT2);
+
+	// set default op mode : RXLNA
+	// set csd
+	GPIO_PinOutSet(PIO_PORT(obj->csd), PIO_PIN(obj->csd));
+
+	// clear cps
+	GPIO_PinOutClear(PIO_PORT(obj->cps), PIO_PIN(obj->cps));
+
+	// set crx
+	GPIO_PinOutSet(PIO_PORT(obj->crx), PIO_PIN(obj->crx));
+
+	// clear ctx
+	GPIO_PinOutClear(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx));
+
+	// set chl
+	GPIO_PinOutSet(PIO_PORT(obj->chl), PIO_PIN(obj->chl));
+
+	// configure prs for ctx (0 for RXLNA, 1 for TXHP)
+	halConfigurePrs(3, 14,
+	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SOURCESEL_MASK) >> _PRS_CH_CTRL_SOURCESEL_SHIFT),
+	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+	                false
+	);
 }
 
 
@@ -54,18 +75,6 @@ void pa_sky66112_set_mode(pa_sky66112_t * obj, pa_mode_t mode)
 			// As specified in datasheet, all controls must be at Vdd or 0v to achieve t the specified sleep current
 			// clear csd
 			GPIO_PinOutClear(PIO_PORT(obj->csd), PIO_PIN(obj->csd));
-
-			// clear cps
-			GPIO_PinOutClear(PIO_PORT(obj->cps), PIO_PIN(obj->cps));
-
-			// clear crx
-			GPIO_PinOutClear(PIO_PORT(obj->crx), PIO_PIN(obj->crx));
-
-			// clear ctx
-			GPIO_PinOutClear(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx));
-
-			// clear chl
-			GPIO_PinOutClear(PIO_PORT(obj->chl), PIO_PIN(obj->chl));
 			break;
 		}
 		case PA_RECEIVE_LNA_MODE:
