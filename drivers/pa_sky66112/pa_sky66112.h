@@ -37,6 +37,8 @@ typedef struct
 	pio_t ctx;
 	pio_t chl;
 
+	uint8_t ctx_prs_ch;
+
 	pa_mode_t current_mode;
 	pa_ant_t current_antenna;
 } pa_sky66112_t;
@@ -84,6 +86,20 @@ void pa_sky66112_set_antenna(pa_sky66112_t * obj, pa_ant_t antenna);
  * @return antenna that is currently using (cached version)
  */
 pa_ant_t pa_sky66112_get_antenna(pa_sky66112_t * obj);
+
+/**
+ * @brief Allow Radio hardware directly control PA operating mode
+ * @param obj power amplifier object
+ * @param ctx_prs_ch corresponding PRS channel with CTX
+ * @param ctx_loc internal routing location for PRS with CTX
+ */
+void pa_sky66112_connect_rac(pa_sky66112_t * obj, uint8_t ctx_prs_ch, uint8_t ctx_prs_loc);
+
+/**
+ * @brief Disconnect the Radio and the power amplifier
+ * @param obj power amplifier object
+ */
+void pa_sky66112_disconnect_rac(pa_sky66112_t * obj);
 
 
 #ifdef __cplusplus

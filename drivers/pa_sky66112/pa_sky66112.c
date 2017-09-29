@@ -21,6 +21,7 @@ void pa_sky66112_init(pa_sky66112_t * obj, pio_t ant_sel, pio_t csd, pio_t cps, 
 	obj->crx = crx;
 	obj->ctx = ctx;
 	obj->chl = chl;
+	obj->ctx_prs_ch = 0;
 
 	// enable GPIO clock
 	CMU_ClockEnable(cmuClock_GPIO, true);
@@ -33,31 +34,9 @@ void pa_sky66112_init(pa_sky66112_t * obj, pio_t ant_sel, pio_t csd, pio_t cps, 
 	GPIO_PinModeSet(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx), gpioModePushPull, 0);
 	GPIO_PinModeSet(PIO_PORT(obj->chl), PIO_PIN(obj->chl), gpioModePushPull, 0);
 
-	// select antenna
-	pa_sky66112_set_antenna(obj, PA_ANT2);
-
-	// set default op mode : RXLNA
-	// set csd
-	GPIO_PinOutSet(PIO_PORT(obj->csd), PIO_PIN(obj->csd));
-
-	// clear cps
-	GPIO_PinOutClear(PIO_PORT(obj->cps), PIO_PIN(obj->cps));
-
-	// set crx
-	GPIO_PinOutSet(PIO_PORT(obj->crx), PIO_PIN(obj->crx));
-
-	// clear ctx
-	GPIO_PinOutClear(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx));
-
-	// set chl
-	GPIO_PinOutSet(PIO_PORT(obj->chl), PIO_PIN(obj->chl));
-
-	// configure prs for ctx (0 for RXLNA, 1 for TXHP)
-	halConfigurePrs(3, 14,
-	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SOURCESEL_MASK) >> _PRS_CH_CTRL_SOURCESEL_SHIFT),
-	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
-	                false
-	);
+	// by default the pa enters bypass mode
+	pa_sky66112_set_mode(obj, PA_RECEIVE_BYPASS_MODE);
+	pa_sky66112_set_mode(obj, PA_TRANSMIT_BYPASS_MODE);
 }
 
 
@@ -218,4 +197,63 @@ pa_ant_t pa_sky66112_get_antenna(pa_sky66112_t * obj)
 	return obj->current_antenna;
 }
 
+void pa_sky66112_connect_rac(pa_sky66112_t * obj, uint8_t ctx_prs_ch, uint8_t ctx_prs_loc)
+{
+	DRV_ASSERT(obj);
 
+	obj->ctx_prs_ch = ctx_prs_ch;
+
+	/**
+	 * @brief set default op mode : RXLNA
+	 * 				CSD		CPS		CRX		CTX		CHL
+	 * RX_LNA:		1		0		1		0		X(1)
+	 * TX_HP: 		1		0		X(1)	1		1
+	 *
+	 * CTX is the only GPIO we need to toggle
+	 */
+
+	// set csd
+	GPIO_PinOutSet(PIO_PORT(obj->csd), PIO_PIN(obj->csd));
+
+	// clear cps
+	GPIO_PinOutClear(PIO_PORT(obj->cps), PIO_PIN(obj->cps));
+
+	// set crx
+	GPIO_PinOutSet(PIO_PORT(obj->crx), PIO_PIN(obj->crx));
+
+	// clear ctx
+	GPIO_PinOutClear(PIO_PORT(obj->ctx), PIO_PIN(obj->ctx));
+
+	// set chl
+	GPIO_PinOutSet(PIO_PORT(obj->chl), PIO_PIN(obj->chl));
+
+	/**
+	 * @brief configure PRS for CTX pin
+	 *
+	 * When the radio is about to transmit, CTX is toggled high to enter TRANSMIT_HP_MODE. When done, the CTX is restored
+	 * back to 0, entering RECEIVE_LNA_MODE.
+	 */
+	halConfigurePrs(ctx_prs_ch, ctx_prs_loc,
+	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SOURCESEL_MASK) >> _PRS_CH_CTRL_SOURCESEL_SHIFT),
+	                ((PRS_RAC_PAEN & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+	                false
+	);
+}
+
+/**
+ * @brief Disconnect the Radio and the power amplifier
+ * @param obj power amplifier object
+ */
+void pa_sky66112_disconnect_rac(pa_sky66112_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	// disable prs channel
+	BUS_RegBitWrite(&PRS->ROUTEPEN,
+	                _PRS_ROUTEPEN_CH0PEN_SHIFT + obj->ctx_prs_ch,
+	                0);
+
+	// enter default bypass mode
+	pa_sky66112_set_mode(obj, PA_RECEIVE_BYPASS_MODE);
+	pa_sky66112_set_mode(obj, PA_TRANSMIT_BYPASS_MODE);
+}
