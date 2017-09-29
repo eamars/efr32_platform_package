@@ -7,7 +7,7 @@
 
 #include "pa_sky66112.h"
 #include "drv_debug.h"
-#include "prs.h"
+#include "platform/base/hal/micro/cortexm3/efm32/prs.h"
 #include "em_cmu.h"
 
 void pa_sky66112_init(pa_sky66112_t * obj, pio_t ant_sel, pio_t csd, pio_t cps, pio_t crx, pio_t ctx, pio_t chl)
