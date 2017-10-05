@@ -85,9 +85,8 @@ static inline bool find_pin_function(const pio_map_t * table, pio_t pio, void **
 	{
 		if (pio == entry->pio)
 		{
-			*base = entry->base;
-			*loc = entry->loc;
-
+			if (base) *base = entry->base;
+			if (loc) *loc = entry->loc;
 			return true;
 		}
 	}
