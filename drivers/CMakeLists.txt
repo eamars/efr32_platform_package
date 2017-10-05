@@ -14,6 +14,7 @@ SET(ENABLED_DRIVERS
 		eeprom_cat24c16
 		temperature_tmp116
 		pa_sky66112
+		radio_rfm9x
 		# simgbpr
 		)
 
