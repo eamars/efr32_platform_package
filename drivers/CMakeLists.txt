@@ -6,6 +6,7 @@ GET_FILENAME_COMPONENT(LIB_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
 
 # create a list of device drivers
 SET(ENABLED_DRIVERS
+		delay
 		bootloader_api
 		stack_struct
 		dynamic_callbacks
