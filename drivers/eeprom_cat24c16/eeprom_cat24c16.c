@@ -93,15 +93,6 @@ void eeprom_cat24c16_init(eeprom_cat24c16_t * obj, i2cdrv_t * i2c_device, pio_t 
 	DRV_ASSERT(obj);
 	DRV_ASSERT(i2c_device);
 
-	// do not reinitialize the eeprom driver
-	if (obj->initialized)
-	{
-		return;
-	}
-
-	// make sure i2c is initialized
-	DRV_ASSERT(i2c_device->initialized);
-
 	// assign i2c object
 	obj->i2c_device = i2c_device;
 
@@ -110,19 +101,11 @@ void eeprom_cat24c16_init(eeprom_cat24c16_t * obj, i2cdrv_t * i2c_device, pio_t 
 
 	// configure load switch pins
 	GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 0);
-
-	obj->initialized = true;
 }
 
 void eeprom_cat24c16_deinit(eeprom_cat24c16_t * obj)
 {
 	DRV_ASSERT(obj);
-
-	// if the object is not initialized then we are not going to do anything
-	if (!obj->initialized)
-	{
-		return;
-	}
 
 	// disable load switch
 	GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModeDisabled, 0);
@@ -130,12 +113,12 @@ void eeprom_cat24c16_deinit(eeprom_cat24c16_t * obj)
 	// revoke assigned variables
 	obj->i2c_device = NULL;
 	obj->enable = NC;
-
-	obj->initialized = false;
 }
 
 void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, void * buffer)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferReturn_TypeDef ret;
 
 	// get corresponding slave address and internal address from location information
@@ -174,6 +157,8 @@ void eeprom_cat24c16_page_write(eeprom_cat24c16_t * obj, uint16_t location, void
 
 void eeprom_cat24c16_byte_write(eeprom_cat24c16_t * obj, uint16_t location, uint8_t byte)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferReturn_TypeDef ret;
 
 	// get corresponding slave address and internal address from location information
@@ -211,6 +196,8 @@ void eeprom_cat24c16_byte_write(eeprom_cat24c16_t * obj, uint16_t location, uint
 
 void eeprom_cat24c16_selective_read(eeprom_cat24c16_t * obj, uint16_t location, uint16_t length, void * buffer)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferReturn_TypeDef ret;
 
 	// get corresponding slave address and internal address from location information

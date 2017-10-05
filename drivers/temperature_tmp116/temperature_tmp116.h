@@ -29,7 +29,6 @@ typedef struct
 {
 	i2cdrv_t * i2c_device;
 	pio_t alert;
-	bool initialized;
 	uint16_t local_config_cache;
 	bool is_local_config_cache_dirty;
 } temperature_tmp116_t;

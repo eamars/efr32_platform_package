@@ -34,7 +34,6 @@ typedef struct
 {
 	i2cdrv_t * i2c_device;
 	pio_t enable;
-	bool initialized;
 
 #if EEPROM_CAT24C16_USE_MUTEX == 1
 	SemaphoreHandle_t access_mutex;

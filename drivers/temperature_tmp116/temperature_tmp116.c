@@ -130,15 +130,6 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	DRV_ASSERT(obj);
 	DRV_ASSERT(i2c_device);
 
-	// do not reinitialize the device
-	if (obj->initialized)
-	{
-		return;
-	}
-
-	// make sure i2c is initialized
-	DRV_ASSERT(i2c_device->initialized);
-
 	// reset dirty pin
 	obj->is_local_config_cache_dirty = false;
 
@@ -162,8 +153,6 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	GPIO_ExtIntConfig(PIO_PORT(obj->alert), PIO_PIN(obj->alert), PIO_PIN(obj->alert),
 	                  false, true, true
 	);
-
-	obj->initialized = true;
 
 	// apply default settings
 	// read configuration from sensor
@@ -189,12 +178,6 @@ void temperature_tmp116_deinit(temperature_tmp116_t * obj)
 {
 	DRV_ASSERT(obj);
 
-	// if the object is not initialized then we are not going to do anything
-	if (!obj->initialized)
-	{
-		return;
-	}
-
 	// disable the interrupt
 	GPIO_ExtIntConfig(PIO_PORT(obj->alert), PIO_PIN(obj->alert), PIO_PIN(obj->alert),
 	                  false, true, false
@@ -209,7 +192,6 @@ void temperature_tmp116_deinit(temperature_tmp116_t * obj)
 	// revoke assigned variables
 	obj->i2c_device = NULL;
 	obj->alert = NC;
-	obj->initialized = false;
 }
 
 void temperature_tmp116_set_high_limit(temperature_tmp116_t * obj, float high_threshold)

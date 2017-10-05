@@ -24,12 +24,6 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	// sanity check
 	DRV_ASSERT(obj);
 
-	// do not reinitialize the I2C driver
-	if (obj->initialized)
-	{
-		return;
-	}
-
 	Ecode_t ret;
 	CMU_Clock_TypeDef clock;
 
@@ -132,12 +126,12 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	obj->access_mutex = xSemaphoreCreateMutex();
 	assert(obj->access_mutex);
 #endif
-
-	obj->initialized = true;
 }
 
 void i2cdrv_deinit(i2cdrv_t *obj)
 {
+	DRV_ASSERT(obj);
+
 	// disable i2c peripheral
 	i2cdrv_disable(obj);
 
@@ -161,14 +155,12 @@ void i2cdrv_deinit(i2cdrv_t *obj)
 	obj->scl = NC;
 	obj->enable = NC;
 	obj->base = NULL;
-	obj->initialized = false;
 }
 
 
 void i2cdrv_enable(i2cdrv_t *obj)
 {
 	DRV_ASSERT(obj);
-	DRV_ASSERT(obj->initialized);
 
 	// acquire clock
 	CMU_Clock_TypeDef clock;
@@ -209,7 +201,6 @@ void i2cdrv_enable(i2cdrv_t *obj)
 void i2cdrv_disable(i2cdrv_t *obj)
 {
 	DRV_ASSERT(obj);
-	DRV_ASSERT(obj->initialized);
 
 	// acquire clock
 	CMU_Clock_TypeDef clock;
@@ -256,9 +247,6 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 	I2C_TransferReturn_TypeDef ret;
 	bool is_timeout_enabled = (timeout_cnt != 0);
 
-	DRV_ASSERT(obj);
-	DRV_ASSERT(seq);
-
 	// shift addr to the left by one
 	// Layout details, A = address bit, X = don't care bit (set to 0):
 	// 7 bit address - use format AAAA AAAX. (X -> R/W bits)
@@ -295,6 +283,8 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 
 I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length, uint32_t timeout_cnt)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
 
@@ -311,6 +301,8 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_timeout(i2cdrv_t *obj, uint8_t sl
 
 I2C_TransferReturn_TypeDef i2cdrv_master_read_timeout(i2cdrv_t *obj, uint8_t slave_addr, void * buffer, uint16_t length, uint32_t timeout_cnt)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
 
@@ -329,6 +321,8 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8
                                                     uint16_t write_length, void * read_buffer, uint16_t read_length,
                                                     uint32_t timeout_cnt)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
 
@@ -347,6 +341,8 @@ I2C_TransferReturn_TypeDef i2cdrv_master_write_read_timeout(i2cdrv_t *obj, uint8
 
 I2C_TransferReturn_TypeDef i2cdrv_master_write_iaddr_timeout(i2cdrv_t *obj, uint8_t slave_addr, uint8_t internal_addr, void *buffer, uint16_t length, uint32_t timeout_cnt)
 {
+	DRV_ASSERT(obj);
+
 	I2C_TransferSeq_TypeDef seq;
 	I2C_TransferReturn_TypeDef ret;
 

@@ -30,7 +30,6 @@
 
 typedef struct
 {
-	bool initialized;
 	I2C_TypeDef * base;
 
 	pio_t sda;
