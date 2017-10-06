@@ -15,7 +15,7 @@ SET(ENABLED_DRIVERS
 		temperature_tmp116
 		pa_sky66112
 		radio_rfm9x
-        FXOS
+        imu_fxos
 		# simgbpr
 		)
 

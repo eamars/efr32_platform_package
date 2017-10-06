@@ -1,26 +1,14 @@
-/****************************************************************************
- * Copyright (C) 2015 Sensorian
- *                                                                          *
- * This file is part of Sensorian.                                          *
- *                                                                          *
- *   Sensorian is free software: you can redistribute it and/or modify it   *
- *   under the terms of the GNU Lesser General Public License as published  *
- *   by the Free Software Foundation, either version 3 of the License, or   *
- *   (at your option) any later version.                                    *
- *                                                                          *
- *   Sensorian is distributed in the hope that it will be useful,           *
- *   but WITHOUT ANY WARRANTY; without even the implied warranty of         *
- *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          *
- *   GNU Lesser General Public License for more details.                    *
- *                                                                          *
- *   You should have received a copy of the GNU Lesser General Public       *
- *   License along with Sensorian.                                          *
- *   If not, see <http://www.gnu.org/licenses/>.                            *
- ****************************************************************************/
+/**
+ * @brief Implementation of I2C IMU driver
+ * @file imu_fxos.c
+ * @author Steven O'Rourke
+ * @date Oct, 2017
+ */
 
 #include <unistd.h>
-#include "FXOS.h"
+#include "imu_fxos.h"
 #include "drv_debug.h"
+#include "delay.h"
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable)
 {
@@ -35,9 +23,6 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
         return;
     }
 
-    // make sure i2c is initialized
-    //DRV_ASSERT(i2c_device->initialized);
-
     // assign i2c object
     obj->i2c_device = i2c_device;
 
@@ -50,11 +35,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->initialized = true;
 
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
-    //TODO add a proper delay function
-    for (i = 0; i <= 1000; i++)
-    {
-
-    }                                           //Wait at least 1ms after issuing a reset before attempting communications.
+    delay_ms(2);                                        //Wait at least 1ms after issuing a reset before attempting communications.
 
     FXOS8700CQ_StandbyMode(obj);
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
