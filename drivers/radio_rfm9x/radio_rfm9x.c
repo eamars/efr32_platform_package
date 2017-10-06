@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+
 #include "spidrv.h"
 #include "radio_rfm9x.h"
 #include "radio_rfm9x_regs.h"
@@ -13,7 +14,9 @@
 #include "bits.h"
 #include "gpiointerrupt.h"
 
-static bool singleton_instance = false;
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
 
 extern const pio_map_t spi_mosi_map[];
 extern const pio_map_t spi_miso_map[];
@@ -27,6 +30,14 @@ extern const pio_map_t spi_cs_map[];
 static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 {
 
+}
+
+static void radio_rfm9x_dio0_thread_handler_pri(radio_rfm9x_t * obj)
+{
+	while (1)
+	{
+
+	}
 }
 
 static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
@@ -144,17 +155,6 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
 	DRV_ASSERT(obj);
 
-	// this instance is singleton
-	if (!singleton_instance)
-	{
-		singleton_instance = true;
-	}
-	else
-	{
-		// Only one instance can be initialized
-		DRV_ASSERT(false);
-	}
-
 	// copy variables object
 	obj->rst = rst;
 	obj->miso = miso;
@@ -162,6 +162,11 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->clk = clk;
 	obj->cs = cs;
 	obj->dio0 = dio0;
+
+	/**
+	 * @brief Create a thread handler for each instance
+	 */
+	xTaskCreate((void *) radio_rfm9x_dio0_thread_handler_pri, "dio0", 200, (void *) obj, 2, &obj->dio0_thread_handle);
 
 	/**
 	 * @brief Configure SPI driver
@@ -200,9 +205,8 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	GPIOINT_Init();
 	GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->dio0), (GPIOINT_IrqCallbackPtrWithArgs_t) radio_rfm9x_dio0_isr_pri, (void *) obj);
 	GPIO_ExtIntConfig(PIO_PORT(obj->dio0), PIO_PIN(obj->dio0), PIO_PIN(obj->dio0),
-	                  true /* raising edge */, false /* falling edge */, false /* enable now */
+	                  true /* raising edge */, false /* falling edge */, true /* enable now */
 	);
-
 
 	/**
 	 * @brief Configure radio module

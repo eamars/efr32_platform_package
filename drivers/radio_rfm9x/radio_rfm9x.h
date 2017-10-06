@@ -9,6 +9,14 @@
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
 
+#if USE_FREERTOS == 1
+	#include "FreeRTOS.h"
+	#include "task.h"
+	#include "queue.h"
+#else
+#error RFM9x module requires FreeRTOS to be included
+#endif
+
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
 
@@ -26,6 +34,10 @@ typedef struct
 	pio_t dio0;
 
 	SPIDRV_HandleData_t spi_handle_data;
+
+#if USE_FREERTOS == 1
+	TaskHandle_t dio0_thread_handle;
+#endif
 } radio_rfm9x_t;
 
 typedef enum
@@ -115,6 +127,10 @@ void radio_rfm9x_set_coding_rate(radio_rfm9x_t * obj, radio_rfm9x_cr_t coding_ra
 void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implicit_header);
 
 void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spreading_factor);
+
+#if USE_FREERTOS != 1
+#endif
+#endif
 
 #ifdef __cplusplus
 }
