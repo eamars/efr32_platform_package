@@ -128,10 +128,6 @@ void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implic
 
 void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spreading_factor);
 
-#if USE_FREERTOS != 1
-#endif
-#endif
-
 #ifdef __cplusplus
 }
 #endif
