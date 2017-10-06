@@ -36,7 +36,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     }
 
     // make sure i2c is initialized
-    DRV_ASSERT(i2c_device->initialized);
+    //DRV_ASSERT(i2c_device->initialized);
 
     // assign i2c object
     obj->i2c_device = i2c_device;
