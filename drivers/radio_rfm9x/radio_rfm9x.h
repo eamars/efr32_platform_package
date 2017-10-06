@@ -9,13 +9,8 @@
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
 
-#if USE_FREERTOS == 1
-	#include "FreeRTOS.h"
-	#include "task.h"
-	#include "queue.h"
-#else
-#error RFM9x module requires FreeRTOS to be included
-#endif
+#include "FreeRTOS.h"
+#include "queue.h"
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
@@ -23,28 +18,25 @@
 // The Frequency Synthesizer step = RH_RF95_FXOSC / 2^^19
 #define RH_RF95_FSTEP  (RH_RF95_FXOSC / 524288)
 
+#define RH_RSSI_OFFSET (-137)
 
-typedef struct
-{
-	pio_t rst;
-	pio_t miso;
-	pio_t mosi;
-	pio_t clk;
-	pio_t cs;
-	pio_t dio0;
-
-	SPIDRV_HandleData_t spi_handle_data;
-
-#if USE_FREERTOS == 1
-	TaskHandle_t dio0_thread_handle;
-#endif
-} radio_rfm9x_t;
+// Maximum a packet can be copied from chip to local
+#define RADIO_RFM9X_RW_BUFFER_SIZE 0x0F
 
 typedef enum
 {
 	RADIO_RFM9X_MODEM_FSK = 0,
 	RADIO_RFM9X_MODEM_LORA = 1
 } radio_rfm9x_modem_t;
+
+typedef enum
+{
+	RADIO_RFM9X_SLEEP = 0,
+	RADIO_RFM9X_IDLE,
+	RADIO_RFM9X_TX,
+	RADIO_RFM9X_RX,
+	RADIO_RFM9X_CAD
+} radio_rfm9x_state_t;
 
 typedef enum
 {
@@ -93,6 +85,29 @@ typedef enum
 } radio_rfm9x_op_t;
 
 
+typedef struct
+{
+	// hardware pins
+	pio_t rst;
+	pio_t miso;
+	pio_t mosi;
+	pio_t clk;
+	pio_t cs;
+	pio_t dio0;
+
+	// SPI driver
+	SPIDRV_HandleData_t spi_handle_data;
+
+	// radio status
+	radio_rfm9x_state_t radio_state;
+	int16_t last_packet_rssi;
+	int8_t last_packet_snr;
+
+	// packet buffer
+	xQueueHandle buffer_message_queue;
+} radio_rfm9x_t;
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -127,6 +142,13 @@ void radio_rfm9x_set_coding_rate(radio_rfm9x_t * obj, radio_rfm9x_cr_t coding_ra
 void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implicit_header);
 
 void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spreading_factor);
+
+void radio_rfm9x_set_opmode_idle(radio_rfm9x_t * obj);
+void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj);
+void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj);
+
+void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t bytes);
+uint8_t radio_rfm9x_recv(radio_rfm9x_t * obj, void * buffer, uint8_t bytes);
 
 #ifdef __cplusplus
 }
