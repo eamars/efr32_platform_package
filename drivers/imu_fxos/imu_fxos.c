@@ -19,7 +19,7 @@
  ****************************************************************************/
 
 #include <unistd.h>
-#include "FXOS.h"
+#include "imu_fxos.h"
 #include "drv_debug.h"
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable)
