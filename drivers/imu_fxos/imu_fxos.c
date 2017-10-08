@@ -6,9 +6,11 @@
  */
 
 #include <unistd.h>
+#include <math.h>
 #include "imu_fxos.h"
 #include "drv_debug.h"
 #include "delay.h"
+
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable)
 {
@@ -138,8 +140,9 @@ void FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t ran
 void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (HYBRID_ACTIVE|M_OSR2_MASK|M_OSR1_MASK|M_OSR0_MASK) );      // OSR=max, hybrid mode (TO, Aug 2012)
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (HYBRID_ACTIVE|M_OSR1_MASK) );      // OSR=2, hybrid mode (TO, Aug 2012)
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OS_1_MASK);       // OSR =2 in auto sleep mode
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -389,13 +392,33 @@ void FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, CTRL_REG1_Data);                //Write in the updated value to put the device in Active Mode.
 }
 
+int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
+{
+    int16_t angle = 0;
+    rawdata_t accel_raw;
+    rawdata_t mag_raw;
+    int16_t x_off = 0;
+    int16_t y_off = 0;
+    FXOS8700CQ_PollAccelerometer(obj, &accel_raw);
+    FXOS8700CQ_PollMagnetometer(obj, &mag_raw);
+
+    x_off = atan2(accel_raw.x, accel_raw.y);
+    y_off = atan2(accel_raw.z, accel_raw.y);
+
+
+    mag_raw.x = mag_raw.x*(cos(x_off)) + mag_raw.y*(sin(x_off));
+    mag_raw.z = mag_raw.z*(cos(y_off))+ mag_raw.y*(sin(y_off));
+
+    angle = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
+    return angle;
+
+}
 
 void FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value)
 {
     uint8_t ret = 0;
     //I2C_WriteByteRegister(reg,value);           //Write value to register
     ret = i2cdrv_master_write_iaddr(obj->i2c_device, FXOS8700CQ_ADDRESS, internal_addr, &value, 1);
-    DRV_ASSERT(ret == i2cTransferDone);
 }
 
 void FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char* buffer, char length)
@@ -403,7 +426,7 @@ void FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char*
     uint8_t ret = 0;
     //I2C_WriteByteArray(reg,buffer,length);          //Write values to register
     ret = i2cdrv_master_write_iaddr(obj->i2c_device, FXOS8700CQ_ADDRESS, internal_addr, buffer, length);
-    DRV_ASSERT(ret == i2cTransferDone);
+
 }
 
 char FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr)
@@ -412,7 +435,6 @@ char FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr)
     char buffer = 0;
     //return I2C_ReadByteRegister(reg);       //Read register current value
     ret = i2cdrv_master_write_read(obj->i2c_device, FXOS8700CQ_ADDRESS, &internal_addr, 1, &buffer, 1);
-    DRV_ASSERT(ret == i2cTransferDone);
     return buffer;
 }
 
@@ -421,5 +443,4 @@ void FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *
     uint8_t ret = 0;
     //I2C_ReadByteArray(reg,buffer,length);   //Read values starting from the reg address
     ret = i2cdrv_master_write_read(obj->i2c_device, FXOS8700CQ_ADDRESS, &internal_addr, 1, buffer, length);
-    DRV_ASSERT(ret == i2cTransferDone);
 }
