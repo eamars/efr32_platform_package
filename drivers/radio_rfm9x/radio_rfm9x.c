@@ -13,6 +13,7 @@
 #include "delay.h"
 #include "bits.h"
 #include "gpiointerrupt.h"
+#include "irq.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -26,6 +27,12 @@ extern const pio_map_t spi_cs_map[];
 
 static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 {
+	// enter critical section
+	if (__IS_INTERRUPT())
+		xSemaphoreTakeFromISR(obj->spi_access_mutex, NULL);
+	else
+		xSemaphoreTake(obj->spi_access_mutex, portMAX_DELAY);
+
 	GPIO_PinOutClear(PIO_PORT(obj->cs), PIO_PIN(obj->cs));
 }
 
@@ -33,6 +40,12 @@ static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 static inline void radio_rfm9x_cs_deassert_pri(radio_rfm9x_t * obj)
 {
 	GPIO_PinOutSet(PIO_PORT(obj->cs), PIO_PIN(obj->cs));
+
+	// exit critical section
+	if (__IS_INTERRUPT())
+		xSemaphoreGiveFromISR(obj->spi_access_mutex, NULL);
+	else
+		xSemaphoreGive(obj->spi_access_mutex);
 }
 
 
@@ -52,6 +65,8 @@ static inline void radio_rfm9x_write_pri(radio_rfm9x_t * obj, uint8_t addr, void
 
 	// deassert the line
 	radio_rfm9x_cs_deassert_pri(obj);
+
+
 }
 
 
@@ -256,6 +271,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	/**
 	 * @brief Configure SPI driver
 	 */
+	obj->spi_access_mutex = xSemaphoreCreateMutex();
 
 	// find spi peripheral functions
 	DRV_ASSERT(find_pin_function(spi_miso_map, miso, (void **) &usart_base, &miso_loc));

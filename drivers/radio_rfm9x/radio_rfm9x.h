@@ -102,6 +102,7 @@ typedef struct
 
 	// SPI driver
 	SPIDRV_HandleData_t spi_handle_data;
+	SemaphoreHandle_t spi_access_mutex;
 
 	// radio status
 	radio_rfm9x_state_t radio_state;
