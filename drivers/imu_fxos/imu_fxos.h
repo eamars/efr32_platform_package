@@ -613,7 +613,7 @@ typedef enum
 {
     DISABLED=0x00,
     BUFFER=0x01,
-    OVERFLOW=0x10,
+//    OVERFLOW=0x10,
     TRIGGERED=0x11
 } FX_mode_t;
 
@@ -683,6 +683,8 @@ void       FXOS8700CQ_ConfigureOrientation(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ConfigureGenericTapMode(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ConfigureSingleTapMode(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj);
+
+int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
 
 void       FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value);
 void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char* buffer, char length);
