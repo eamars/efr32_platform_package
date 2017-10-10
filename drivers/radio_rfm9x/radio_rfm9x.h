@@ -91,9 +91,9 @@ typedef struct
 {
 	uint8_t rx_buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
 	uint8_t size;
-} radio_rfm9x_rx_msg_t;
+} radio_rfm9x_msg_t;
 
-typedef void (*on_rx_done_handler)(radio_rfm9x_rx_msg_t *msg, int16_t rssi, int8_t snr) ;
+typedef void (*on_rx_done_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
 typedef void (*on_tx_done_handler)(void);
 
 typedef struct
@@ -109,8 +109,8 @@ typedef struct
 	// SPI driver
 	SPIDRV_HandleData_t spi_handle_data;
 	SemaphoreHandle_t spi_access_mutex;
-	SemaphoreHandle_t tx_ready_bin_sem;
-	QueueHandle_t rx_recv_queue;
+	SemaphoreHandle_t tx_ready;
+	QueueHandle_t rx_queue;
 
 	// radio status
 	radio_rfm9x_state_t radio_state;
@@ -167,7 +167,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes,
 #define radio_rfm9x_send_block(obj, buffer, bytes) \
 		radio_rfm9x_send_timeout((obj), (buffer), (bytes), portMAX_DELAY)
 
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_rx_msg_t * msg, uint32_t timeout_ms);
+bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
 #define radio_rfm9x_recv(obj, msg) \
 		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
 #define radio_rfm9x_recv_block(obj, msg) \

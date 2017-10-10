@@ -136,9 +136,9 @@ static void radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
 
 		// signal the tx is ready
 		if (__IS_INTERRUPT())
-			xSemaphoreGiveFromISR(obj->tx_ready_bin_sem, NULL);
+			xSemaphoreGiveFromISR(obj->tx_ready, NULL);
 		else
-			xSemaphoreGive(obj->tx_ready_bin_sem);
+			xSemaphoreGive(obj->tx_ready);
 	}
 }
 
@@ -220,7 +220,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			}
 
 			// read data packet
-			radio_rfm9x_rx_msg_t rx_msg;
+			radio_rfm9x_msg_t rx_msg;
 
 			// read available bytes from FIFO
 			rx_msg.size = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_13_RX_NB_BYTES);
@@ -233,7 +233,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, rx_msg.rx_buffer, rx_msg.size);
 
 			// send received data to queue
-			xQueueSendFromISR(obj->rx_recv_queue, &rx_msg, NULL);
+			xQueueSendFromISR(obj->rx_queue, &rx_msg, NULL);
 
 			// TODO: optionally, we call interrupt handler directly
 			// any modification to the rx buffer will be discarded
@@ -310,12 +310,12 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	 * @brief Configure SPI driver
 	 */
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
-	obj->tx_ready_bin_sem = xSemaphoreCreateBinary(); // tx is ready on startup
-	obj->rx_recv_queue = xQueueCreate(4, sizeof(radio_rfm9x_rx_msg_t));
+	obj->tx_ready = xSemaphoreCreateBinary(); // tx is ready on startup
+	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 
 	DRV_ASSERT(obj->spi_access_mutex);
-	DRV_ASSERT(obj->tx_ready_bin_sem);
-	DRV_ASSERT(obj->rx_recv_queue);
+	DRV_ASSERT(obj->tx_ready);
+	DRV_ASSERT(obj->rx_queue);
 
 	// find spi peripheral functions
 	DRV_ASSERT(find_pin_function(spi_miso_map, miso, (void **) &usart_base, &miso_loc));
@@ -369,7 +369,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	radio_rfm9x_set_opmode_idle_pri(obj);
 
 	// configure pointer for FIFO
-	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x80);
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 }
 
@@ -508,12 +508,12 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes,
 	// consume the token first, indicating that TX is not available until idle is set
 	if (timeout_ms == portMAX_DELAY)
 	{
-		xSemaphoreTake(obj->tx_ready_bin_sem, portMAX_DELAY);
+		xSemaphoreTake(obj->tx_ready, portMAX_DELAY);
 	}
 	else
 	{
 		// wait for TX to get ready
-		if (xSemaphoreTake(obj->tx_ready_bin_sem, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+		if (xSemaphoreTake(obj->tx_ready, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
 		{
 			// timeout, indicating we failed to wait for transceiver to get ready
 			return false;
@@ -527,8 +527,8 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes,
 	// declare data length
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_22_PAYLOAD_LENGTH, bytes);
 
-	// position at the beginning of the FIFO
-	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x80);
+	// reset tx fifo
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 	// transfer data
 	radio_rfm9x_write_pri(obj, RH_RF95_REG_00_FIFO, buffer, bytes);
@@ -540,10 +540,13 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes,
 }
 
 
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_rx_msg_t * msg, uint32_t timeout_ms)
+bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(msg);
+
+	// reset rx fifo
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
 
 	// set rx mode
 	radio_rfm9x_set_opmode_rx_pri(obj);
@@ -551,12 +554,12 @@ bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_rx_msg_t * msg, u
 	// allow user to wait forever
 	if (timeout_ms == portMAX_DELAY)
 	{
-		xQueueReceive(obj->rx_recv_queue, msg, portMAX_DELAY);
+		xQueueReceive(obj->rx_queue, msg, portMAX_DELAY);
 	}
 	else
 	{
 		// attempt to read from queue
-		if (xQueueReceive(obj->rx_recv_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+		if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
 		{
 			// timeout, nothing is received in rx queue
 			return false;
