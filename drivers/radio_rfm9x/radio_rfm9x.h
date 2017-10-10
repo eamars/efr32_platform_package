@@ -11,6 +11,8 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "queue.h"
+#include "task.h"
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
@@ -109,8 +111,13 @@ typedef struct
 	// SPI driver
 	SPIDRV_HandleData_t spi_handle_data;
 	SemaphoreHandle_t spi_access_mutex;
+
+	// packet handler
 	SemaphoreHandle_t tx_ready;
+	QueueHandle_t tx_queue;
 	QueueHandle_t rx_queue;
+
+
 
 	// radio status
 	radio_rfm9x_state_t radio_state;
