@@ -12,6 +12,9 @@
 #include "i2cdrv.h"
 
 #define FXOS8700CQ_ADDRESS    0x1F
+#define M_THRESHOLD           20
+#define VECTOR_THRESH         70
+#define M_VECTOR_DBNCE        0
 
 /**************************STATUS Register********************************/
 #define ZYXOW_MASK            0x80
@@ -347,6 +350,19 @@
 #define OFF_Z_REG             0x31
 
 /*
+** M_THS_CFG Magnetic threshold
+ */
+#define M_THS_ELE             0x80
+#define M_THS_OAE             0x40
+#define M_THS_ZEFE            0x20
+#define M_THS_YEFE            0x10
+#define M_THS_XEFE            0x08
+#define M_THS_WAKE_EN         0x04
+#define M_THS_INT_EN          0x02
+#define M_THS_INT_CFG         0x01
+
+
+/*
 **  MAG CTRL_REG1 System Control 1 Register
 */
 #define M_ACAL_MASK           0x80
@@ -448,14 +464,15 @@
 **  MAG VECTOR CONFIG Register
 */
 
-#define M_VECM_INIT_CFG_MASK  0x40
-#define M_VECM_INIT_EN_MASK   0x20
-#define M_VECM_WAKE_EN_MASK   0x10
-#define M_VECM_EN_MASK        0x08
-#define M_VECM_UPDM_MASK      0x04
-#define M_VECM_INITM_MASK     0x02
-#define M_VECM_ELE_MASK       0x01
 
+
+#define M_VECM_ELE_MASK       0x40
+#define M_VECM_INITM_MASK     0x20
+#define M_VECM_UPDM_MASK      0x10
+#define M_VECM_EN_MASK        0x08
+#define M_VECM_WAKE_EN_MASK   0x04
+#define M_VECM_INIT_EN_MASK   0x02
+#define M_VECM_INIT_CFG_MASK  0x01
 /*
 **  MAG VECTOR THS MSB AND LSB Register
 */
@@ -565,7 +582,7 @@
 #define  MIN_Y_MSB        0x4D
 #define  MIN_Y_LSB        0x4E
 #define  MIN_Z_MSB        0x4F
-#define  MIN_Z_LSB        0x50
+#define  MIN_Z_LSB        0x50vector-magnitude
 #define  TEMP             0x51
 #define  M_THS_CFG        0x52
 #define  M_THS_SRC        0x53
@@ -649,6 +666,12 @@ typedef struct
     i2cdrv_t * i2c_device;
     pio_t enable;
     bool initialized;
+    bool door_state;
+    bool calibrated;
+    int16_t x_origin;
+    int16_t y_origin;
+    int16_t z_origin;
+    int16_t start_position;
 
 } imu_FXOS8700CQ_t;
 
@@ -684,10 +707,16 @@ void       FXOS8700CQ_ConfigureGenericTapMode(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ConfigureSingleTapMode(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj);
 
+void       FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * object);
+void       FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj);
 int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
+static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
+
 
 void       FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value);
-void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char* buffer, char length);
+void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, uint8_t* buffer, char length);
 char       FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr);
 void       FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *buffer, uint32_t length);
 
