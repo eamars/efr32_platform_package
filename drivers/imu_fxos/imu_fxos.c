@@ -7,9 +7,13 @@
 
 #include <unistd.h>
 #include <math.h>
+#include <stdlib.h>
 #include "imu_fxos.h"
 #include "drv_debug.h"
 #include "delay.h"
+#include "gpiointerrupt.h"
+#include "led.h"
+#include "debug-printing.h"
 
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable)
@@ -37,10 +41,11 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->initialized = true;
 
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
-    delay_ms(2);                                        //Wait at least 1ms after issuing a reset before attempting communications.
-
+    delay_ms(2);                                        //Wait at least 1ms after issuing a reset before attempting communications
     FXOS8700CQ_StandbyMode(obj);
+
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
+
 }
 
 char FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj)
@@ -91,6 +96,7 @@ void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, (HYB_ASLP_RATE_25HZ|HYB_DATA_RATE_50HZ));     // Set ODRs
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
+    //FXOS8700CQ_WriteByte(obj, CTRL_REG3, (IPOL_MASK));
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -140,7 +146,7 @@ void FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t ran
 void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (HYBRID_ACTIVE|M_OSR1_MASK) );      // OSR=2, hybrid mode (TO, Aug 2012)
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE|M_OSR1_MASK) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OS_1_MASK);       // OSR =2 in auto sleep mode
     FXOS8700CQ_ActiveMode (obj);
@@ -392,25 +398,126 @@ void FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, CTRL_REG1_Data);                //Write in the updated value to put the device in Active Mode.
 }
 
+/**
+ * takes a measurement of the magnetomoiter and sets the x,y and z inital positoins
+ * @param object [description]
+ */
+void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
+{
+    rawdata_t mag_raw;
+    delay_ms(30);  // wait after configuring before reading
+    FXOS8700CQ_PollMagnetometer(obj ,&mag_raw);
+    FXOS8700CQ_StandbyMode (obj);
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE|M_OSR1_MASK) ); // turns auto calibrate mode off
+    obj->x_origin = abs(mag_raw.x);
+    obj->y_origin = abs(mag_raw.y);
+    obj->z_origin = abs(mag_raw.z);
+    obj->start_position = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
+    obj->calibrated = true;
+    FXOS8700CQ_ActiveMode (obj);
+
+}
+
+/**
+ * Sets teh threshold for the magnetomiter interup as the origin +the threshold value
+ * set the imu to interupt on the x and z axis as if the device is upright on the door
+ * with no debounce and no latching interupt is on pin 1
+ * @param obj Imu object
+ */
+void FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj)
+{
+    FXOS8700CQ_StandbyMode (obj);
+    uint8_t origin[6] = {0};
+
+    origin[1] = obj->x_origin;
+    origin[0] = obj->x_origin >> 8;
+    origin[3] = obj->y_origin;
+    origin[2] = obj->y_origin >> 8;
+    origin[5] = obj->z_origin;
+    origin[4] = obj->z_origin >> 8;
+
+
+    FXOS8700CQ_WriteByte(obj, M_THS_CFG, M_THS_ZEFE | M_THS_YEFE| M_THS_XEFE| M_THS_WAKE_EN | M_THS_INT_EN | M_THS_OAE);
+    FXOS8700CQ_WriteByteArray(obj, M_THS_X_MSB, origin, 6);
+    FXOS8700CQ_ActiveMode(obj);
+}
+ /**
+  * set up the magnetic vector function of the imu and set up it as an interupt
+  * @param obj imu object
+  */
+void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
+{
+    FXOS8700CQ_StandbyMode (obj);
+    uint8_t Vector_Threshold[2] = {0};
+    uint8_t ref[6] = {0};
+
+    ref[1] = obj->x_origin;
+    ref[0] = obj->x_origin >> 8;
+    ref[3] = obj->y_origin;
+    ref[2] = obj->y_origin >> 8;
+    ref[5] = obj->z_origin;
+    ref[4] = obj->z_origin >> 8;
+    Vector_Threshold[1] = VECTOR_THRESH;
+    Vector_Threshold[0] = VECTOR_THRESH >> 8;
+
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_ELE_MASK | M_VECM_UPDM_MASK | M_VECM_INITM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_CFG));
+    FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
+    FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
+    FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
+    FXOS8700CQ_ActiveMode (obj);
+}
+
+
+/**
+ * find the current heading of the compass using the x and z axis
+ * @param  obj iu object
+ * @return     returns the compass angle
+ */
 int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 {
     int16_t angle = 0;
-    rawdata_t accel_raw;
     rawdata_t mag_raw;
-    int16_t x_off = 0;
-    int16_t y_off = 0;
-    FXOS8700CQ_PollAccelerometer(obj, &accel_raw);
     FXOS8700CQ_PollMagnetometer(obj, &mag_raw);
 
-    x_off = atan2(accel_raw.x, accel_raw.y);
-    y_off = atan2(accel_raw.z, accel_raw.y);
-
-
-    mag_raw.x = mag_raw.x*(cos(x_off)) + mag_raw.y*(sin(x_off));
-    mag_raw.z = mag_raw.z*(cos(y_off))+ mag_raw.y*(sin(y_off));
-
     angle = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
+
+
     return angle;
+
+}
+
+
+static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
+{
+    bool interupt_1 = 0;
+    interupt_1 = GPIO_PinInGet((GPIO_Port_TypeDef) BSP_IMU_INT_1_PORT, BSP_IMU_INT_1_PIN);
+    if (interupt_1 == true)
+    {
+        emberAfCorePrint(" on \n\r");
+        obj->door_state = true;
+    }
+    else
+    {
+        emberAfCorePrint(" off \n\r");
+        obj->door_state = false;
+    }
+}
+
+
+/**
+ * [FXOS8700CQ_Init_Interupt  Sets up the interupt for the imu interupt_1
+ * @param obj IMU object holing information about the imu and door open / closed state.
+ */
+void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
+{
+    GPIO_PinModeSet(PIO_PORT(BSP_IMU_INT_1_PORT), PIO_PIN(BSP_IMU_INT_1_PIN), gpioModeInput, 0);
+
+    // configure port interrupt
+    GPIOINT_Init();
+    GPIOINT_CallbackRegisterWithArgs(PIO_PIN(BSP_IMU_INT_1_PIN), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
+    GPIO_ExtIntConfig(PIO_PORT(BSP_IMU_INT_1_PORT), PIO_PIN(BSP_IMU_INT_1_PIN), PIO_PIN(BSP_IMU_INT_1_PIN),
+                      true /* raising edge */, true /* falling edge */, true /* enable now */);
 
 }
 
@@ -421,7 +528,7 @@ void FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value
     ret = i2cdrv_master_write_iaddr(obj->i2c_device, FXOS8700CQ_ADDRESS, internal_addr, &value, 1);
 }
 
-void FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char* buffer, char length)
+void FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, uint8_t* buffer, char length)
 {
     uint8_t ret = 0;
     //I2C_WriteByteArray(reg,buffer,length);          //Write values to register
