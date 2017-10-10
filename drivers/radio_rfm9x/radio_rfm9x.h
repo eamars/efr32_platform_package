@@ -10,7 +10,9 @@
 #include "radio_rfm9x_regs.h"
 
 #include "FreeRTOS.h"
+#include "semphr.h"
 #include "queue.h"
+#include "task.h"
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
@@ -20,8 +22,11 @@
 
 #define RH_RSSI_OFFSET (-137)
 
-// Maximum a packet can be copied from chip to local
-#define RADIO_RFM9X_RW_BUFFER_SIZE 0x0F
+// Maximum a packet can be copied from chip to local (reserve 1 byte for memory alignment)
+#define RADIO_RFM9X_RW_BUFFER_SIZE (0xFEUL)
+
+#define RADIO_RFM9X_DEFAULT_RX_TIMEOUT (2000) // ms
+#define RADIO_RFM9X_DEFAULT_TX_TIMEOUT (2000) // ms
 
 typedef enum
 {
@@ -84,6 +89,14 @@ typedef enum
 	RADIO_RFM9X_OP_CAD = RH_RF95_MODE_CAD
 } radio_rfm9x_op_t;
 
+typedef struct
+{
+	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
+	uint8_t size;
+} radio_rfm9x_msg_t;
+
+typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
+typedef void (*on_tx_done_isr_handler)(void);
 
 typedef struct
 {
@@ -97,14 +110,22 @@ typedef struct
 
 	// SPI driver
 	SPIDRV_HandleData_t spi_handle_data;
+	SemaphoreHandle_t spi_access_mutex;
+
+	// packet handler
+	SemaphoreHandle_t tx_ready;
+	// QueueHandle_t tx_queue;
+	QueueHandle_t rx_queue;
 
 	// radio status
 	radio_rfm9x_state_t radio_state;
 	int16_t last_packet_rssi;
 	int8_t last_packet_snr;
 
-	// packet buffer
-	xQueueHandle buffer_message_queue;
+	// handlers
+	on_rx_done_isr_handler on_rx_done_isr;
+	on_tx_done_isr_handler on_tx_done_isr;
+
 } radio_rfm9x_t;
 
 
@@ -143,12 +164,20 @@ void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implic
 
 void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spreading_factor);
 
-void radio_rfm9x_set_opmode_idle(radio_rfm9x_t * obj);
-void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj);
-void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj);
+void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
 
-void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t bytes);
-uint8_t radio_rfm9x_recv(radio_rfm9x_t * obj, void * buffer, uint8_t bytes);
+bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes, uint32_t timeout_ms);
+#define radio_rfm9x_send(obj, buffer, bytes) \
+		radio_rfm9x_send_timeout((obj), (buffer), (bytes), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
+#define radio_rfm9x_send_block(obj, buffer, bytes) \
+		radio_rfm9x_send_timeout((obj), (buffer), (bytes), portMAX_DELAY)
+
+bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
+#define radio_rfm9x_recv(obj, msg) \
+		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
+#define radio_rfm9x_recv_block(obj, msg) \
+		radio_rfm9x_recv_timeout((obj), (msg), portMAX_DELAY)
+
 
 #ifdef __cplusplus
 }

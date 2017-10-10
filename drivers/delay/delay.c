@@ -7,6 +7,7 @@
 #include "delay.h"
 #include "ustimer.h"
 #include "drv_debug.h"
+#include "irq.h"
 
 #if USE_FREERTOS == 1
 	#include "FreeRTOS.h"
@@ -22,7 +23,7 @@ void delay_init(void)
 void delay_ms(uint32_t ms)
 {
 	// delay is prohibited in interrupt function
-	if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0)
+	if (__IS_INTERRUPT())
 	{
 		DRV_ASSERT(false);
 	}
@@ -47,7 +48,7 @@ void delay_us(uint32_t us)
 	else
 	{
 		// delay is prohibited in interrupt function
-		if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) != 0)
+		if (__IS_INTERRUPT())
 		{
 			DRV_ASSERT(false);
 		}
