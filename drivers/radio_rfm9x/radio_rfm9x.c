@@ -174,13 +174,24 @@ static inline void radio_rfm9x_set_opmode_pri(radio_rfm9x_t * obj, radio_rfm9x_o
 
 
 /**
+ * @brief Read current transceiver operating mode
+ * @param obj the transceiver object
+ * @return current transceiver operating mode @see radio_rfm9x_op_t
+ */
+static inline radio_rfm9x_op_t radio_rfm9x_get_opmode_pri(radio_rfm9x_t * obj)
+{
+	return (radio_rfm9x_op_t) (radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_01_OP_MODE) & RH_RF95_MODE);
+}
+
+
+/**
  * @brief Toggle the transceiver mode to idle
  *
  * Note: low power, ready to switch states, passive data sensing is not available
  *
  * @param obj the transciever
  */
-static void radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
+static void inline radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -203,7 +214,7 @@ static void radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
  * @brief Toggle the transceiver mode to Tx (Transmit)
  * @param obj the transceiver object
  */
-static void radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
+static void inline radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -221,7 +232,7 @@ static void radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
  * @brief Toggle the transceiver mode to Rx (active continuous receive)
  * @param obj the transceiver object
  */
-static void radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
+static void inline radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -231,6 +242,23 @@ static void radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
 		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x00 << 6, 0xC0); // interrupt on rx done
 
 		obj->radio_state = RADIO_RFM9X_RX;
+	}
+}
+
+
+/**
+ * @brief Toggle the transceiver mode to Sleep (low power mode)
+ * @param obj the transceiver
+ */
+static void inline radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	if (obj->radio_state != RADIO_RFM9X_SLEEP)
+	{
+		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
+
+		obj->radio_state = RADIO_RFM9X_SLEEP;
 	}
 }
 
@@ -454,6 +482,9 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 {
 	DRV_ASSERT(obj);
 
+	// backup previous transceiver opmode
+	radio_rfm9x_op_t prev_opmode = radio_rfm9x_get_opmode_pri(obj);
+
 	// set to sleep mode to allow modem to be switched
 	radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
 
@@ -474,6 +505,9 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 		default:
 			DRV_ASSERT(false);
 	}
+
+	// restore previous op mode
+	radio_rfm9x_set_opmode_pri(obj, prev_opmode);
 }
 
 
