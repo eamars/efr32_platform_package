@@ -133,45 +133,122 @@ typedef struct
 extern "C" {
 #endif
 
-
+/**
+ * @brief Initialize RFM9x LoRa/FSK module
+ * @param obj the transceiver object
+ * @param rst reset pin
+ * @param miso master in slave out
+ * @param mosi master out slave in
+ * @param clk SPI clock
+ * @param cs SPI slave select
+ * @param dio0 transceivier interrupt in 0
+ * @param dio1 transceivier interrupt in 1
+ * @param dio2 transceivier interrupt in 2
+ * @param dio3 transceivier interrupt in 3
+ * @param dio4 transceivier interrupt in 4
+ * @param dio5 transceivier interrupt in 5
+ */
 void radio_rfm9x_init(radio_rfm9x_t * obj,
                       pio_t rst, pio_t miso, pio_t mosi, pio_t clk, pio_t cs,
                       pio_t dio0, pio_t dio1, pio_t dio2, pio_t dio3, pio_t dio4, pio_t dio5
 );
 
+/**
+ * @brief Perform a hard reset on RFM9x transceiver module
+ *
+ * Note: The thread is excepted to be block for more than 5ms
+ *
+ * @param obj the transceiver object
+ */
 void radio_rfm9x_hard_reset(radio_rfm9x_t * obj);
 
+/**
+ * @brief Configure transceiver center channel
+ * @param obj the transceiver object
+ * @param freq center frequency, measured in Hz
+ */
 void radio_rfm9x_set_channel(radio_rfm9x_t * obj, uint32_t freq);
 
+/**
+ * @brief Configure transmit power from the transceiver
+ * @param obj the transceiver object
+ * @param power_dbm transmit power, measured in dBm
+ * @param use_rfo do not use power amplifier
+ */
 void radio_rfm9x_set_tx_power_use_rfo(radio_rfm9x_t * obj, int8_t power_dbm, bool use_rfo);
 #define radio_rfm9x_set_tx_power(obj, power_dbm) \
 		radio_rfm9x_set_tx_power_use_rfo((obj), (power_dbm), false)
 
+/**
+ * @brief Configure modem mode
+ * @param obj the transceiver object
+ * @param modem (G)FSK or LoRa (spread spectrum) @see radio_rfm9x_modem_t
+ */
 void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem);
 
+/**
+ * @brief Configure LoRa packet preamble length
+ * @param obj the transceiver object
+ * @param bytes number of bytes in preamble
+ */
 void radio_rfm9x_set_preamble_length(radio_rfm9x_t * obj, uint16_t bytes);
 
 /**
  * @brief Configure radio bandwidth. Note, in the lower band (169MHz), the signal bandwidth 250KHz and 500KHz are not available
- * @param obj radio object
+ * @param obj transceiver object
  * @param bandwidth desired bandwidth
  */
 void radio_rfm9x_set_bandwidth(radio_rfm9x_t * obj, radio_rfm9x_bw_t bandwidth);
 
+/**
+ * @brief Configure coding rate
+ * @param obj the transceiver object
+ * @param coding_rate desired coding rate, @see radio_rfm9x_cr_t
+ */
 void radio_rfm9x_set_coding_rate(radio_rfm9x_t * obj, radio_rfm9x_cr_t coding_rate);
 
+/**
+ * @brief Configure the implicit header mode
+ * @param obj the transceiver object
+ * @param is_implicit_header whether to enable implicit header
+ */
 void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implicit_header);
 
+/**
+ * @brief Configure LoRa spreading factor
+ * @param obj the transceiver object
+ * @param spreading_factor desired spreading factor @see radio_rfm9x_sf_t
+ */
 void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spreading_factor);
 
+/**
+ * @brief Configure CRC validation for the payload
+ * @param obj the transceiver object
+ * @param crc_enable whether to check CRC for the payload
+ */
 void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
 
+/**
+ * @brief Send bytes to transceiver
+ * @param obj the transceiver object
+ * @param buffer generic data buffer
+ * @param bytes number of bytes
+ * @param timeout_ms maximum block time, portMAX_DELAY if block forever
+ * @return whether message is transmitted successfully within timeout, if maximum block time is configured
+ */
 bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes, uint32_t timeout_ms);
 #define radio_rfm9x_send(obj, buffer, bytes) \
 		radio_rfm9x_send_timeout((obj), (buffer), (bytes), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
 #define radio_rfm9x_send_block(obj, buffer, bytes) \
 		radio_rfm9x_send_timeout((obj), (buffer), (bytes), portMAX_DELAY)
 
+/**
+ * @brief Receive bytes from transceiver
+ * @param obj the transceiver object
+ * @param msg message buffer @see radio_rfm9x_msg_t. The message buffer have maximum payload length, @see RADIO_RFM9X_RW_BUFFER_SIZE
+ * @param timeout_ms maximum block time, portMAX_DELAY if block forever
+ * @return whether received message is valid, if maximum block time is specified
+ */
 bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
 #define radio_rfm9x_recv(obj, msg) \
 		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
