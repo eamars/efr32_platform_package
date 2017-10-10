@@ -91,12 +91,12 @@ typedef enum
 
 typedef struct
 {
-	uint8_t rx_buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
+	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
 	uint8_t size;
 } radio_rfm9x_msg_t;
 
-typedef void (*on_rx_done_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
-typedef void (*on_tx_done_handler)(void);
+typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
+typedef void (*on_tx_done_isr_handler)(void);
 
 typedef struct
 {
@@ -114,10 +114,8 @@ typedef struct
 
 	// packet handler
 	SemaphoreHandle_t tx_ready;
-	QueueHandle_t tx_queue;
+	// QueueHandle_t tx_queue;
 	QueueHandle_t rx_queue;
-
-
 
 	// radio status
 	radio_rfm9x_state_t radio_state;
@@ -125,8 +123,8 @@ typedef struct
 	int8_t last_packet_snr;
 
 	// handlers
-	on_rx_done_handler on_rx_done;
-	on_tx_done_handler on_tx_done;
+	on_rx_done_isr_handler on_rx_done_isr;
+	on_tx_done_isr_handler on_tx_done_isr;
 
 } radio_rfm9x_t;
 

@@ -230,15 +230,15 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			                          radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_10_FIFO_RX_CURRENT_ADDR)
 			);
 
-			radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, rx_msg.rx_buffer, rx_msg.size);
+			radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, rx_msg.buffer, rx_msg.size);
 
 			// send received data to queue
 			xQueueSendFromISR(obj->rx_queue, &rx_msg, NULL);
 
 			// TODO: optionally, we call interrupt handler directly
 			// any modification to the rx buffer will be discarded
-			if (obj->on_rx_done)
-				obj->on_rx_done(&rx_msg, obj->last_packet_rssi, obj->last_packet_snr);
+			if (obj->on_rx_done_isr)
+				obj->on_rx_done_isr(&rx_msg, obj->last_packet_rssi, obj->last_packet_snr);
 
 			// we've processed the received data, the radio can now enter the idle state and wait for next instruction
 			radio_rfm9x_set_opmode_idle_pri(obj);
@@ -249,8 +249,8 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 		{
 			if (reg_irq_flags & RH_RF95_TX_DONE)
 			{
-				if (obj->on_tx_done)
-					obj->on_tx_done();
+				if (obj->on_tx_done_isr)
+					obj->on_tx_done_isr();
 
 				// transmit complete, we can safely enter the idle state
 				radio_rfm9x_set_opmode_idle_pri(obj);
