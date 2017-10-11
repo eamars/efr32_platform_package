@@ -527,13 +527,14 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->fsm_ev_count = xSemaphoreCreateCounting(5, 0);
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
+
+	// spawn a thread for each RFM9X module for handling data receive/transmit path
 	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 2, &obj->fsm_thread_handler);
 
 	DRV_ASSERT(obj->fsm_ev_count);
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue);
-
-
+	
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
 
