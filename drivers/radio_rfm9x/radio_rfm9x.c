@@ -375,6 +375,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				{
 					// have data ready to transmit
 					// set fifo pointer
+					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
 					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 					// declare data length
@@ -425,6 +426,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			{
 				// since tx is complete, we can enter rx/idle state now
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
@@ -436,6 +438,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			case RADIO_RFM9X_FSM_RX_ERROR:
 			{
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
@@ -448,6 +451,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			case RADIO_RFM9X_FSM_RX_TIMEOUT:
 			{
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
