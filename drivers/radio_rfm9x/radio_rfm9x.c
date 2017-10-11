@@ -191,7 +191,7 @@ static inline radio_rfm9x_op_t radio_rfm9x_get_opmode_pri(radio_rfm9x_t * obj)
  *
  * @param obj the transciever
  */
-static void inline radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
+static inline void radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -214,7 +214,7 @@ static void inline radio_rfm9x_set_opmode_idle_pri(radio_rfm9x_t * obj)
  * @brief Toggle the transceiver mode to Tx (Transmit)
  * @param obj the transceiver object
  */
-static void inline radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
+static inline void radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -232,7 +232,7 @@ static void inline radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
  * @brief Toggle the transceiver mode to Rx (active continuous receive)
  * @param obj the transceiver object
  */
-static void inline radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
+static inline void radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
@@ -250,7 +250,7 @@ static void inline radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
  * @brief Toggle the transceiver mode to Sleep (low power mode)
  * @param obj the transceiver
  */
-static void inline radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
+static inline void radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
 
