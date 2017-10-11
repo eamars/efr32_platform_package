@@ -534,7 +534,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	DRV_ASSERT(obj->fsm_ev_count);
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue);
-	
+
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
 

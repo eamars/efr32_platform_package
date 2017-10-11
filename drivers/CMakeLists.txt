@@ -16,6 +16,7 @@ SET(ENABLED_DRIVERS
 		pa_sky66112
 		radio_rfm9x
         imu_fxos
+		lora_simple_mac
 		# simgbpr
 		)
 

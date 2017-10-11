@@ -12,6 +12,12 @@
 
 #define SUBG_PACKET_TOTAL_LEN (12) // bytes
 
+typedef struct __attribute__ ((packed))
+{
+	uint8_t version;
+	uint8_t device_id8;
+} subg_packet_header_t;
+
 typedef union
 {
 	// byte interface
@@ -20,8 +26,7 @@ typedef union
 	// struct interface
 	struct __attribute__ ((packed))
 	{
-		uint8_t version;
-		uint8_t device_id8;
+		subg_packet_header_t header;
 		int16_t lpk_rssi;
 		int8_t lpk_snr;
 		int8_t battery_percentage;
