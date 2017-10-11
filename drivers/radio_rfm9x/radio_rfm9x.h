@@ -36,12 +36,16 @@ typedef enum
 
 typedef enum
 {
-	RADIO_RFM9X_SLEEP = 0,
-	RADIO_RFM9X_IDLE,
-	RADIO_RFM9X_TX,
-	RADIO_RFM9X_RX,
-	RADIO_RFM9X_CAD
-} radio_rfm9x_state_t;
+	RADIO_RFM9X_FSM_RX,
+	RADIO_RFM9X_FSM_RX_DONE,
+	RADIO_RFM9X_FSM_TX,
+	RADIO_RFM9X_FSM_TX_DONE,
+
+	// some error handlers
+	RADIO_RFM9X_FSM_RX_ERROR,
+	RADIO_RFM9X_FSM_RX_TIMEOUT,
+
+} radio_rfm9x_fsm_state_t;
 
 typedef enum
 {
@@ -112,13 +116,19 @@ typedef struct
 	SPIDRV_HandleData_t spi_handle_data;
 	SemaphoreHandle_t spi_access_mutex;
 
-	// packet handler
-	SemaphoreHandle_t tx_ready;
-	// QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue;
+	// packet queue
+	QueueHandle_t tx_queue;
+	QueueHandle_t rx_queue_pri; // used to exchange data between rx_isr and rx_thread
+	QueueHandle_t rx_queue; // --> used by user
+
+	// state machine
+	radio_rfm9x_fsm_state_t fsm_state;
+	SemaphoreHandle_t fsm_ev_count;
 
 	// radio status
-	radio_rfm9x_state_t radio_state;
+	radio_rfm9x_op_t radio_op_state;
+
+	// link quality
 	int16_t last_packet_rssi;
 	int8_t last_packet_snr;
 
@@ -231,16 +241,15 @@ void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
 /**
  * @brief Send bytes to transceiver
  * @param obj the transceiver object
- * @param buffer generic data buffer
- * @param bytes number of bytes
+ * @param msg message buffer @see radio_rfm9x_msg_t. The message buffer have maximum payload length, @see RADIO_RFM9X_RW_BUFFER_SIZE
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether message is transmitted successfully within timeout, if maximum block time is configured
  */
-bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes, uint32_t timeout_ms);
-#define radio_rfm9x_send(obj, buffer, bytes) \
-		radio_rfm9x_send_timeout((obj), (buffer), (bytes), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
-#define radio_rfm9x_send_block(obj, buffer, bytes) \
-		radio_rfm9x_send_timeout((obj), (buffer), (bytes), portMAX_DELAY)
+bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
+#define radio_rfm9x_send(obj, msg) \
+		radio_rfm9x_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
+#define radio_rfm9x_send_block(obj, msg) \
+		radio_rfm9x_send_timeout((obj), (msg), portMAX_DELAY)
 
 /**
  * @brief Receive bytes from transceiver
@@ -249,7 +258,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t bytes,
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether received message is valid, if maximum block time is specified
  */
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
+bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
 #define radio_rfm9x_recv(obj, msg) \
 		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
 #define radio_rfm9x_recv_block(obj, msg) \
