@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 #include "i2cdrv.h"
+#include "pio_defs.h"
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20

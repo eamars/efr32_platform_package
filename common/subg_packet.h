@@ -27,8 +27,8 @@ typedef union
 		int8_t battery_percentage;
 		int8_t temperature;
 		uint8_t door_state;
-		uint16_t compass_value;
-		uint16_t heading;
+		int16_t compass_value;
+		int16_t heading;
 	};
 
 } subg_packet_t;

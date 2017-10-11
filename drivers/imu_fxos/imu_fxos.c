@@ -496,7 +496,7 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     bool interupt_1 = 0;
-    interupt_1 = GPIO_PinInGet((GPIO_Port_TypeDef) BSP_IMU_INT_1_PORT, BSP_IMU_INT_1_PIN);
+    interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1));
     if (interupt_1 == true)
     {
         emberAfCorePrint(" on \n\r");

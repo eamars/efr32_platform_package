@@ -25,6 +25,13 @@ extern const pio_map_t spi_clk_map[];
 extern const pio_map_t spi_cs_map[];
 
 
+/**
+ * @brief Assert chip select line for transceiver
+ *
+ * Note: internal function
+ *
+ * @param obj the transceiver object
+ */
 static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 {
 	// enter critical section
@@ -37,6 +44,10 @@ static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 }
 
 
+/**
+ * @brief De-assert chip select line for transceiver
+ * @param obj the transceiver object
+ */
 static inline void radio_rfm9x_cs_deassert_pri(radio_rfm9x_t * obj)
 {
 	GPIO_PinOutSet(PIO_PORT(obj->cs), PIO_PIN(obj->cs));
@@ -49,6 +60,13 @@ static inline void radio_rfm9x_cs_deassert_pri(radio_rfm9x_t * obj)
 }
 
 
+/**
+ * @brief Send data to transceiver
+ * @param obj the transceiver object
+ * @param addr internal register address
+ * @param buffer generic data buffer (input)
+ * @param size buffer size (in bytes)
+ */
 static inline void radio_rfm9x_write_pri(radio_rfm9x_t * obj, uint8_t addr, void * buffer, uint8_t size)
 {
 	// assert the line
@@ -68,6 +86,13 @@ static inline void radio_rfm9x_write_pri(radio_rfm9x_t * obj, uint8_t addr, void
 }
 
 
+/**
+ * @brief Read data from transceiver
+ * @param obj the transceiver object
+ * @param addr internal register address
+ * @param buffer generic data buffer (output)
+ * @param size number of bytes wanted to read from transceiver
+ */
 static inline void radio_rfm9x_read_pri(radio_rfm9x_t * obj, uint8_t addr, void * buffer, uint8_t size)
 {
 	// assert the line
@@ -87,12 +112,24 @@ static inline void radio_rfm9x_read_pri(radio_rfm9x_t * obj, uint8_t addr, void 
 }
 
 
+/**
+ * @brief Write a word to internal register
+ * @param obj the transceiver object
+ * @param addr register address
+ * @param value word
+ */
 static inline void radio_rfm9x_reg_write_pri(radio_rfm9x_t * obj, uint8_t addr, uint8_t value)
 {
 	radio_rfm9x_write_pri(obj, addr, &value, 1);
 }
 
 
+/**
+ * @brief Read a word from internal register
+ * @param obj the transceiver object
+ * @param addr address of internal register
+ * @return word
+ */
 static inline uint8_t radio_rfm9x_reg_read_pri(radio_rfm9x_t * obj, uint8_t addr)
 {
 	uint8_t reg = 0;
@@ -102,6 +139,13 @@ static inline uint8_t radio_rfm9x_reg_read_pri(radio_rfm9x_t * obj, uint8_t addr
 }
 
 
+/**
+ * @brief Modify a word of a specific internal register (read-write operation)
+ * @param obj the transceiver object
+ * @param addr address of internal register
+ * @param value word
+ * @param mask bit mask for bits need to be changed in a word
+ */
 static inline void radio_rfm9x_reg_modify_pri(radio_rfm9x_t * obj, uint8_t addr, uint8_t value, uint8_t mask)
 {
 	// perform a write on modify operation
@@ -118,6 +162,11 @@ static inline void radio_rfm9x_reg_modify_pri(radio_rfm9x_t * obj, uint8_t addr,
 }
 
 
+/**
+ * @brief Generically, set the transceiver operating mode
+ * @param obj the transceiver object
+ * @param opmode transceiver operating mode @see radio_rfm9x_op_t
+ */
 static inline void radio_rfm9x_set_opmode_pri(radio_rfm9x_t * obj, radio_rfm9x_op_t opmode)
 {
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_01_OP_MODE, (uint8_t) opmode, RH_RF95_MODE);
@@ -206,7 +255,9 @@ static inline void radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
 
 /**
  * @brief DIO0 raising edge interrupt handler
+ *
  * @param pin interrupt pin number
+ * @param obj the transciever object
  */
 static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 {
@@ -311,7 +362,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 	while (1)
 	{
 		// wait for event
-		xSemaphoreTake(obj->fsm_ev_count, pdMS_TO_TICKS(5000));
+		xSemaphoreTake(obj->fsm_ev_count, portMAX_DELAY);
 
 		switch (obj->fsm_state)
 		{
@@ -334,6 +385,8 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 					// set in tx mode
 					radio_rfm9x_set_opmode_tx_pri(obj);
+
+					obj->fsm_state = RADIO_RFM9X_FSM_TX;
 				}
 
 				break;
@@ -427,6 +480,7 @@ void radio_rfm9x_hard_reset(radio_rfm9x_t * obj)
 	delay_ms(5);
 }
 
+
 void radio_rfm9x_init(radio_rfm9x_t * obj,
                       pio_t rst, pio_t miso, pio_t mosi, pio_t clk, pio_t cs,
                       pio_t dio0, pio_t dio1, pio_t dio2, pio_t dio3, pio_t dio4, pio_t dio5
@@ -455,10 +509,17 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
 	// configure state machine
 	obj->fsm_state = RADIO_RFM9X_FSM_RX;
-	obj->fsm_ev_count = xSemaphoreCreateCounting(10, 0);
+	obj->fsm_ev_count = xSemaphoreCreateCounting(5, 0);
 	obj->rx_queue_pri = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
+	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 2, &obj->fsm_thread_handler);
+
+	DRV_ASSERT(obj->fsm_ev_count);
+	DRV_ASSERT(obj->rx_queue_pri);
+	DRV_ASSERT(obj->tx_queue);
+	DRV_ASSERT(obj->rx_queue);
+
 
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
@@ -538,6 +599,9 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 {
 	DRV_ASSERT(obj);
 
+	// backup previous transceiver opmode
+	radio_rfm9x_op_t prev_opmode = radio_rfm9x_get_opmode_pri(obj);
+
 	// set to sleep mode to allow modem to be switched
 	radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
 
@@ -558,6 +622,9 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 		default:
 			DRV_ASSERT(false);
 	}
+
+	// restore previous op mode
+	radio_rfm9x_set_opmode_pri(obj, prev_opmode);
 }
 
 
@@ -658,6 +725,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 	if (timeout_ms == portMAX_DELAY)
 	{
 		xQueueSend(obj->tx_queue, msg, portMAX_DELAY);
+		xSemaphoreGive(obj->fsm_ev_count);
 	}
 	else
 	{
@@ -667,6 +735,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 			// timeout, indicating we failed to wait for transceiver to get ready
 			return false;
 		}
+		xSemaphoreGive(obj->fsm_ev_count);
 	}
 
 	return true;

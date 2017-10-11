@@ -124,6 +124,7 @@ typedef struct
 	// state machine
 	radio_rfm9x_fsm_state_t fsm_state;
 	SemaphoreHandle_t fsm_ev_count;
+	TaskHandle_t fsm_thread_handler;
 
 	// radio status
 	radio_rfm9x_op_t radio_op_state;
@@ -245,7 +246,7 @@ void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether message is transmitted successfully within timeout, if maximum block time is configured
  */
-bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
+bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
 #define radio_rfm9x_send(obj, msg) \
 		radio_rfm9x_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
 #define radio_rfm9x_send_block(obj, msg) \
@@ -258,7 +259,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether received message is valid, if maximum block time is specified
  */
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
+bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
 #define radio_rfm9x_recv(obj, msg) \
 		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
 #define radio_rfm9x_recv_block(obj, msg) \
