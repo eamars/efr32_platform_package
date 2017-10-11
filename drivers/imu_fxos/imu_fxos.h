@@ -582,7 +582,7 @@
 #define  MIN_Y_MSB        0x4D
 #define  MIN_Y_LSB        0x4E
 #define  MIN_Z_MSB        0x4F
-#define  MIN_Z_LSB        0x50vector-magnitude
+#define  MIN_Z_LSB        0x50
 #define  TEMP             0x51
 #define  M_THS_CFG        0x52
 #define  M_THS_SRC        0x53
@@ -663,6 +663,11 @@ typedef struct rawdata {
 
 typedef struct
 {
+    /// pins
+    uint8_t int_1;
+    uint8_t int_2;
+
+
     i2cdrv_t * i2c_device;
     pio_t enable;
     bool initialized;
@@ -676,7 +681,7 @@ typedef struct
 } imu_FXOS8700CQ_t;
 
 
-void       FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable);
+void       FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, uint8_t int_1, uint8_t int_2);
 char       FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ActiveMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_StandbyMode (imu_FXOS8700CQ_t * obj);

@@ -16,7 +16,7 @@
 #include "debug-printing.h"
 
 
-void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable)
+void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, uint8_t int_1, uint8_t int_2)
 {
     uint16_t i = 0;
     // sanity check for pointers
@@ -34,6 +34,11 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     // store enable pins
     obj->enable = enable;
+
+    // assigng interupt pins
+    obj->int_1 = int_1;
+    obj->int_2 = int_2;
+
 
     // configure load switch pins
     GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 1);
@@ -96,7 +101,7 @@ void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, (HYB_ASLP_RATE_25HZ|HYB_DATA_RATE_50HZ));     // Set ODRs
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
-    //FXOS8700CQ_WriteByte(obj, CTRL_REG3, (IPOL_MASK));
+    FXOS8700CQ_WriteByte(obj, CTRL_REG3, (IPOL_MASK));
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -461,7 +466,7 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     Vector_Threshold[0] = VECTOR_THRESH >> 8;
 
     FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_ELE_MASK | M_VECM_UPDM_MASK | M_VECM_INITM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_CFG));
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_CFG));
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
@@ -511,12 +516,13 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
  */
 void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
 {
-    GPIO_PinModeSet(PIO_PORT(BSP_IMU_INT_1_PORT), PIO_PIN(BSP_IMU_INT_1_PIN), gpioModeInput, 0);
+    GPIO_PinModeSet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), gpioModeInput, 0);
+    GPIO_PinModeSet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), gpioModeInput, 0);
 
     // configure port interrupt
     GPIOINT_Init();
-    GPIOINT_CallbackRegisterWithArgs(PIO_PIN(BSP_IMU_INT_1_PIN), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
-    GPIO_ExtIntConfig(PIO_PORT(BSP_IMU_INT_1_PORT), PIO_PIN(BSP_IMU_INT_1_PIN), PIO_PIN(BSP_IMU_INT_1_PIN),
+    GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_1), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
+    GPIO_ExtIntConfig(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), PIO_PIN(obj->int_1),
                       true /* raising edge */, true /* falling edge */, true /* enable now */);
 
 }

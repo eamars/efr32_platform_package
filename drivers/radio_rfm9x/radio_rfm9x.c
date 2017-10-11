@@ -667,4 +667,3 @@ bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 
 	return true;
 }
-
