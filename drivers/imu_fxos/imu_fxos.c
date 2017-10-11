@@ -16,7 +16,7 @@
 #include "debug-printing.h"
 
 
-void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, uint8_t int_1, uint8_t int_2)
+void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2)
 {
     uint16_t i = 0;
     // sanity check for pointers
