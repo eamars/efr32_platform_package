@@ -28,6 +28,8 @@
 #define RADIO_RFM9X_DEFAULT_RX_TIMEOUT (2000) // ms
 #define RADIO_RFM9X_DEFAULT_TX_TIMEOUT (2000) // ms
 
+#define RADIO_RFM9X_CHANNEL_RSSI_THRESHOLD (-60) // dBm
+
 typedef enum
 {
 	RADIO_RFM9X_MODEM_FSK = 0,
@@ -118,7 +120,6 @@ typedef struct
 
 	// packet queue
 	QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue_pri; // used to exchange data between rx_isr and rx_thread
 	QueueHandle_t rx_queue; // --> used by user
 
 	// state machine
