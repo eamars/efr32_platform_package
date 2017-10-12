@@ -517,6 +517,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 }
 
 
+
 /**
  * [FXOS8700CQ_Init_Interupt  Sets up the interupt for the imu interupt_1
  * @param obj IMU object holing information about the imu and door open / closed state.
