@@ -41,7 +41,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->int_2 = int_2;
 
     //intalise que
-    obj->imu_event_queue = xQueueCreate(2, sizeof(imu_ev_t));
+    obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
     // configure load switch pins
     GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 1);
@@ -500,18 +500,20 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     bool interupt_1 = 0;
+    imu_event_t door_event;
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     if (interupt_1 == true)
     {
-        xQueueSendFromISR(obj->imu_event_queue, &IMU_EVENT_DOOR_OPEN, NULL);
+        door_event = IMU_EVENT_DOOR_OPEN;
         halSetLed(BOARDLED1);
     }
     else
     {
-        xQueueSendFromISR(obj->imu_event_queue, &IMU_EVENT_DOOR_CLOSE, NULL);
-        obj->door_state = false;
+        door_event = IMU_EVENT_DOOR_CLOSE;
+        halClearLed(BOARDLED1);
 
     }
+    xQueueSendFromISR(obj->imu_event_queue, &door_event, NULL);
 }
 
 
