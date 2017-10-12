@@ -40,6 +40,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->int_1 = int_1;
     obj->int_2 = int_2;
 
+    obj->current_compass = 0;
+    obj->current_heading = 0;
+
     //intalise que
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
@@ -529,11 +532,16 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 
     angle = FXOS8700CQ_Get_Heading(obj);
     change = abs(angle - obj->start_position);
+
+    // Store the current values in the object.
+    obj->current_compass = angle; // The compass angle
+    obj->current_heading = change; // The heading away from calibrated angle
+
     if (!obj->calibrated)
     {
         door_event = IMU_EVENT_CALIBRATING;
     }
-    else if (change >= 20) // angle that is needed for door to trigger
+    else if (change >= POLL_THRESH) // angle that is needed for door to trigger
     {
 
         door_event = IMU_EVENT_DOOR_OPEN;

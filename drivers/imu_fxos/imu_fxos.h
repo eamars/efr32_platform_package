@@ -16,6 +16,7 @@
 #define M_THRESHOLD           20
 #define VECTOR_THRESH         70
 #define M_VECTOR_DBNCE        0
+#define POLL_THRESH           15
 
 /**************************STATUS Register********************************/
 #define ZYXOW_MASK            0x80
@@ -685,6 +686,9 @@ typedef struct
     int16_t y_origin;
     int16_t z_origin;
     int16_t start_position;
+
+    int16_t current_compass; // The current angle
+    int16_t current_heading; // The heading away from calibrated angle
 
     QueueHandle_t imu_event_queue;
     imu_event_t last_event;
