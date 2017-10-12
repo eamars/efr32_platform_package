@@ -267,6 +267,34 @@ static inline bool radio_rfm9x_is_channel_available_pri(radio_rfm9x_t * obj)
 
 
 /**
+ * @brief Block the FSM
+ * @param obj the transceiver object
+ */
+static void radio_rfm9x_fsm_sleep_handler_pri(radio_rfm9x_t * obj)
+{
+	// block here, waiting until timeout or unblock from other threads or handlers
+	DRV_ASSERT(xSemaphoreTake(obj->fsm_ev_count, portMAX_DELAY));
+}
+
+
+/**
+ * @brief Unblock the FSM
+ * @param obj the transceiver object
+ */
+static void radio_rfm9x_fsm_wakeup_handler_pri(radio_rfm9x_t * obj)
+{
+	if (__IS_INTERRUPT())
+	{
+		DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
+	}
+	else
+	{
+		DRV_ASSERT(xSemaphoreGive(obj->fsm_ev_count));
+	}
+}
+
+
+/**
  * @brief DIO0 raising edge interrupt handler
  *
  * @param pin interrupt pin number
@@ -290,7 +318,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
-				DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
+				radio_rfm9x_fsm_wakeup_handler_pri(obj);
 
 				break;
 			}
@@ -299,7 +327,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
-				DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
+				radio_rfm9x_fsm_wakeup_handler_pri(obj);
 
 				break;
 			}
@@ -339,7 +367,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 
 			// advance the state to RX, allow data to be processed
 			obj->fsm_state = RADIO_RFM9X_FSM_RX_DONE;
-			DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
+			radio_rfm9x_fsm_wakeup_handler_pri(obj);
 
 			break;
 		}
@@ -352,7 +380,8 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 
 				// transmit complete, advance the fsm state to tx_done
 				obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
-				DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
+
+				radio_rfm9x_fsm_wakeup_handler_pri(obj);
 			}
 
 			break;
@@ -367,13 +396,12 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 {
 	while (1)
 	{
-		// wait for event
-		DRV_ASSERT(xSemaphoreTake(obj->fsm_ev_count, portMAX_DELAY));
-
 		switch (obj->fsm_state)
 		{
 			case RADIO_RFM9X_FSM_RX:
 			{
+				radio_rfm9x_fsm_sleep_handler_pri(obj);
+
 				// read data from tx queue, checking if data is received
 				// if so, then transmit data
 				radio_rfm9x_msg_t tx_msg;
@@ -408,6 +436,14 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				break;
 			}
 
+			case RADIO_RFM9X_FSM_TX:
+			{
+				// stay in tx state until tx is done
+				radio_rfm9x_fsm_sleep_handler_pri(obj);
+
+				break;
+			}
+
 			case RADIO_RFM9X_FSM_RX_DONE:
 			{
 				// reset fifo pointer
@@ -417,12 +453,6 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				// enter rx_continous mode, the app state enters idle state
 				radio_rfm9x_set_opmode_rx_pri(obj);
 				obj->fsm_state = RADIO_RFM9X_FSM_RX;
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_TX:
-			{
-				// stay in tx state until tx is done
 				break;
 			}
 
@@ -517,7 +547,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
 	// configure state machine
 	obj->fsm_state = RADIO_RFM9X_FSM_RX;
-	obj->fsm_ev_count = xSemaphoreCreateCounting(5, 0);
+	obj->fsm_ev_count = xSemaphoreCreateCounting(10, 0);
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 
@@ -748,7 +778,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 	}
 
 	// if the packet is put to the queue then I should run the fsm as soon as possible
-	xSemaphoreGive(obj->fsm_ev_count);
+	radio_rfm9x_fsm_wakeup_handler_pri(obj);
 
 	return true;
 }
