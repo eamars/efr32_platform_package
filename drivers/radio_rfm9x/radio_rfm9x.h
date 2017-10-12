@@ -152,7 +152,7 @@ typedef struct
 
 	// packet queue
 	QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue; // --> used by user
+	QueueHandle_t rx_queue;
 
 	// state machine
 	radio_rfm9x_fsm_state_t fsm_state;
