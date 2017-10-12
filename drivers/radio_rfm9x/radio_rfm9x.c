@@ -254,6 +254,19 @@ static inline void radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
 
 
 /**
+ * @brief Tell if the channel is free by measuring channel RSSI
+ * @param obj the transceiver object
+ * @return True if the channel is free, False otherwise
+ */
+static inline bool radio_rfm9x_is_channel_available_pri(radio_rfm9x_t * obj)
+{
+	int16_t rssi = (int16_t) (RH_RSSI_OFFSET + radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_1B_RSSI_VALUE));
+
+	return rssi <= RADIO_RFM9X_CHANNEL_RSSI_THRESHOLD;
+}
+
+
+/**
  * @brief DIO0 raising edge interrupt handler
  *
  * @param pin interrupt pin number
@@ -321,7 +334,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, rx_msg.buffer, rx_msg.size);
 
 			// send received data to queue
-			xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
+			xQueueSendFromISR(obj->rx_queue, &rx_msg, NULL);
 
 			// TODO: optionally, we call interrupt handler directly
 			// any modification to the rx buffer will be discarded
@@ -374,7 +387,17 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
 				{
 					// have data ready to transmit
+#if 0
+					// TODO: sense channel if free or not. Ideally this should be implemented by CAD.
+					// For simplicity sake, we use channel rssi detection method
+					while (!radio_rfm9x_is_channel_available_pri(obj))
+					{
+						vTaskDelay(pdMS_TO_TICKS(1000));
+					}
+#endif
+
 					// set fifo pointer
+					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
 					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 					// declare data length
@@ -394,20 +417,9 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 			case RADIO_RFM9X_FSM_RX_DONE:
 			{
-				// read data from rx queue, checking if data is received
-				radio_rfm9x_msg_t rx_msg;
-				if (!xQueueReceive(obj->rx_queue_pri, &rx_msg, 0))
-				{
-					DRV_ASSERT(false);
-				}
-
-				// process data (data and ack packet)
-
-				// push data to user
-				// filter MAC packet, only deliver user defined data to the user
-				// if no space is left, the packet will be dropped
-				xQueueSend(obj->rx_queue, &rx_msg, 0);
-
+				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// enter rx_continous mode, the app state enters idle state
 				radio_rfm9x_set_opmode_rx_pri(obj);
@@ -425,6 +437,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			{
 				// since tx is complete, we can enter rx/idle state now
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
@@ -436,6 +449,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			case RADIO_RFM9X_FSM_RX_ERROR:
 			{
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
@@ -448,6 +462,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			case RADIO_RFM9X_FSM_RX_TIMEOUT:
 			{
 				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 				// set radio in rx_continous mode
@@ -510,16 +525,15 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	// configure state machine
 	obj->fsm_state = RADIO_RFM9X_FSM_RX;
 	obj->fsm_ev_count = xSemaphoreCreateCounting(5, 0);
-	obj->rx_queue_pri = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
+
+	// spawn a thread for each RFM9X module for handling data receive/transmit path
 	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 2, &obj->fsm_thread_handler);
 
 	DRV_ASSERT(obj->fsm_ev_count);
-	DRV_ASSERT(obj->rx_queue_pri);
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue);
-
 
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();

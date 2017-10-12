@@ -28,12 +28,22 @@
 #define RADIO_RFM9X_DEFAULT_RX_TIMEOUT (2000) // ms
 #define RADIO_RFM9X_DEFAULT_TX_TIMEOUT (2000) // ms
 
+#define RADIO_RFM9X_CHANNEL_RSSI_THRESHOLD (-60) // dBm
+
+
+/**
+ * @brief RFM9X supports (G)FSK or LoRa frontend mode
+ */
 typedef enum
 {
 	RADIO_RFM9X_MODEM_FSK = 0,
 	RADIO_RFM9X_MODEM_LORA = 1
 } radio_rfm9x_modem_t;
 
+
+/**
+ * @brief Internal LoRa state machine properties
+ */
 typedef enum
 {
 	RADIO_RFM9X_FSM_RX,
@@ -47,6 +57,10 @@ typedef enum
 
 } radio_rfm9x_fsm_state_t;
 
+
+/**
+ * @brief Configurable bandwidth
+ */
 typedef enum
 {
 	RADIO_RFM9X_BW_7K8 = 0x0,
@@ -61,6 +75,10 @@ typedef enum
 	RADIO_RFM9X_BW_500K = 0x9
 } radio_rfm9x_bw_t;
 
+
+/**
+ * @brief Configurable coding rate
+ */
 typedef enum
 {
 	RADIO_RFM9X_CR_4_5 = 1,
@@ -69,6 +87,10 @@ typedef enum
 	RADIO_RFM9X_CR_4_8 = 4
 } radio_rfm9x_cr_t;
 
+
+/**
+ * @brief Configurable spreading factor (LoRa)
+ */
 typedef enum
 {
 	// expressed in the power of 2
@@ -81,6 +103,10 @@ typedef enum
 	RADIO_RFM9X_SF_4096 = 12
 } radio_rfm9x_sf_t;
 
+
+/**
+ * @brief Radio operation mode
+ */
 typedef enum
 {
 	RADIO_RFM9X_OP_SLEEP = RH_RF95_MODE_SLEEP,
@@ -93,15 +119,23 @@ typedef enum
 	RADIO_RFM9X_OP_CAD = RH_RF95_MODE_CAD
 } radio_rfm9x_op_t;
 
+
+/**
+ * @brief Physical layer message payload
+ */
 typedef struct
 {
 	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
 	uint8_t size;
 } radio_rfm9x_msg_t;
 
+
 typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
 typedef void (*on_tx_done_isr_handler)(void);
 
+/**
+ * @brief RFM9X transceiver object
+ */
 typedef struct
 {
 	// hardware pins
@@ -118,7 +152,6 @@ typedef struct
 
 	// packet queue
 	QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue_pri; // used to exchange data between rx_isr and rx_thread
 	QueueHandle_t rx_queue; // --> used by user
 
 	// state machine
