@@ -14,7 +14,7 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH         55
+#define VECTOR_THRESH         70
 #define M_VECTOR_DBNCE        0
 
 /**************************STATUS Register********************************/
