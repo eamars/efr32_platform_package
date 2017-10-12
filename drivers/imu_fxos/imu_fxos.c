@@ -14,7 +14,8 @@
 #include "gpiointerrupt.h"
 #include "led.h"
 #include "debug-printing.h"
-
+#include "FreeRTOS.h"
+#include "queue.h"
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2)
 {
@@ -39,6 +40,8 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->int_1 = int_1;
     obj->int_2 = int_2;
 
+    //intalise que
+    obj->imu_event_queue = xQueueCreate(2, sizeof(imu_ev_t));
 
     // configure load switch pins
     GPIO_PinModeSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable), gpioModePushPull, 1);
@@ -97,7 +100,7 @@ char FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj)
 void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, CTRL_REG4, INT_EN_DRDY_MASK );                   // Enable interrupts for DRDY (TO, Aug 2012)
+    //FXOS8700CQ_WriteByte(obj, CTRL_REG4, INT_EN_DRDY_MASK );                   // Enable interrupts for DRDY (TO, Aug 2012)
     FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, (HYB_ASLP_RATE_25HZ|HYB_DATA_RATE_50HZ));     // Set ODRs
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
@@ -154,6 +157,7 @@ void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE|M_OSR1_MASK) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OS_1_MASK);       // OSR =2 in auto sleep mode
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -462,11 +466,11 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     ref[2] = obj->y_origin >> 8;
     ref[5] = obj->z_origin;
     ref[4] = obj->z_origin >> 8;
-    Vector_Threshold[1] = VECTOR_THRESH;
-    Vector_Threshold[0] = VECTOR_THRESH >> 8;
+    Vector_Threshold[1] = (uint8_t)VECTOR_THRESH ;
+    Vector_Threshold[0] = VECTOR_THRESH >> 8 | 0x80;
 
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_CFG));
+    //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK));
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
@@ -496,16 +500,17 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     bool interupt_1 = 0;
-    interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1));
+    interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     if (interupt_1 == true)
     {
-        emberAfCorePrint(" on \n\r");
-        obj->door_state = true;
+        xQueueSendFromISR(obj->imu_event_queue, &IMU_EVENT_DOOR_OPEN, NULL);
+        halSetLed(BOARDLED1);
     }
     else
     {
-        emberAfCorePrint(" off \n\r");
+        xQueueSendFromISR(obj->imu_event_queue, &IMU_EVENT_DOOR_CLOSE, NULL);
         obj->door_state = false;
+
     }
 }
 
@@ -521,8 +526,8 @@ void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
 
     // configure port interrupt
     GPIOINT_Init();
-    GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_1), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
-    GPIO_ExtIntConfig(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), PIO_PIN(obj->int_1),
+    GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
+    GPIO_ExtIntConfig(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), PIO_PIN(obj->int_2),
                       true /* raising edge */, true /* falling edge */, true /* enable now */);
 
 }

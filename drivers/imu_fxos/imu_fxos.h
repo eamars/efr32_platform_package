@@ -14,7 +14,7 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH         70
+#define VECTOR_THRESH         55
 #define M_VECTOR_DBNCE        0
 
 /**************************STATUS Register********************************/
@@ -679,8 +679,16 @@ typedef struct
     int16_t z_origin;
     int16_t start_position;
 
+    QueueHandle_t imu_event_queue;
+
 } imu_FXOS8700CQ_t;
 
+
+typedef enum
+{
+   IMU_EVENT_DOOR_OPEN,
+   IMU_EVENT_DOOR_CLOSE
+} imu_event_t;
 
 void       FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2);
 char       FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj);
