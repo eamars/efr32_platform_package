@@ -8,6 +8,11 @@
 
 const pio_map_t spi_mosi_map[] = {
 
+		{PD12, USART1, 18},
+		{PD13, USART1, 18},
+		{PD14, USART1, 21},
+		{PD15, USART1, 23},
+
 		/* USART0 */
 		{PA0,  USART0,  0},
 		{PA1,  USART0,  1},
@@ -23,10 +28,10 @@ const pio_map_t spi_mosi_map[] = {
 		{PD9,  USART0, 17},
 		{PD10, USART0, 18},
 		{PD11, USART0, 19},
-		{PD12, USART0, 20},
-		{PD13, USART0, 21},
-		{PD14, USART0, 22},
-		{PD15, USART0, 23},
+//		{PD12, USART0, 20},
+//		{PD13, USART0, 21},
+//		{PD14, USART0, 22},
+//		{PD15, USART0, 23},
 
 		/* USART1 */
 		{PC6,  USART1, 11},
@@ -85,6 +90,11 @@ const pio_map_t spi_mosi_map[] = {
 
 const pio_map_t spi_miso_map[] = {
 
+		{PD12, USART1, 18},
+		{PD13, USART1, 18},
+		{PD14, USART1, 21},
+		{PD15, USART1, 23},
+
 		/* USART0 */
 		{PA0,  USART0, 31},
 		{PA1,  USART0,  0},
@@ -100,10 +110,10 @@ const pio_map_t spi_miso_map[] = {
 		{PD9,  USART0, 16},
 		{PD10, USART0, 17},
 		{PD11, USART0, 18},
-		{PD12, USART0, 19},
-		{PD13, USART0, 20},
-		{PD14, USART0, 21},
-		{PD15, USART0, 22},
+//		{PD12, USART0, 19},
+//		{PD13, USART0, 20},
+//		{PD14, USART0, 21},
+//		{PD15, USART0, 22},
 
 		/* USART1 */
 		{PC6,  USART1, 10},
@@ -163,6 +173,11 @@ const pio_map_t spi_miso_map[] = {
 
 const pio_map_t spi_clk_map[] = {
 
+		{PD12, USART1, 18},
+		{PD13, USART1, 18},
+		{PD14, USART1, 21},
+		{PD15, USART1, 23},
+
 		/* USART0 */
 		{PA0,  USART0, 30},
 		{PA1,  USART0, 31},
@@ -178,10 +193,10 @@ const pio_map_t spi_clk_map[] = {
 		{PD9,  USART0, 15},
 		{PD10, USART0, 16},
 		{PD11, USART0, 17},
-		{PD12, USART0, 18},
-		{PD13, USART0, 19},
-		{PD14, USART0, 20},
-		{PD15, USART0, 21},
+//		{PD12, USART0, 18},
+//		{PD13, USART0, 19},
+//		{PD14, USART0, 20},
+//		{PD15, USART0, 21},
 
 		/* USART1 */
 		{PC6,  USART1,  9},
@@ -242,6 +257,11 @@ const pio_map_t spi_clk_map[] = {
 
 const pio_map_t spi_cs_map[] = {
 
+		{PD12, USART1, 18},
+		{PD13, USART1, 18},
+		{PD14, USART1, 21},
+		{PD15, USART1, 23},
+
 		/* USART0 */
 		{PA0,  USART0,  29},
 		{PA1,  USART0,  30},
@@ -257,10 +277,10 @@ const pio_map_t spi_cs_map[] = {
 		{PD9,  USART0, 14},
 		{PD10, USART0, 15},
 		{PD11, USART0, 16},
-		{PD12, USART0, 17},
-		{PD13, USART0, 18},
-		{PD14, USART0, 19},
-		{PD15, USART0, 20},
+//		{PD12, USART0, 17},
+//		{PD13, USART0, 18},
+//		{PD14, USART0, 19},
+//		{PD15, USART0, 20},
 
 		/* USART1 */
 		{PC6,  USART1,  8},
