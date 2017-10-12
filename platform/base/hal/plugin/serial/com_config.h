@@ -143,7 +143,7 @@
     BSP_USART1_RTS_PORT,                                                  /* RTS port number              */ \
     BSP_USART1_RTS_PIN,                                                   /* RTS pin number               */ \
     NULL,                                                                 /* RX operation queue           */ \
-    NULL                                                                  /* TX operation queue           */ \
+    NULL,                                                                 /* TX operation queue           */ \
     BSP_USART1_CTS_LOC,                                                   /* CTS pin location             */ \
     BSP_USART1_RTS_LOC                                                    /* RTS pin location             */ \
   }
