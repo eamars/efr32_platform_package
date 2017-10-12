@@ -13,9 +13,9 @@
 #include "delay.h"
 #include "gpiointerrupt.h"
 #include "led.h"
-#include "debug-printing.h"
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2)
 {
@@ -499,24 +499,55 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
-    bool interupt_1 = 0;
     imu_event_t door_event;
+    bool interupt_1 = 0;
+
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-    if (interupt_1 == true)
+    if (xTaskGetTickCountFromISR() > 1000 && door_event != obj->last_event)
     {
+        if (interupt_1 == true)
+        {
+            door_event = IMU_EVENT_DOOR_OPEN;
+            halSetLed(BOARDLED1);
+        }
+        else
+        {
+            door_event = IMU_EVENT_DOOR_CLOSE;
+            halClearLed(BOARDLED1);
+
+        }
+        xQueueSendFromISR(obj->imu_event_queue, &door_event, NULL);
+    }
+    obj->last_event = door_event;
+}
+
+void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
+{
+    int16_t angle = 0;
+    int16_t change = 0;
+    imu_event_t door_event;
+
+    angle = FXOS8700CQ_Get_Heading(obj);
+    change = abs(angle - obj->start_position);
+    if (!obj->calibrated)
+    {
+        door_event = IMU_EVENT_CALIBRATING;
+    }
+    else if (change >= 20) // angle that is needed for door to trigger
+    {
+
         door_event = IMU_EVENT_DOOR_OPEN;
-        halSetLed(BOARDLED1);
     }
     else
     {
         door_event = IMU_EVENT_DOOR_CLOSE;
-        halClearLed(BOARDLED1);
-
     }
-    xQueueSendFromISR(obj->imu_event_queue, &door_event, NULL);
+    if (door_event != obj->last_event)
+    {
+        xQueueSend(obj->imu_event_queue, &door_event, portMAX_DELAY);
+        obj->last_event = door_event;
+    }
 }
-
-
 
 /**
  * [FXOS8700CQ_Init_Interupt  Sets up the interupt for the imu interupt_1

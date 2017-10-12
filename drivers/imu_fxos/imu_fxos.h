@@ -661,6 +661,13 @@ typedef struct rawdata {
     int16_t z;
 } rawdata_t;
 
+typedef enum
+{
+   IMU_EVENT_DOOR_OPEN,
+   IMU_EVENT_DOOR_CLOSE,
+   IMU_EVENT_CALIBRATING
+} imu_event_t;
+
 
 typedef struct
 {
@@ -680,15 +687,10 @@ typedef struct
     int16_t start_position;
 
     QueueHandle_t imu_event_queue;
+    imu_event_t last_event;
 
 } imu_FXOS8700CQ_t;
 
-
-typedef enum
-{
-   IMU_EVENT_DOOR_OPEN,
-   IMU_EVENT_DOOR_CLOSE
-} imu_event_t;
 
 void       FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2);
 char       FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj);
@@ -726,6 +728,7 @@ void       FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj);
 int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
 
 
