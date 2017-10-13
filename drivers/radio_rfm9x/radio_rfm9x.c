@@ -267,34 +267,6 @@ static inline bool radio_rfm9x_is_channel_available_pri(radio_rfm9x_t * obj)
 
 
 /**
- * @brief Block the FSM
- * @param obj the transceiver object
- */
-static void radio_rfm9x_fsm_sleep_handler_pri(radio_rfm9x_t * obj)
-{
-	// block here, waiting until timeout or unblock from other threads or handlers
-	DRV_ASSERT(xSemaphoreTake(obj->fsm_ev_count, portMAX_DELAY));
-}
-
-
-/**
- * @brief Unblock the FSM
- * @param obj the transceiver object
- */
-static void radio_rfm9x_fsm_wakeup_handler_pri(radio_rfm9x_t * obj)
-{
-	if (__IS_INTERRUPT())
-	{
-		DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_ev_count, NULL));
-	}
-	else
-	{
-		DRV_ASSERT(xSemaphoreGive(obj->fsm_ev_count));
-	}
-}
-
-
-/**
  * @brief DIO0 raising edge interrupt handler
  *
  * @param pin interrupt pin number
@@ -318,7 +290,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
-				radio_rfm9x_fsm_wakeup_handler_pri(obj);
+				xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
 
 				break;
 			}
@@ -327,7 +299,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
-				radio_rfm9x_fsm_wakeup_handler_pri(obj);
+				xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
 
 				break;
 			}
@@ -367,7 +339,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 
 			// advance the state to RX, allow data to be processed
 			obj->fsm_state = RADIO_RFM9X_FSM_RX_DONE;
-			radio_rfm9x_fsm_wakeup_handler_pri(obj);
+			xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
 
 			break;
 		}
@@ -381,7 +353,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				// transmit complete, advance the fsm state to tx_done
 				obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
 
-				radio_rfm9x_fsm_wakeup_handler_pri(obj);
+				xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 			}
 
 			break;
@@ -400,7 +372,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 		{
 			case RADIO_RFM9X_FSM_RX:
 			{
-				radio_rfm9x_fsm_sleep_handler_pri(obj);
+				xSemaphoreTake(obj->fsm_rx_done, portMAX_DELAY);
 
 				// read data from tx queue, checking if data is received
 				// if so, then transmit data
@@ -439,7 +411,11 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			case RADIO_RFM9X_FSM_TX:
 			{
 				// stay in tx state until tx is done
-				radio_rfm9x_fsm_sleep_handler_pri(obj);
+				if (!xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(5000)))
+				{
+					// fail to transmit, then enter TX_TIMEOUT STATE
+					obj->fsm_state = RADIO_RFM9X_FSM_TX_TIMEOUT;
+				}
 
 				break;
 			}
@@ -483,6 +459,19 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 			}
 
 			case RADIO_RFM9X_FSM_RX_TIMEOUT:
+			{
+				// reset fifo pointer
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
+				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
+
+				// set radio in rx_continous mode
+				radio_rfm9x_set_opmode_rx_pri(obj);
+				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+
+				break;
+			}
+
+			case RADIO_RFM9X_FSM_TX_TIMEOUT:
 			{
 				// reset fifo pointer
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
@@ -547,16 +536,19 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
 	// configure state machine
 	obj->fsm_state = RADIO_RFM9X_FSM_RX;
-	obj->fsm_ev_count = xSemaphoreCreateCounting(10, 0);
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
+
+	obj->fsm_tx_done = xSemaphoreCreateBinary();
+	obj->fsm_rx_done = xSemaphoreCreateBinary();
 
 	// spawn a thread for each RFM9X module for handling data receive/transmit path
 	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 2, &obj->fsm_thread_handler);
 
-	DRV_ASSERT(obj->fsm_ev_count);
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue);
+	DRV_ASSERT(obj->fsm_tx_done);
+	DRV_ASSERT(obj->fsm_rx_done);
 
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
@@ -778,7 +770,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 	}
 
 	// if the packet is put to the queue then I should run the fsm as soon as possible
-	radio_rfm9x_fsm_wakeup_handler_pri(obj);
+	xSemaphoreGive(obj->fsm_rx_done);
 
 	return true;
 }

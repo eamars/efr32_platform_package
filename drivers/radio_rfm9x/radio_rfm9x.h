@@ -54,6 +54,7 @@ typedef enum
 	// some error handlers
 	RADIO_RFM9X_FSM_RX_ERROR,
 	RADIO_RFM9X_FSM_RX_TIMEOUT,
+	RADIO_RFM9X_FSM_TX_TIMEOUT
 
 } radio_rfm9x_fsm_state_t;
 
@@ -156,8 +157,9 @@ typedef struct
 
 	// state machine
 	radio_rfm9x_fsm_state_t fsm_state;
-	SemaphoreHandle_t fsm_ev_count;
 	TaskHandle_t fsm_thread_handler;
+	SemaphoreHandle_t fsm_tx_done;
+	SemaphoreHandle_t fsm_rx_done;
 
 	// radio status
 	radio_rfm9x_op_t radio_op_state;
