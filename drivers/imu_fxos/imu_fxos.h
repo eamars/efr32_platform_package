@@ -16,7 +16,7 @@
 #define M_THRESHOLD           20
 #define VECTOR_THRESH         70
 #define M_VECTOR_DBNCE        0
-#define POLL_THRESH           15
+#define POLL_THRESH           10
 
 /**************************STATUS Register********************************/
 #define ZYXOW_MASK            0x80
@@ -382,11 +382,11 @@
 #define M_OSR_1_56_HZ         0x00
 #define M_OSR_6_25_HZ         M_OSR0_MASK
 #define M_OSR_12_5_HZ         M_OSR1_MASK
-#define M_OSR_50_HZ           M_OSR1_MASK+M_OSR0_MASK
+#define M_OSR_50_HZ           M_OSR1_MASK | M_OSR0_MASK
 #define M_OSR_100_HZ          M_OSR2_MASK
-#define M_OSR_200_HZ          M_OSR2_MASK+M_OSR0_MASK
-#define M_OSR_400_HZ          M_OSR2_MASK+M_OSR1_MASK
-#define M_OSR_800_HZ          M_OSR2_MASK+M_OSR1_MASK+M_OSR0_MASK
+#define M_OSR_200_HZ          M_OSR2_MASK | M_OSR0_MASK
+#define M_OSR_400_HZ          M_OSR2_MASK | M_OSR1_MASK
+#define M_OSR_800_HZ          M_OSR2_MASK | M_OSR1_MASK | M_OSR0_MASK
 
 //Hybrid Mode Selection
 #define ACCEL_ACTIVE          0x00

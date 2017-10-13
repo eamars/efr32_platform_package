@@ -157,9 +157,9 @@ void FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t ran
 void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE|M_OSR1_MASK) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE| M_OSR_400_HZ) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OS_1_MASK);       // OSR =2 in auto sleep mode
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_400_HZ);       // OSR =2 in auto sleep mode
     FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
     FXOS8700CQ_ActiveMode (obj);
 }
@@ -420,7 +420,7 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
     delay_ms(30);  // wait after configuring before reading
     FXOS8700CQ_PollMagnetometer(obj ,&mag_raw);
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE|M_OSR1_MASK) ); // turns auto calibrate mode off
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE | M_OSR_400_HZ) ); // turns auto calibrate mode off
     obj->x_origin = abs(mag_raw.x);
     obj->y_origin = abs(mag_raw.y);
     obj->z_origin = abs(mag_raw.z);
