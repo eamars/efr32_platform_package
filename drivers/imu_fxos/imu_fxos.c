@@ -528,7 +528,6 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 {
     int16_t angle = 0;
     int16_t change = 0;
-    imu_event_t door_event;
 
     angle = FXOS8700CQ_Get_Heading(obj);
     change = abs(angle - obj->start_position);
@@ -539,21 +538,22 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 
     if (!obj->calibrated)
     {
-        door_event = IMU_EVENT_CALIBRATING;
+
+        obj->door_state = IMU_EVENT_CALIBRATING;
     }
     else if (change >= POLL_THRESH) // angle that is needed for door to trigger
     {
 
-        door_event = IMU_EVENT_DOOR_OPEN;
+	    obj->door_state = IMU_EVENT_DOOR_OPEN;
     }
     else
     {
-        door_event = IMU_EVENT_DOOR_CLOSE;
+	    obj->door_state = IMU_EVENT_DOOR_CLOSE;
     }
-    if (door_event != obj->last_event)
+    if (obj->door_state != obj->last_event)
     {
-        xQueueSend(obj->imu_event_queue, &door_event, portMAX_DELAY);
-        obj->last_event = door_event;
+        xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
+        obj->last_event = obj->door_state;
     }
 }
 

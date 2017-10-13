@@ -680,7 +680,7 @@ typedef struct
     i2cdrv_t * i2c_device;
     pio_t enable;
     bool initialized;
-    bool door_state;
+	imu_event_t door_state;
     bool calibrated;
     int16_t x_origin;
     int16_t y_origin;
