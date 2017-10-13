@@ -290,7 +290,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
-				xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
+				xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 
 				break;
 			}
@@ -299,7 +299,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 			{
 				obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
-				xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
+				xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 
 				break;
 			}
@@ -337,9 +337,9 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			if (obj->on_rx_done_isr)
 				obj->on_rx_done_isr(&rx_msg, obj->last_packet_rssi, obj->last_packet_snr);
 
-			// advance the state to RX, allow data to be processed
+			// advance the state to RX, allow data to be transmitted or received
 			obj->fsm_state = RADIO_RFM9X_FSM_RX_DONE;
-			xSemaphoreGiveFromISR(obj->fsm_rx_done, NULL);
+			xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 
 			break;
 		}
@@ -370,9 +370,12 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 	{
 		switch (obj->fsm_state)
 		{
-			case RADIO_RFM9X_FSM_RX:
+			case RADIO_RFM9X_FSM_RX_IDLE:
 			{
-				xSemaphoreTake(obj->fsm_rx_done, portMAX_DELAY);
+				// the state machine thread stopped as nothing is received or is required to be transmitted
+				// the fsm will start running when event occurred, for example, radio ISR or packet is ready to be
+				// transmitted
+				xSemaphoreTake(obj->fsm_poll_event, portMAX_DELAY);
 
 				// read data from tx queue, checking if data is received
 				// if so, then transmit data
@@ -428,7 +431,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 				// enter rx_continous mode, the app state enters idle state
 				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 				break;
 			}
 
@@ -441,7 +444,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 				// set radio in rx_continous mode
 				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 				break;
 			}
 
@@ -453,7 +456,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 				// set radio in rx_continous mode
 				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 
 				break;
 			}
@@ -466,7 +469,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 				// set radio in rx_continous mode
 				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 
 				break;
 			}
@@ -479,7 +482,7 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 
 				// set radio in rx_continous mode
 				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX;
+				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 
 				break;
 			}
@@ -535,12 +538,12 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->dio0 = dio0;
 
 	// configure state machine
-	obj->fsm_state = RADIO_RFM9X_FSM_RX;
+	obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 
 	obj->fsm_tx_done = xSemaphoreCreateBinary();
-	obj->fsm_rx_done = xSemaphoreCreateBinary();
+	obj->fsm_poll_event = xSemaphoreCreateBinary();
 
 	// spawn a thread for each RFM9X module for handling data receive/transmit path
 	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 2, &obj->fsm_thread_handler);
@@ -548,7 +551,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue);
 	DRV_ASSERT(obj->fsm_tx_done);
-	DRV_ASSERT(obj->fsm_rx_done);
+	DRV_ASSERT(obj->fsm_poll_event);
 
 	// Configure SPI driver
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
@@ -770,7 +773,7 @@ bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 	}
 
 	// if the packet is put to the queue then I should run the fsm as soon as possible
-	xSemaphoreGive(obj->fsm_rx_done);
+	xSemaphoreGive(obj->fsm_poll_event);
 
 	return true;
 }

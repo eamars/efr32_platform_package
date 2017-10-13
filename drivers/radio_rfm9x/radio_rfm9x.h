@@ -46,7 +46,7 @@ typedef enum
  */
 typedef enum
 {
-	RADIO_RFM9X_FSM_RX,
+	RADIO_RFM9X_FSM_RX_IDLE,
 	RADIO_RFM9X_FSM_RX_DONE,
 	RADIO_RFM9X_FSM_TX,
 	RADIO_RFM9X_FSM_TX_DONE,
@@ -159,7 +159,7 @@ typedef struct
 	radio_rfm9x_fsm_state_t fsm_state;
 	TaskHandle_t fsm_thread_handler;
 	SemaphoreHandle_t fsm_tx_done;
-	SemaphoreHandle_t fsm_rx_done;
+	SemaphoreHandle_t fsm_poll_event;
 
 	// radio status
 	radio_rfm9x_op_t radio_op_state;
