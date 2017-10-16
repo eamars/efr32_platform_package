@@ -160,7 +160,7 @@ void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE| M_OSR_400_HZ) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_400_HZ);       // OSR =2 in auto sleep mode
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
+    //FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -499,31 +499,45 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 
 }
 
-
+/**
+ * Handles teh the intterupts associate with the imu. check if the int pin is high or low and sends a door open/ closed to the que
+ * @param pin in that is used for detection of the interupt (IMU INT pn2)
+ * @param obj IMU object
+ */
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
-    imu_event_t door_event;
     bool interupt_1 = 0;
 
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-    if (xTaskGetTickCountFromISR() > 1000 && door_event != obj->last_event)
-    {
-        if (interupt_1 == true)
-        {
-            door_event = IMU_EVENT_DOOR_OPEN;
-            halSetLed(BOARDLED1);
-        }
-        else
-        {
-            door_event = IMU_EVENT_DOOR_CLOSE;
-            halClearLed(BOARDLED1);
 
-        }
-        xQueueSendFromISR(obj->imu_event_queue, &door_event, NULL);
+    if (!obj->calibrated)
+    {
+
+        obj->door_state = IMU_EVENT_CALIBRATING;
     }
-    obj->last_event = door_event;
+    else if (interupt_1 == true)
+    {
+        obj->door_state = IMU_EVENT_DOOR_OPEN;
+        halSetLed(BOARDLED1);
+    }
+    else
+    {
+        obj->door_state = IMU_EVENT_DOOR_CLOSE;
+        halClearLed(BOARDLED1);
+
+    }
+    if (xTaskGetTickCountFromISR() > 1500 && obj->door_state != obj->last_event)
+    {
+        //xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
+        obj->last_event = obj->door_state;
+    }
 }
 
+
+/**
+ * Polls the magnetomiter and checks for a door open/ closed condition and if a change has occured sends it to the queue
+ * @param obj IMU device object
+ */
 void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 {
     int16_t angle = 0;
@@ -531,6 +545,7 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 
     angle = FXOS8700CQ_Get_Heading(obj);
     change = abs(angle - obj->start_position);
+    change = (change < 180 ? change : 180 - (change % 180));
 
     // Store the current values in the object.
     obj->current_compass = angle; // The compass angle
