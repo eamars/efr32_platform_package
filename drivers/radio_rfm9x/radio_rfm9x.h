@@ -5,18 +5,17 @@
 #ifndef RADIO_RFM9X_H_
 #define RADIO_RFM9X_H_
 
+#if USE_FREERTOS == 1
+
 #include "spidrv.h"
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
 
-#if USE_FREERTOS == 1
-	#include "FreeRTOS.h"
-	#include "semphr.h"
-	#include "queue.h"
-	#include "task.h"
-#else
-#error RFM9x driver requires integration of FreeRTOS API
-#endif
+#include "FreeRTOS.h"
+#include "semphr.h"
+#include "queue.h"
+#include "task.h"
+
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
@@ -308,5 +307,7 @@ bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 #ifdef __cplusplus
 }
 #endif
+
+#endif // USE_FREERTOS == 1
 
 #endif // RADIO_RFM9X_H_

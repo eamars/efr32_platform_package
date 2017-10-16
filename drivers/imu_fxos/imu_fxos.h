@@ -8,6 +8,8 @@
 #ifndef __FXOS8700CQ_H__
 #define __FXOS8700CQ_H__
 
+#if USE_FREERTOS == 1
+
 #include <stdint.h>
 #include "i2cdrv.h"
 #include "pio_defs.h"
@@ -742,6 +744,6 @@ void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr,
 char       FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr);
 void       FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *buffer, uint32_t length);
 
-
+#endif // USE_FREERTOS == 1
 
 #endif
