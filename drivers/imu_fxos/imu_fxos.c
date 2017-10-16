@@ -63,7 +63,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
 char FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj)
 {
-    return FXOS8700CQ_ReadByte(obj, STATUS);
+    return FXOS8700CQ_ReadByte(obj, IMU_STATUS);
 }
 
 void FXOS8700CQ_ActiveMode (imu_FXOS8700CQ_t * obj)
@@ -106,9 +106,9 @@ void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
     //FXOS8700CQ_WriteByte(obj, CTRL_REG4, INT_EN_DRDY_MASK );                   // Enable interrupts for DRDY (TO, Aug 2012)
-    FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
-    FXOS8700CQ_WriteByte(obj, CTRL_REG1, (HYB_ASLP_RATE_25HZ|HYB_DATA_RATE_50HZ));     // Set ODRs
-    FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
+    //FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
+    FXOS8700CQ_WriteByte(obj, CTRL_REG1, (ASLP_RATE_1_56HZ|DATA_RATE_640MS));     // Set ODRs
+    //FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
     FXOS8700CQ_WriteByte(obj, CTRL_REG3, (IPOL_MASK));
     FXOS8700CQ_ActiveMode (obj);
 }
@@ -159,9 +159,9 @@ void FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t ran
 void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE| M_OSR_400_HZ) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE| M_OSR_100_HZ) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_400_HZ);       // OSR =2 in auto sleep mode
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_100_HZ);       // OSR =2 in auto sleep mode
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
     FXOS8700CQ_ActiveMode (obj);
 }
