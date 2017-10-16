@@ -15,6 +15,7 @@
 
 #include "i2cdrv.h"
 #include "drv_debug.h"
+#include "irq.h"
 
 extern const pio_map_t i2c_scl_map[];
 extern const pio_map_t i2c_sda_map[];
@@ -47,8 +48,8 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	scl_pin = PIO_PIN(scl);
 
 	// find base and pin location
-	find_pin_function(i2c_scl_map, scl, (void **) &scl_base, &scl_loc);
-	find_pin_function(i2c_sda_map, sda, (void **) &sda_base, &sda_loc);
+	DRV_ASSERT(find_pin_function(i2c_scl_map, obj->scl, (void **) &scl_base, &scl_loc));
+	DRV_ASSERT(find_pin_function(i2c_sda_map, obj->sda, (void **) &sda_base, &sda_loc));
 
 	DRV_ASSERT(scl_base == sda_base);
 	DRV_ASSERT(scl_base);
@@ -255,7 +256,10 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 
 #if I2C_USE_MUTEX == 1
 	// enter mutex section
-	xSemaphoreTake(obj->access_mutex, portMAX_DELAY);
+	if (__IS_INTERRUPT())
+		xSemaphoreTakeFromISR(obj->access_mutex, NULL);
+	else
+		xSemaphoreTake(obj->access_mutex, portMAX_DELAY);
 #endif
 
 	// start transfer
@@ -274,7 +278,10 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 
 #if I2C_USE_MUTEX == 1
 	// exit mutex section
-	xSemaphoreGive(obj->access_mutex);
+	if (__IS_INTERRUPT())
+		xSemaphoreGiveFromISR(obj->access_mutex, NULL);
+	else
+		xSemaphoreGive(obj->access_mutex);
 #endif
 
 	return ret;
