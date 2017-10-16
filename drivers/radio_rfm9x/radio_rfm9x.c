@@ -2,6 +2,8 @@
  * @brief RFM9x LoRa/FSK module driver
  */
 
+#if USE_FREERTOS == 1
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -805,3 +807,5 @@ bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint
 
 	return true;
 }
+
+#endif // USE_FREERTOS == 1

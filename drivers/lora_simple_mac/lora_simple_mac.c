@@ -5,6 +5,8 @@
  * @file lora_simple_mac.c
  */
 
+#if USE_FREERTOS == 1
+
 #include "lora_simple_mac.h"
 #include "drv_debug.h"
 #include "subg_packet.h"
@@ -99,3 +101,6 @@ void lora_simple_mac_send_packet(lora_simple_mac_t * obj, subg_packet_t * packet
 		radio_rfm9x_hard_reset(obj->transceiver);
 	}
 }
+
+
+#endif // USE_FREERTOS == 1

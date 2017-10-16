@@ -5,6 +5,8 @@
  * @date Oct, 2017
  */
 
+#if USE_FREERTOS == 1
+
 #include <unistd.h>
 #include <math.h>
 #include <stdlib.h>
@@ -619,3 +621,6 @@ void FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *
     //I2C_ReadByteArray(reg,buffer,length);   //Read values starting from the reg address
     ret = i2cdrv_master_write_read(obj->i2c_device, FXOS8700CQ_ADDRESS, &internal_addr, 1, buffer, length);
 }
+
+
+#endif // USE_FREERTOS == 1
