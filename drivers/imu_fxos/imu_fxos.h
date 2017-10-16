@@ -14,7 +14,7 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH         70
+#define VECTOR_THRESH         50
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
@@ -508,7 +508,7 @@
 
 /*****************************************************************************/
 // register addresses
-#define  STATUS           0x00
+#define  IMU_STATUS       0x00
 #define  DR_STATUS        0x00
 #define  F_STATUS         0x00
 #define  OUT_X_MSB        0x01
