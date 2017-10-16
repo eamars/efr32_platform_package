@@ -8,6 +8,8 @@
 #ifndef LORA_SIMPLE_MAC_H_
 #define LORA_SIMPLE_MAC_H_
 
+#if USE_FREERTOS == 1
+
 #include "radio_rfm9x.h"
 #include "subg_packet.h"
 
@@ -50,4 +52,5 @@ void lora_simple_mac_init(lora_simple_mac_t * obj, radio_rfm9x_t * transceiver,
 void lora_simple_mac_send_packet(lora_simple_mac_t * obj, subg_packet_t * packet);
 
 
+#endif // USE_FREERTOS == 1
 #endif // LORA_SIMPLE_MAC_H_
