@@ -557,10 +557,10 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->spi_access_mutex = xSemaphoreCreateMutex();
 
 	// find spi peripheral functions
-	DRV_ASSERT(find_pin_function(spi_miso_map, miso, (void **) &usart_base, &miso_loc));
-	DRV_ASSERT(find_pin_function(spi_mosi_map, mosi, NULL, &mosi_loc));
-	DRV_ASSERT(find_pin_function(spi_clk_map, clk, NULL, &clk_loc));
-	DRV_ASSERT(find_pin_function(spi_cs_map, cs, NULL, &cs_loc));
+	DRV_ASSERT(find_pin_function(spi_miso_map, obj->miso, (void **) &usart_base, &miso_loc));
+	DRV_ASSERT(find_pin_function(spi_mosi_map, obj->mosi, NULL, &mosi_loc));
+	DRV_ASSERT(find_pin_function(spi_clk_map, obj->clk, NULL, &clk_loc));
+	DRV_ASSERT(find_pin_function(spi_cs_map, obj->cs, NULL, &cs_loc));
 
 	// configure spi
 	spi_init_data.port = usart_base;
