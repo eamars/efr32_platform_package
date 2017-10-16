@@ -9,10 +9,14 @@
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
 
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "queue.h"
-#include "task.h"
+#if USE_FREERTOS == 1
+	#include "FreeRTOS.h"
+	#include "semphr.h"
+	#include "queue.h"
+	#include "task.h"
+#else
+#error RFM9x driver requires integration of FreeRTOS API
+#endif
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
