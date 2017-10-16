@@ -526,9 +526,9 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         halClearLed(BOARDLED1);
 
     }
-    if (xTaskGetTickCountFromISR() > 1500 && obj->door_state != obj->last_event)
+    if (obj->door_state != obj->last_event)
     {
-        //xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
+        xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
         obj->last_event = obj->door_state;
     }
 }

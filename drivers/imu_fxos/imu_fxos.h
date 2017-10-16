@@ -692,6 +692,7 @@ typedef struct
 
     QueueHandle_t imu_event_queue;
     imu_event_t last_event;
+    uint32_t last_call;
 
 } imu_FXOS8700CQ_t;
 
