@@ -334,9 +334,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				}
 
 				// send received data to queue
-				BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-				DRV_ASSERT(xQueueSendFromISR(obj->rx_queue, &rx_msg, &xHigherPriorityTaskWoken));
-				portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+				DRV_ASSERT(xQueueSendFromISR(obj->rx_queue, &rx_msg, NULL));
 
 				// TODO: optionally, we call interrupt handler directly
 				// any modification to the rx buffer will be discarded
