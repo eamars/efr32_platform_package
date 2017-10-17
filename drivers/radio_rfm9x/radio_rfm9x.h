@@ -279,6 +279,13 @@ void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spre
 void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
 
 /**
+ * @brief Configure transceiver LNA
+ * @param lna_gain LNA gain settings, please refer to datasheet. 0x0 indicates no changes
+ * @param boost_on true if turn LNA boost on, 150% LNA current
+ */
+void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on);
+
+/**
  * @brief Send bytes to transceiver
  * @param obj the transceiver object
  * @param msg message buffer @see radio_rfm9x_msg_t. The message buffer have maximum payload length, @see RADIO_RFM9X_RW_BUFFER_SIZE

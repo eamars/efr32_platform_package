@@ -773,6 +773,31 @@ void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable)
 }
 
 
+void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on)
+{
+	DRV_ASSERT(obj);
+
+	// read lna settings
+	uint8_t reg = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_0C_LNA);
+
+	// apply boost_on option
+	BITS_MODIFY(reg, (boost_on ? 0x1 : 0x0), 0x1);
+
+	// apply lna gain
+	if (lna_gain == 0x0 || lna_gain == 0x7)
+	{
+		return;
+	}
+	else
+	{
+		BITS_MODIFY(reg, lna_gain << 5, 0x7 << 5);
+	}
+
+	// write back
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0C_LNA, reg);
+}
+
+
 bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
 {
 	DRV_ASSERT(obj);
