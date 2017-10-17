@@ -156,6 +156,7 @@ typedef struct
 
 	// packet queue
 	QueueHandle_t tx_queue;
+	QueueHandle_t rx_queue_pri;
 	QueueHandle_t rx_queue;
 
 	// state machine

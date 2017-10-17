@@ -334,7 +334,7 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				}
 
 				// send received data to queue
-				DRV_ASSERT(xQueueSendFromISR(obj->rx_queue, &rx_msg, NULL));
+				DRV_ASSERT(xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL));
 
 				// TODO: optionally, we call interrupt handler directly
 				// any modification to the rx buffer will be discarded
@@ -346,21 +346,30 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			);
 
 			// let the state machine runs
-			DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL));
+			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+			DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_poll_event, &xHigherPriorityTaskWoken));
+			portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
 
 			break;
 		}
 		case RADIO_RFM9X_OP_TX:
 		{
-			if (reg_irq_flags & RH_RF95_TX_DONE)
-			{
-				if (obj->on_tx_done_isr)
-					obj->on_tx_done_isr();
+			YIELD(
+				if (reg_irq_flags & RH_RF95_TX_DONE)
+				{
+					if (obj->on_tx_done_isr)
+						obj->on_tx_done_isr();
 
-				// transmit complete, advance the fsm state to tx_done
-				obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
-				DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL));
-			}
+					// transmit complete, advance the fsm state to tx_done
+					obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
+
+					// indicate the Tx is ready
+					BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+					DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_tx_done, &xHigherPriorityTaskWoken));
+					portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+				}
+			);
+
 
 			break;
 		}
@@ -434,6 +443,13 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				// reset fifo pointer
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
+
+				// read message received from interrupt
+				radio_rfm9x_msg_t rx_msg;
+				while (xQueueReceive(obj->rx_queue_pri, &rx_msg, 0))
+				{
+					xQueueSend(obj->rx_queue, &rx_msg, 0);
+				}
 
 				// enter rx_continous mode, the app state enters idle state
 				radio_rfm9x_set_opmode_rx_pri(obj);
@@ -546,6 +562,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	// configure state machine
 	obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
 	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
+	obj->rx_queue_pri = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
 
 	obj->fsm_tx_done = xSemaphoreCreateBinary();
@@ -555,6 +572,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 3, &obj->fsm_thread_handler);
 
 	DRV_ASSERT(obj->tx_queue);
+	DRV_ASSERT(obj->rx_queue_pri);
 	DRV_ASSERT(obj->rx_queue);
 	DRV_ASSERT(obj->fsm_tx_done);
 	DRV_ASSERT(obj->fsm_poll_event);
