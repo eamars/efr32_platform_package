@@ -298,14 +298,14 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
 				{
 					obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
-					break;
+					break; // to the end of yield
 				}
 
 				// if rx timeout error
 				if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 				{
 					obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
-					break;
+					break; // to the end of yield
 				}
 
 				// read data packet
@@ -367,6 +367,8 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 					BaseType_t xHigherPriorityTaskWoken = pdFALSE;
 					DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_tx_done, &xHigherPriorityTaskWoken));
 					portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+
+					break;
 				}
 			);
 
