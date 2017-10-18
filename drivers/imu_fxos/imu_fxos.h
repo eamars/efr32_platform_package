@@ -738,7 +738,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
 
-
+void       FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask);
 void       FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value);
 void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, uint8_t* buffer, char length);
 char       FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr);
