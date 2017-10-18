@@ -298,6 +298,10 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
 				{
 					obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
+
+					if (obj->on_rx_error_isr)
+						obj->on_rx_error_isr();
+
 					break;
 				}
 
@@ -305,6 +309,10 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 				if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 				{
 					obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
+
+					if (obj->on_rx_timeout_isr)
+						obj->on_rx_timeout_isr();
+
 					break;
 				}
 
@@ -357,11 +365,11 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 			YIELD(
 				if (reg_irq_flags & RH_RF95_TX_DONE)
 				{
-					if (obj->on_tx_done_isr)
-						obj->on_tx_done_isr();
-
 					// transmit complete, advance the fsm state to tx_done
 					obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
+
+					if (obj->on_tx_done_isr)
+						obj->on_tx_done_isr();
 
 					// indicate the Tx is ready
 					BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -433,6 +441,9 @@ static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
 				{
 					// fail to transmit, then enter TX_TIMEOUT STATE
 					obj->fsm_state = RADIO_RFM9X_FSM_TX_TIMEOUT;
+
+					if (obj->on_tx_timeout)
+						obj->on_tx_timeout();
 				}
 
 				break;
