@@ -136,6 +136,10 @@ typedef struct
 
 typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
 typedef void (*on_tx_done_isr_handler)(void);
+typedef void (*on_rx_error_isr_handler)(void);
+typedef void (*on_tx_timeout_handler)(void);
+typedef void (*on_rx_timeout_isr_handler)(void);
+
 
 /**
  * @brief RFM9X transceiver object
@@ -175,6 +179,9 @@ typedef struct
 	// handlers
 	on_rx_done_isr_handler on_rx_done_isr;
 	on_tx_done_isr_handler on_tx_done_isr;
+	on_rx_error_isr_handler on_rx_error_isr;
+	on_rx_timeout_isr_handler on_rx_timeout_isr;
+	on_tx_timeout_handler on_tx_timeout; // tx_timeout is executed in thread mode
 
 } radio_rfm9x_t;
 
