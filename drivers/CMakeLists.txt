@@ -17,7 +17,6 @@ SET(ENABLED_DRIVERS
 		radio_rfm9x
 		lorawan
         imu_fxos
-		lora_simple_mac
 		battery_monitor
 		# simgbpr
 		)
