@@ -475,8 +475,9 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     ref[2] = obj->y_origin >> 8;
     ref[5] = obj->z_origin;
     ref[4] = obj->z_origin >> 8;
-    Vector_Threshold[1] = (uint8_t)VECTOR_THRESH ;
-    Vector_Threshold[0] = VECTOR_THRESH >> 8 | 0x80;
+    Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
+    Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
+
 
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
     FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK));
@@ -513,29 +514,42 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     bool interupt_1 = 0;
-
+    uint8_t Vector_Threshold[2] = {0};
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 )
+    {
+        if (!obj->calibrated)
+        {
 
-    if (!obj->calibrated)
-    {
+            obj->door_state = IMU_EVENT_CALIBRATING;
+        }
+        else if (interupt_1 == true)
+        {
+            obj->door_state = IMU_EVENT_DOOR_OPEN;
+            halSetLed(BOARDLED1);
+            Vector_Threshold[0] = VECTOR_THRESH_OPEN >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_OPEN ;
 
-        obj->door_state = IMU_EVENT_CALIBRATING;
-    }
-    else if (interupt_1 == true)
-    {
-        obj->door_state = IMU_EVENT_DOOR_OPEN;
-        halSetLed(BOARDLED1);
-    }
-    else
-    {
-        obj->door_state = IMU_EVENT_DOOR_CLOSE;
-        halClearLed(BOARDLED1);
 
-    }
-    if (obj->door_state != obj->last_event)
-    {
-        xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
-        obj->last_event = obj->door_state;
+        }
+        else
+        {
+            obj->door_state = IMU_EVENT_DOOR_CLOSE;
+            halClearLed(BOARDLED1);
+            Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
+
+
+
+        }
+        if (obj->door_state != obj->last_event)
+        {
+            FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
+            FXOS8700CQ_Door_State_Poll(obj);
+            xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
+            obj->last_event = obj->door_state;
+        }
+        obj->last_call = xTaskGetTickCountFromISR();
     }
 }
 
@@ -557,25 +571,28 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
     obj->current_compass = angle; // The compass angle
     obj->current_heading = change; // The heading away from calibrated angle
 
-    if (!obj->calibrated)
-    {
 
-        obj->door_state = IMU_EVENT_CALIBRATING;
-    }
-    else if (change >= POLL_THRESH) // angle that is needed for door to trigger
-    {
+//removed so a heading can be gained from the interupt
+    // if (!obj->calibrated)
+    // {
+    //
+    //     obj->door_state = IMU_EVENT_CALIBRATING;
+    // }
+    // else if (change >= POLL_THRESH) // angle that is needed for door to trigger
+    // {
+    //
+	//     obj->door_state = IMU_EVENT_DOOR_OPEN;
+    // }
+    // else
+    // {
+	//     obj->door_state = IMU_EVENT_DOOR_CLOSE;
+    // }
+    // if (obj->door_state != obj->last_event)
+    // {
+    //     xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
+    //     obj->last_event = obj->door_state;
+    // }
 
-	    obj->door_state = IMU_EVENT_DOOR_OPEN;
-    }
-    else
-    {
-	    obj->door_state = IMU_EVENT_DOOR_CLOSE;
-    }
-    if (obj->door_state != obj->last_event)
-    {
-        xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
-        obj->last_event = obj->door_state;
-    }
 }
 
 /**

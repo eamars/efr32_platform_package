@@ -16,7 +16,8 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH         50
+#define VECTOR_THRESH_OPEN    25
+#define VECTOR_THRESH_CLOSE   45
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
