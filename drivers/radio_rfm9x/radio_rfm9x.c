@@ -2,12 +2,13 @@
  * @brief RFM9x LoRa/FSK module driver
  */
 
-#if USE_FREERTOS == 1
 
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <string.h>
 
+#include "em_core.h"
 #include "spidrv.h"
 #include "radio_rfm9x.h"
 #include "radio_rfm9x_regs.h"
@@ -17,10 +18,6 @@
 #include "gpiointerrupt.h"
 #include "irq.h"
 #include "yield.h"
-
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "task.h"
 
 extern const pio_map_t spi_mosi_map[];
 extern const pio_map_t spi_miso_map[];
@@ -37,12 +34,6 @@ extern const pio_map_t spi_cs_map[];
  */
 static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 {
-	// enter critical section
-	if (__IS_INTERRUPT())
-		DRV_ASSERT(xSemaphoreTakeFromISR(obj->spi_access_mutex, NULL));
-	else
-		DRV_ASSERT(xSemaphoreTake(obj->spi_access_mutex, portMAX_DELAY));
-
 	GPIO_PinOutClear(PIO_PORT(obj->cs), PIO_PIN(obj->cs));
 }
 
@@ -54,16 +45,6 @@ static inline void radio_rfm9x_cs_assert_pri(radio_rfm9x_t * obj)
 static inline void radio_rfm9x_cs_deassert_pri(radio_rfm9x_t * obj)
 {
 	GPIO_PinOutSet(PIO_PORT(obj->cs), PIO_PIN(obj->cs));
-
-	// exit critical section
-	if (__IS_INTERRUPT())
-	{
-		BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-		DRV_ASSERT(xSemaphoreGiveFromISR(obj->spi_access_mutex, &xHigherPriorityTaskWoken));
-		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	}
-	else
-		DRV_ASSERT(xSemaphoreGive(obj->spi_access_mutex));
 }
 
 
@@ -76,20 +57,22 @@ static inline void radio_rfm9x_cs_deassert_pri(radio_rfm9x_t * obj)
  */
 static inline void radio_rfm9x_write_pri(radio_rfm9x_t * obj, uint8_t addr, void * buffer, uint8_t size)
 {
-	// assert the line
-	radio_rfm9x_cs_assert_pri(obj);
+	CORE_ATOMIC_SECTION(
+        // assert the line
+		radio_rfm9x_cs_assert_pri(obj);
 
-	// set write mode (MSB=1)
-	addr |= 0x80;
+		// set write mode (MSB=1)
+		addr |= 0x80;
 
-	// transmit address
-	SPIDRV_MTransmitB(&obj->spi_handle_data, &addr, 1);
+		// transmit address
+		SPIDRV_MTransmitB(&obj->spi_handle_data, &addr, 1);
 
-	// transmit payload
-	SPIDRV_MTransmitB(&obj->spi_handle_data, buffer, size);
+		// transmit payload
+		SPIDRV_MTransmitB(&obj->spi_handle_data, buffer, size);
 
-	// deassert the line
-	radio_rfm9x_cs_deassert_pri(obj);
+		// deassert the line
+		radio_rfm9x_cs_deassert_pri(obj);
+	);
 }
 
 
@@ -102,20 +85,22 @@ static inline void radio_rfm9x_write_pri(radio_rfm9x_t * obj, uint8_t addr, void
  */
 static inline void radio_rfm9x_read_pri(radio_rfm9x_t * obj, uint8_t addr, void * buffer, uint8_t size)
 {
-	// assert the line
-	radio_rfm9x_cs_assert_pri(obj);
+	CORE_ATOMIC_SECTION(
+		// assert the line
+		radio_rfm9x_cs_assert_pri(obj);
 
-	// set read mode (MSB=0)
-	addr &= 0x7F;
+		// set read mode (MSB=0)
+		addr &= 0x7F;
 
-	// transmit address
-	SPIDRV_MTransmitB(&obj->spi_handle_data, &addr, 1);
+		// transmit address
+		SPIDRV_MTransmitB(&obj->spi_handle_data, &addr, 1);
 
-	// read data
-	SPIDRV_MReceiveB(&obj->spi_handle_data, buffer, size);
+		// read data
+		SPIDRV_MReceiveB(&obj->spi_handle_data, buffer, size);
 
-	// deassert the line
-	radio_rfm9x_cs_deassert_pri(obj);
+		// deassert the line
+		radio_rfm9x_cs_deassert_pri(obj);
+	);
 }
 
 
@@ -192,75 +177,6 @@ static inline radio_rfm9x_op_t radio_rfm9x_get_opmode_pri(radio_rfm9x_t * obj)
 
 
 /**
- * @brief Toggle the transceiver mode to stand by
- *
- * Note: low power, ready to switch states, passive data sensing is not available
- *
- * @param obj the transciever
- */
-static inline void radio_rfm9x_set_opmode_stdby_pri(radio_rfm9x_t * obj)
-{
-	if (obj->radio_op_state != RADIO_RFM9X_OP_STDBY)
-	{
-		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_STDBY);
-
-		obj->radio_op_state = RADIO_RFM9X_OP_STDBY;
-	}
-}
-
-
-/**
- * @brief Toggle the transceiver mode to Tx (Transmit)
- * @param obj the transceiver object
- */
-static inline void radio_rfm9x_set_opmode_tx_pri(radio_rfm9x_t * obj)
-{
-	if (obj->radio_op_state != RADIO_RFM9X_OP_TX)
-	{
-		// the application takes the responsible for
-
-		// set opmode and interrupt source
-		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_TX);
-		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x01 << 6, 0xC0); // interrupt on tx done
-
-		obj->radio_op_state = RADIO_RFM9X_OP_TX;
-	}
-}
-
-
-/**
- * @brief Toggle the transceiver mode to Rx (active continuous receive)
- * @param obj the transceiver object
- */
-static inline void radio_rfm9x_set_opmode_rx_pri(radio_rfm9x_t * obj)
-{
-	if (obj->radio_op_state != RADIO_RFM9X_OP_RX)
-	{
-		// set opmode and interrupt source
-		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_RX);
-		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x00 << 6, 0xC0); // interrupt on rx done
-
-		obj->radio_op_state = RADIO_RFM9X_OP_RX;
-	}
-}
-
-
-/**
- * @brief Toggle the transceiver mode to Sleep (low power mode)
- * @param obj the transceiver
- */
-static inline void radio_rfm9x_set_opmode_sleep_pri(radio_rfm9x_t * obj)
-{
-	if (obj->radio_op_state != RADIO_RFM9X_OP_SLEEP)
-	{
-		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
-
-		obj->radio_op_state = RADIO_RFM9X_OP_SLEEP;
-	}
-}
-
-
-/**
  * @brief Tell if the channel is free by measuring channel RSSI
  * @param obj the transceiver object
  * @return True if the channel is free, False otherwise
@@ -293,241 +209,75 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 	{
 		case RADIO_RFM9X_OP_RX:
 		{
-			YIELD(
-				// if crc error
-				if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
-				{
-					obj->fsm_state = RADIO_RFM9X_FSM_RX_ERROR;
+			// if crc error
+			if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
+			{
+				if (obj->on_rx_error_isr.callback_function)
+					((on_rx_error_isr_handler) obj->on_rx_error_isr.callback_function)(obj->on_rx_error_isr.args);
 
-					if (obj->on_rx_error_isr)
-						obj->on_rx_error_isr();
+				break;
+			}
 
-					break;
-				}
+			// if rx timeout error
+			else if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
+			{
+				if (obj->on_rx_timeout_isr.callback_function)
+					((on_rx_timeout_isr_handler) obj->on_rx_timeout_isr.callback_function)(obj->on_rx_timeout_isr.args);
 
-				// if rx timeout error
-				if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
-				{
-					obj->fsm_state = RADIO_RFM9X_FSM_RX_TIMEOUT;
+				break;
+			}
 
-					if (obj->on_rx_timeout_isr)
-						obj->on_rx_timeout_isr();
-
-					break;
-				}
-
-				// read data packet
-				radio_rfm9x_msg_t rx_msg;
+			// data received
+			else
+			{
+				// get ready for message receive
+				uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
+				uint8_t size;
 
 				// read available bytes from FIFO
-				rx_msg.size = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_13_RX_NB_BYTES);
+				size = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_13_RX_NB_BYTES);
 
 				// reset the fifo read pointer to the beginning of packet
 				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR,
 				                          radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_10_FIFO_RX_CURRENT_ADDR)
 				);
-				radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, rx_msg.buffer, rx_msg.size);
+				radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, buffer, size);
 
 				// read snr and rssi
-				obj->last_packet_rssi = (int16_t) (RH_RSSI_OFFSET + radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_1A_PKT_RSSI_VALUE));
-				obj->last_packet_snr = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_19_PKT_SNR_VALUE);
-				if (obj->last_packet_snr & 0x80)
+				int16_t rssi;
+				int8_t snr;
+				rssi = (int16_t) (RH_RSSI_OFFSET + radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_1A_PKT_RSSI_VALUE));
+				snr = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_19_PKT_SNR_VALUE);
+				if (snr & 0x80)
 				{
-					obj->last_packet_snr = (int8_t) ((~obj->last_packet_snr + 1) & 0xff) >> 2;
-					obj->last_packet_snr = -obj->last_packet_snr;
-				}
-				else
+					snr = (int8_t) ((~snr + 1) & 0xff) >> 2;
+					snr = -snr;
+				} else
 				{
-					obj->last_packet_snr = (int8_t) (obj->last_packet_snr & 0xff) >> 2;
+					snr = (int8_t) (snr & 0xff) >> 2;
 				}
 
-				// send received data to queue
-				DRV_ASSERT(xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL));
-
-				// TODO: optionally, we call interrupt handler directly
-				// any modification to the rx buffer will be discarded
-				if (obj->on_rx_done_isr)
-					obj->on_rx_done_isr(&rx_msg, obj->last_packet_rssi, obj->last_packet_snr);
-
-				// advance the state to RX, allow data to be transmitted or received
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_DONE;
-			);
-
-			// let the state machine runs
-			BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-			DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_poll_event, &xHigherPriorityTaskWoken));
-			portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
+				// send received data to callback function
+				if (obj->on_rx_done_isr.callback_function)
+					((on_rx_done_isr_handler) obj->on_rx_done_isr.callback_function)(buffer, size, rssi, snr,
+					                                                                 obj->on_rx_done_isr.args);
+			}
 
 			break;
 		}
 		case RADIO_RFM9X_OP_TX:
 		{
-			YIELD(
-				if (reg_irq_flags & RH_RF95_TX_DONE)
-				{
-					// transmit complete, advance the fsm state to tx_done
-					obj->fsm_state = RADIO_RFM9X_FSM_TX_DONE;
-
-					if (obj->on_tx_done_isr)
-						obj->on_tx_done_isr();
-
-					// indicate the Tx is ready
-					BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-					DRV_ASSERT(xSemaphoreGiveFromISR(obj->fsm_tx_done, &xHigherPriorityTaskWoken));
-					portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-
-					break;
-				}
-			);
-
+			if (reg_irq_flags & RH_RF95_TX_DONE)
+			{
+				// transmit done
+				if (obj->on_tx_done_isr.callback_function)
+					((on_tx_done_isr_handler) obj->on_tx_done_isr.callback_function)(obj->on_tx_done_isr.args);
+			}
 
 			break;
 		}
 		default:
 			break;
-	}
-}
-
-
-static void radio_rfm9x_transceiver_fsm(radio_rfm9x_t * obj)
-{
-	while (1)
-	{
-		switch (obj->fsm_state)
-		{
-			case RADIO_RFM9X_FSM_RX_IDLE:
-			{
-				// the state machine thread stopped as nothing is received or is required to be transmitted
-				// the fsm will start running when event occurred, for example, radio ISR or packet is ready to be
-				// transmitted
-				xSemaphoreTake(obj->fsm_poll_event, portMAX_DELAY);
-
-				// read data from tx queue, checking if data is received
-				// if so, then transmit data
-				radio_rfm9x_msg_t tx_msg;
-				if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
-				{
-					// have data ready to transmit
-#if 0
-					// TODO: sense channel if free or not. Ideally this should be implemented by CAD.
-					// For simplicity sake, we use channel rssi detection method
-					while (!radio_rfm9x_is_channel_available_pri(obj))
-					{
-						vTaskDelay(pdMS_TO_TICKS(1000));
-					}
-#endif
-
-					// set fifo pointer
-					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
-					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-					// declare data length
-					radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_22_PAYLOAD_LENGTH, tx_msg.size);
-
-					// transfer data from local to fifo
-					radio_rfm9x_write_pri(obj, RH_RF95_REG_00_FIFO, tx_msg.buffer, tx_msg.size);
-
-					// set in tx mode
-					radio_rfm9x_set_opmode_tx_pri(obj);
-
-					obj->fsm_state = RADIO_RFM9X_FSM_TX;
-				}
-
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_TX:
-			{
-				// stay in tx state until tx is done
-				if (!xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(5000)))
-				{
-					// fail to transmit, then enter TX_TIMEOUT STATE
-					obj->fsm_state = RADIO_RFM9X_FSM_TX_TIMEOUT;
-
-					if (obj->on_tx_timeout)
-						obj->on_tx_timeout();
-				}
-
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_RX_DONE:
-			{
-				// reset fifo pointer
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-				// read message received from interrupt
-				radio_rfm9x_msg_t rx_msg;
-				while (xQueueReceive(obj->rx_queue_pri, &rx_msg, 0))
-				{
-					xQueueSend(obj->rx_queue, &rx_msg, 0);
-				}
-
-				// enter rx_continous mode, the app state enters idle state
-				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_TX_DONE:
-			{
-				// since tx is complete, we can enter rx/idle state now
-				// reset fifo pointer
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-				// set radio in rx_continous mode
-				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_RX_ERROR:
-			{
-				// reset fifo pointer
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-				// set radio in rx_continous mode
-				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_RX_TIMEOUT:
-			{
-				// reset fifo pointer
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-				// set radio in rx_continous mode
-				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-
-				break;
-			}
-
-			case RADIO_RFM9X_FSM_TX_TIMEOUT:
-			{
-				// reset fifo pointer
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
-				// set radio in rx_continous mode
-				radio_rfm9x_set_opmode_rx_pri(obj);
-				obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-
-				break;
-			}
-
-			default:
-			{
-				DRV_ASSERT(false);
-				break;
-			}
-		}
 	}
 }
 
@@ -571,27 +321,6 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->clk = clk;
 	obj->cs = cs;
 	obj->dio0 = dio0;
-
-	// configure state machine
-	obj->fsm_state = RADIO_RFM9X_FSM_RX_IDLE;
-	obj->tx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
-	obj->rx_queue_pri = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
-	obj->rx_queue = xQueueCreate(4, sizeof(radio_rfm9x_msg_t));
-
-	obj->fsm_tx_done = xSemaphoreCreateBinary();
-	obj->fsm_poll_event = xSemaphoreCreateBinary();
-
-	// spawn a thread for each RFM9X module for handling data receive/transmit path
-	xTaskCreate((void *) radio_rfm9x_transceiver_fsm, "rfm9x_fsm", 200, obj, 3, &obj->fsm_thread_handler);
-
-	DRV_ASSERT(obj->tx_queue);
-	DRV_ASSERT(obj->rx_queue_pri);
-	DRV_ASSERT(obj->rx_queue);
-	DRV_ASSERT(obj->fsm_tx_done);
-	DRV_ASSERT(obj->fsm_poll_event);
-
-	// Configure SPI driver
-	obj->spi_access_mutex = xSemaphoreCreateMutex();
 
 	// find spi peripheral functions
 	DRV_ASSERT(find_pin_function(spi_miso_map, obj->miso, (void **) &usart_base, &miso_loc));
@@ -649,7 +378,7 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
 	// set rx mode
-	radio_rfm9x_set_opmode_rx_pri(obj);
+	radio_rfm9x_set_opmode_rx(obj);
 }
 
 
@@ -811,61 +540,82 @@ void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on)
 }
 
 
-bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
+void radio_rfm9x_write(radio_rfm9x_t * obj, void * buffer, uint8_t size)
 {
 	DRV_ASSERT(obj);
+	DRV_ASSERT(buffer);
+	DRV_ASSERT(size);
 
-	// send message buffer to the queue
-	if (timeout_ms == portMAX_DELAY)
-	{
-		if (xQueueSend(obj->tx_queue, msg, portMAX_DELAY) == pdFALSE)
-		{
-			return false;
-		}
+	// set fifo pointer
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
-	}
-	else
-	{
-		// wait for TX to get ready
-		if (xQueueSend(obj->tx_queue, &msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
-		{
-			// timeout, indicating we failed to wait for transceiver to get ready
-			return false;
-		}
-	}
+	// declare data length
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_22_PAYLOAD_LENGTH, size);
 
-	// if the packet is put to the queue then I should run the fsm as soon as possible
-	xSemaphoreGive(obj->fsm_poll_event);
+	// transfer data from local to fifo
+	radio_rfm9x_write_pri(obj, RH_RF95_REG_00_FIFO, buffer, size);
 
-	return true;
+	// set in tx mode
+	radio_rfm9x_set_opmode_tx(obj);
 }
 
 
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms)
+void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj)
 {
 	DRV_ASSERT(obj);
-	DRV_ASSERT(msg);
 
-	// allow user to wait forever
-	if (timeout_ms == portMAX_DELAY)
+	if (obj->radio_op_state != RADIO_RFM9X_OP_STDBY)
 	{
-		if (xQueueReceive(obj->rx_queue, msg, portMAX_DELAY) == pdFALSE)
-		{
-			return false;
-		}
+		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_STDBY);
 
+		obj->radio_op_state = RADIO_RFM9X_OP_STDBY;
 	}
-	else
-	{
-		// attempt to read from queue
-		if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
-		{
-			// timeout, nothing is received in rx queue
-			return false;
-		}
-	}
-
-	return true;
 }
 
-#endif // USE_FREERTOS == 1
+
+void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	if (obj->radio_op_state != RADIO_RFM9X_OP_TX)
+	{
+		// set opmode and interrupt source
+		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_TX);
+		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x01 << 6, 0xC0); // interrupt on tx done
+
+		obj->radio_op_state = RADIO_RFM9X_OP_TX;
+	}
+}
+
+
+void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	if (obj->radio_op_state != RADIO_RFM9X_OP_RX)
+	{
+		// reset fifo pointer
+		radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
+		radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
+
+		// set opmode and interrupt source
+		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_RX);
+		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x00 << 6, 0xC0); // interrupt on rx done
+
+		obj->radio_op_state = RADIO_RFM9X_OP_RX;
+	}
+}
+
+
+void radio_rfm9x_set_opmode_sleep(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	if (obj->radio_op_state != RADIO_RFM9X_OP_SLEEP)
+	{
+		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
+
+		obj->radio_op_state = RADIO_RFM9X_OP_SLEEP;
+	}
+}

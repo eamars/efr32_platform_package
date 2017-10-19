@@ -5,46 +5,79 @@
  * @file lorawan_mac.c
  */
 
-#include <drivers/radio_rfm9x/radio_rfm9x.h>
 #include "lorawan_mac.h"
 #include "drv_debug.h"
 #include "lorawan_types.h"
 
-static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
+
+/*!
+ * Class A&B receive delay 1 in ms
+ */
+#define RECEIVE_DELAY1                              1000
+
+/*!
+ * Class A&B receive delay 2 in ms
+ */
+#define RECEIVE_DELAY2                              2000
+
+
+static void lorawan_mac_rx_window_timer1_callback(TimerHandle_t xTimer)
 {
-	while (1)
-	{
-		radio_rfm9x_msg_t msg;
+	DRV_ASSERT(xTimer);
 
-		radio_rfm9x_recv_block(obj->radio, &msg);
+	xTimerStop(xTimer, 0);
 
-		// apply MAC header
-		lorawan_mac_header_t * header = (lorawan_mac_header_t *) &msg.buffer;
+	// restore the timer id (which is used to store the parameter
+	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
-		// do things based on mac header type
-		switch (header->message_type)
-		{
-			case LORAWAN_MHDR_JOIN_REQUEST:
-				break;
-			case LORAWAN_MHDR_JOIN_ACCEPT:
-				break;
-			case LORAWAN_MHDR_UNCONFIRMED_DATA_UP:
-				break;
-			case LORAWAN_MHDR_UNCONFIRMED_DATA_DOWN:
-				break;
-			case LORAWAN_MHDR_CONFIRMED_DATA_UP:
-				break;
-			case LORAWAN_MHDR_CONFIRMED_DATA_DOWN:
-				break;
-			case LORAWAN_MHDR_RFU:
-				break;
-			case LORAWAN_MHDR_PROPRIETARY:
-				break;
-			default:
-				DRV_ASSERT(false);
-				break;
-		}
-	}
+}
+
+static void lorawan_mac_rx_window_timer2_callback(TimerHandle_t xTimer)
+{
+	DRV_ASSERT(xTimer);
+
+	xTimerStop(xTimer, 0);
+
+	// restore the timer id (which is used to store the parameter
+	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
+}
+
+
+static void lorawan_mac_on_rx_done_isr(uint8_t * msg, int16_t size, int16_t rssi, int8_t snr, lorawan_mac_t * obj)
+{
+
+}
+
+static void lorawan_mac_on_tx_done_isr(lorawan_mac_t * obj)
+{
+	// TODO: put the radio in sleep state
+
+	// at the moment the packet is transmitted, we are going to setup two rx slots, with corresponding delays
+
+	// setup first time slot, with update-to-date rx_window_delay1
+	xTimerChangePeriodFromISR(obj->rx_window_timer1, pdMS_TO_TICKS(obj->rx_window_delay1), NULL);
+	xTimerStartFromISR(obj->rx_window_timer1, NULL);
+
+	// setup the second time slot, with update-to-date rx_window_delay2
+	xTimerChangePeriodFromISR(obj->rx_window_timer2, pdMS_TO_TICKS(obj->rx_window_delay2), NULL);
+	xTimerStartFromISR(obj->rx_window_timer2, NULL);
+
+
+}
+
+static void lorawan_mac_on_tx_timeout_thread(lorawan_mac_t * obj)
+{
+	// TODO: put the radio in sleep state
+}
+
+static void lorawan_mac_on_rx_error_isr(lorawan_mac_t * obj)
+{
+
+}
+
+static void lorawan_mac_on_rx_timeout_isr(lorawan_mac_t * obj)
+{
+
 }
 
 void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
@@ -54,7 +87,14 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
 
 	// copy variables
 	obj->radio = radio;
+	obj->rx_window_delay1 = RECEIVE_DELAY1;
+	obj->rx_window_delay2 = RECEIVE_DELAY2;
 
-	// create a thread for handling PHY payload
-	xTaskCreate((void *) lorawan_mac_rx_thread, "mac_rx", 200, NULL, 2, &obj->rx_thread_handler);
+	radio_rfm9x_set_rx_done_isr_callback(obj->radio, (void *) lorawan_mac_on_rx_done_isr, obj);
+	radio_rfm9x_set_tx_done_isr_callback(obj->radio, (void *) lorawan_mac_on_tx_done_isr, obj);
+	radio_rfm9x_set_tx_timeout_thread_callback(obj->radio, (void *) lorawan_mac_on_tx_timeout_thread, obj);
+
+	// create timer instance
+	obj->rx_window_timer1 = xTimerCreate("rxw_t1", pdMS_TO_TICKS(obj->rx_window_delay1), pdFALSE, obj, lorawan_mac_rx_window_timer1_callback);
+	obj->rx_window_timer2 = xTimerCreate("rxw_t2", pdMS_TO_TICKS(obj->rx_window_delay2), pdFALSE, obj, lorawan_mac_rx_window_timer2_callback);
 }

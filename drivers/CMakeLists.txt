@@ -16,6 +16,7 @@ SET(ENABLED_DRIVERS
 		pa_sky66112
 		radio_rfm9x
 		lorawan
+		lora_phy
         imu_fxos
 		battery_monitor
 		# simgbpr
