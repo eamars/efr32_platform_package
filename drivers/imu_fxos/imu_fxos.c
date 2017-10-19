@@ -516,7 +516,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     bool interupt_1 = 0;
     uint8_t Vector_Threshold[2] = {0};
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-    if (xTaskGetTickCountFromISR() >= obj->next_call )
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 )
     {
         if (!obj->calibrated)
         {
@@ -527,8 +527,8 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
             halSetLed(BOARDLED1);
-            Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
-            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
+            Vector_Threshold[0] = VECTOR_THRESH_OPEN >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_OPEN ;
 
 
         }
@@ -549,7 +549,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
             xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
             obj->last_event = obj->door_state;
         }
-        obj->next_call = xTaskGetTickCountFromISR() + 1500;
+        obj->last_call = xTaskGetTickCountFromISR();
     }
 }
 
@@ -592,7 +592,6 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
     //     xQueueSend(obj->imu_event_queue, &obj->door_state, portMAX_DELAY);
     //     obj->last_event = obj->door_state;
     // }
-
 
 }
 

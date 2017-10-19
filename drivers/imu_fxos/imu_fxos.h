@@ -16,8 +16,8 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH_OPEN    45
-#define VECTOR_THRESH_CLOSE   60
+#define VECTOR_THRESH_OPEN    25
+#define VECTOR_THRESH_CLOSE   45
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
@@ -695,7 +695,7 @@ typedef struct
 
     QueueHandle_t imu_event_queue;
     imu_event_t last_event;
-    uint32_t next_call;
+    uint32_t last_call;
 
 } imu_FXOS8700CQ_t;
 
