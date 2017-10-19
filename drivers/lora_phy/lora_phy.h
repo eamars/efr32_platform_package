@@ -39,7 +39,7 @@ typedef enum
  */
 typedef struct
 {
-	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
+	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE - 1]; // 1 byte reserved for data alignment
 	uint8_t size;
 } lora_phy_msg_t;
 

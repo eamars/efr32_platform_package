@@ -92,7 +92,6 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
 
 	radio_rfm9x_set_rx_done_isr_callback(obj->radio, (void *) lorawan_mac_on_rx_done_isr, obj);
 	radio_rfm9x_set_tx_done_isr_callback(obj->radio, (void *) lorawan_mac_on_tx_done_isr, obj);
-	radio_rfm9x_set_tx_timeout_thread_callback(obj->radio, (void *) lorawan_mac_on_tx_timeout_thread, obj);
 
 	// create timer instance
 	obj->rx_window_timer1 = xTimerCreate("rxw_t1", pdMS_TO_TICKS(obj->rx_window_delay1), pdFALSE, obj, lorawan_mac_rx_window_timer1_callback);

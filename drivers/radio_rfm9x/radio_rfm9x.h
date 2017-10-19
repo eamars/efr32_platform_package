@@ -20,7 +20,7 @@
 #define RH_RSSI_OFFSET (-137)
 
 // Maximum a packet can be copied from chip to local (reserve 1 byte for memory alignment)
-#define RADIO_RFM9X_RW_BUFFER_SIZE (0xFEUL)
+#define RADIO_RFM9X_RW_BUFFER_SIZE (0xFFUL)
 
 #define RADIO_RFM9X_DEFAULT_RX_TIMEOUT (2000) // ms
 #define RADIO_RFM9X_DEFAULT_TX_TIMEOUT (2000) // ms
@@ -256,7 +256,7 @@ void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on);
  * @param buffer data
  * @param size the length of data
  */
-void radio_rfm9x_write(radio_rfm9x_t * obj, void * buffer, uint8_t size);
+void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size);
 
 /**
  * @brief Toggle the transceiver mode to stand by

@@ -9,7 +9,6 @@
 
 #include "lora_phy.h"
 
-
 static void lora_phy_on_rx_done_isr(uint8_t * buffer, int16_t size, int16_t rssi, int8_t snr, lora_phy_t * obj)
 {
 	lora_phy_msg_t rx_msg;
@@ -60,12 +59,12 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 				// transmitted
 				xSemaphoreTake(obj->fsm_poll_event, portMAX_DELAY);
 
-				// read data from tx queue, checking if data is received
+				// read data from tx queue, checking if data is queueing
 				// if so, then transmit data
 				lora_phy_msg_t tx_msg;
 				if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
 				{
-					radio_rfm9x_write(obj->radio, tx_msg.buffer, tx_msg.size);
+					radio_rfm9x_send(obj->radio, tx_msg.buffer, tx_msg.size);
 				}
 
 				break;
@@ -166,7 +165,7 @@ void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio)
 	obj->fsm_tx_done = xSemaphoreCreateBinary();
 	obj->fsm_poll_event = xSemaphoreCreateBinary();
 
-	xTaskCreate((void *) lora_phy_fsm_thread, "lora_phy", 200, obj, 3, &obj->fsm_thread_handler);
+	xTaskCreate((void *) lora_phy_fsm_thread, "lora_phy", 500, obj, 3, &obj->fsm_thread_handler);
 
 	DRV_ASSERT(obj->tx_queue);
 	DRV_ASSERT(obj->rx_queue_pri);

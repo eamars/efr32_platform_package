@@ -204,6 +204,9 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 	// clear all flags
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_12_IRQ_FLAGS, 0xff);
 
+	// enter standby mode
+	radio_rfm9x_set_opmode_stdby(obj);
+
 	// handle the irq in the module
 	switch (obj->radio_op_state)
 	{
@@ -540,7 +543,7 @@ void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on)
 }
 
 
-void radio_rfm9x_write(radio_rfm9x_t * obj, void * buffer, uint8_t size)
+void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(buffer);
