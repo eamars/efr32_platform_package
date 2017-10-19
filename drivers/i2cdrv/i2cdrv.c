@@ -11,6 +11,7 @@
 #include "em_device.h"
 #include "em_cmu.h"
 #include "em_i2c.h"
+#include "em_core.h"
 #include "ecode.h"
 
 #include "i2cdrv.h"
@@ -254,7 +255,10 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 	// 10 bit address - use format XXXX XAAX AAAA AAAA
 	seq->addr <<= 1;
 
-#if I2C_USE_MUTEX == 1
+#if 0 // I2C_USE_MUTEX == 1
+	// TODO: Use CORE_ATOMIC_SECTION to ensure accessing to I2C is exclusive.
+	// It looks like the FreeRTOS is not functioning properly in some extreme cases
+
 	// enter mutex section
 	if (__IS_INTERRUPT())
 		xSemaphoreTakeFromISR(obj->access_mutex, NULL);
@@ -262,21 +266,25 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 		xSemaphoreTake(obj->access_mutex, portMAX_DELAY);
 #endif
 
-	// start transfer
-	ret = I2C_TransferInit(obj->base, seq);
+	CORE_ATOMIC_SECTION(
+	    // start transfer
+		ret = I2C_TransferInit(obj->base, seq);
 
-	// wait until finish, error or timeout
-	while (ret == i2cTransferInProgress)
-	{
-		if (is_timeout_enabled)
+		// wait until finish, error or timeout
+		while (ret == i2cTransferInProgress)
 		{
-			timeout_cnt -= 1;
-			if (timeout_cnt == 0) break;
+			if (is_timeout_enabled)
+			{
+				timeout_cnt -= 1;
+				if (timeout_cnt == 0) break;
+			}
+			ret = I2C_Transfer(obj->base);
 		}
-		ret = I2C_Transfer(obj->base);
-	}
+	);
 
-#if I2C_USE_MUTEX == 1
+	return ret;
+
+#if 0 // I2C_USE_MUTEX == 1
 	// exit mutex section
 	if (__IS_INTERRUPT())
 		xSemaphoreGiveFromISR(obj->access_mutex, NULL);
