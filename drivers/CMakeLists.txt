@@ -15,8 +15,8 @@ SET(ENABLED_DRIVERS
 		temperature_tmp116
 		pa_sky66112
 		radio_rfm9x
+		lorawan
         imu_fxos
-		lora_simple_mac
 		battery_monitor
 		# simgbpr
 		)

@@ -34,11 +34,20 @@ typedef struct
 
 } battery_monitor_t;
 
-void battery_monitor_init(battery_monitor_t * obj, pio_t probe, pio_t enable,
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+void battery_monitor_init(battery_monitor_t *obj, pio_t probe, pio_t enable,
                           uint32_t vref_mv, float divider_ratio);
 
-uint16_t battery_monitor_read_raw_pri(battery_monitor_t * obj);
+uint16_t battery_monitor_read_raw_pri(battery_monitor_t *obj);
 
-uint32_t battery_monitor_read_mv(battery_monitor_t * obj);
+uint32_t battery_monitor_read_mv(battery_monitor_t *obj);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // BATTERY_MONITOR_H

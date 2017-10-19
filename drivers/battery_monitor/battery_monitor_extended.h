@@ -25,10 +25,17 @@ typedef struct
 
 } battery_monitor_extended_t;
 
-void battery_monitor_extended_init(battery_monitor_extended_t * obj, pio_t probe, pio_t enable,
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void battery_monitor_extended_init(battery_monitor_extended_t *obj, pio_t probe, pio_t enable,
                                    uint32_t vref_mv, float divider_ratio, uint32_t measure_period_ms
 );
 
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif // BATTERY_MONITOR_EXTENDED_H

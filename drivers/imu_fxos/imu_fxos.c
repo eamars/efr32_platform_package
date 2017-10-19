@@ -15,6 +15,7 @@
 #include "delay.h"
 #include "gpiointerrupt.h"
 #include "led.h"
+#include "bits.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
@@ -58,6 +59,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     FXOS8700CQ_StandbyMode(obj);
 
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
+
+    // detect the existence of IMU
+    DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
 
 }
 
@@ -607,6 +611,19 @@ void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
     GPIO_ExtIntConfig(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), PIO_PIN(obj->int_2),
                       true /* raising edge */, true /* falling edge */, true /* enable now */);
 
+}
+
+void FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask)
+{
+    char reg = 0;
+
+    // perform a write on modify operation
+    reg = FXOS8700CQ_ReadByte(obj, internal_addr);
+
+    BITS_MODIFY(reg, value, mask);
+
+    // write back
+    FXOS8700CQ_WriteByte(obj, internal_addr, reg);
 }
 
 void FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value)

@@ -136,6 +136,10 @@ typedef struct
 
 typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
 typedef void (*on_tx_done_isr_handler)(void);
+typedef void (*on_rx_error_isr_handler)(void);
+typedef void (*on_tx_timeout_handler)(void);
+typedef void (*on_rx_timeout_isr_handler)(void);
+
 
 /**
  * @brief RFM9X transceiver object
@@ -175,6 +179,9 @@ typedef struct
 	// handlers
 	on_rx_done_isr_handler on_rx_done_isr;
 	on_tx_done_isr_handler on_tx_done_isr;
+	on_rx_error_isr_handler on_rx_error_isr;
+	on_rx_timeout_isr_handler on_rx_timeout_isr;
+	on_tx_timeout_handler on_tx_timeout; // tx_timeout is executed in thread mode
 
 } radio_rfm9x_t;
 
@@ -277,6 +284,13 @@ void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spre
  * @param crc_enable whether to check CRC for the payload
  */
 void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
+
+/**
+ * @brief Configure transceiver LNA
+ * @param lna_gain LNA gain settings, please refer to datasheet. 0x0 indicates no changes
+ * @param boost_on true if turn LNA boost on, 150% LNA current
+ */
+void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on);
 
 /**
  * @brief Send bytes to transceiver
