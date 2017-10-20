@@ -26,6 +26,7 @@ static void lora_phy_on_rx_done_isr(uint8_t * buffer, int16_t size, int16_t rssi
 	DRV_ASSERT(xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL));
 
 	obj->fsm_state = LORA_PHY_FSM_RX_DONE;
+	xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
 static void lora_phy_on_tx_done_isr(lora_phy_t * obj)
@@ -34,16 +35,19 @@ static void lora_phy_on_tx_done_isr(lora_phy_t * obj)
 	xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 
 	obj->fsm_state = LORA_PHY_FSM_TX_DONE;
+	xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
 static void lora_phy_on_rx_error_isr(lora_phy_t * obj)
 {
 	obj->fsm_state = LORA_PHY_FSM_RX_ERROR;
+	xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
 static void lora_phy_on_rx_timeout_isr(lora_phy_t * obj)
 {
 	obj->fsm_state = LORA_PHY_FSM_RX_TIMEOUT;
+	xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
 static void lora_phy_fsm_thread(lora_phy_t * obj)

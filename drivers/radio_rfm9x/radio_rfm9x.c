@@ -204,83 +204,86 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 	// clear all flags
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_12_IRQ_FLAGS, 0xff);
 
-	// enter standby mode
-	radio_rfm9x_set_opmode_stdby(obj);
-
-	// handle the irq in the module
-	switch (obj->radio_op_state)
+	// rx_timeout error
+	if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
 	{
-		case RADIO_RFM9X_OP_RX:
+		if (obj->on_rx_timeout_isr.callback_function)
+			((on_rx_timeout_isr_handler) obj->on_rx_timeout_isr.callback_function)(obj->on_rx_timeout_isr.args);
+	}
+
+	// rx done
+	if (reg_irq_flags & RH_RF95_RX_DONE)
+	{
+		// get ready for message receive
+		uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
+		uint8_t size;
+
+		// read available bytes from FIFO
+		size = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_13_RX_NB_BYTES);
+
+		// reset the fifo read pointer to the beginning of packet
+		radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR,
+		                          radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_10_FIFO_RX_CURRENT_ADDR)
+		);
+		radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, buffer, size);
+
+		// read snr and rssi
+		int16_t rssi;
+		int8_t snr;
+		rssi = (int16_t) (RH_RSSI_OFFSET + radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_1A_PKT_RSSI_VALUE));
+		snr = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_19_PKT_SNR_VALUE);
+		if (snr & 0x80)
 		{
-			// if crc error
-			if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
-			{
-				if (obj->on_rx_error_isr.callback_function)
-					((on_rx_error_isr_handler) obj->on_rx_error_isr.callback_function)(obj->on_rx_error_isr.args);
-
-				break;
-			}
-
-			// if rx timeout error
-			else if (reg_irq_flags & RH_RF95_RX_TIMEOUT)
-			{
-				if (obj->on_rx_timeout_isr.callback_function)
-					((on_rx_timeout_isr_handler) obj->on_rx_timeout_isr.callback_function)(obj->on_rx_timeout_isr.args);
-
-				break;
-			}
-
-			// data received
-			else
-			{
-				// get ready for message receive
-				uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
-				uint8_t size;
-
-				// read available bytes from FIFO
-				size = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_13_RX_NB_BYTES);
-
-				// reset the fifo read pointer to the beginning of packet
-				radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR,
-				                          radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_10_FIFO_RX_CURRENT_ADDR)
-				);
-				radio_rfm9x_read_pri(obj, RH_RF95_REG_00_FIFO, buffer, size);
-
-				// read snr and rssi
-				int16_t rssi;
-				int8_t snr;
-				rssi = (int16_t) (RH_RSSI_OFFSET + radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_1A_PKT_RSSI_VALUE));
-				snr = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_19_PKT_SNR_VALUE);
-				if (snr & 0x80)
-				{
-					snr = (int8_t) ((~snr + 1) & 0xff) >> 2;
-					snr = -snr;
-				} else
-				{
-					snr = (int8_t) (snr & 0xff) >> 2;
-				}
-
-				// send received data to callback function
-				if (obj->on_rx_done_isr.callback_function)
-					((on_rx_done_isr_handler) obj->on_rx_done_isr.callback_function)(buffer, size, rssi, snr,
-					                                                                 obj->on_rx_done_isr.args);
-			}
-
-			break;
-		}
-		case RADIO_RFM9X_OP_TX:
+			snr = (int8_t) ((~snr + 1) & 0xff) >> 2;
+			snr = -snr;
+		} else
 		{
-			if (reg_irq_flags & RH_RF95_TX_DONE)
-			{
-				// transmit done
-				if (obj->on_tx_done_isr.callback_function)
-					((on_tx_done_isr_handler) obj->on_tx_done_isr.callback_function)(obj->on_tx_done_isr.args);
-			}
-
-			break;
+			snr = (int8_t) (snr & 0xff) >> 2;
 		}
-		default:
-			break;
+
+		// send received data to callback function
+		if (obj->on_rx_done_isr.callback_function)
+			((on_rx_done_isr_handler) obj->on_rx_done_isr.callback_function)(buffer, size, rssi, snr,
+			                                                                 obj->on_rx_done_isr.args);
+	}
+
+	// crc error
+	if (reg_irq_flags & RH_RF95_PAYLOAD_CRC_ERROR)
+	{
+		if (obj->on_rx_error_isr.callback_function)
+			((on_rx_error_isr_handler) obj->on_rx_error_isr.callback_function)(obj->on_rx_error_isr.args);
+	}
+
+	// valid header
+	if (reg_irq_flags & RH_RF95_VALID_HEADER)
+	{
+
+	}
+
+	// tx done
+	if (reg_irq_flags & RH_RF95_TX_DONE)
+	{
+		// transmit done
+		if (obj->on_tx_done_isr.callback_function)
+			((on_tx_done_isr_handler) obj->on_tx_done_isr.callback_function)(obj->on_tx_done_isr.args);
+	}
+
+	// cad done
+	if (reg_irq_flags & RH_RF95_CAD_DONE)
+	{
+
+	}
+
+	// FHSS change channel
+	if (reg_irq_flags & RH_RF95_FHSS_CHANGE_CHANNEL)
+	{
+
+	}
+
+	// CAD detected
+	if (reg_irq_flags & RH_RF95_CAD_DETECTED)
+	{
+
 	}
 }
 
