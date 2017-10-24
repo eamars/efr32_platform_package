@@ -69,6 +69,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 				if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
 				{
 					radio_rfm9x_send(obj->radio, tx_msg.buffer, tx_msg.size);
+					obj->fsm_state = LORA_PHY_FSM_TX;
 				}
 
 				break;
