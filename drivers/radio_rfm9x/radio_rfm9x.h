@@ -5,16 +5,10 @@
 #ifndef RADIO_RFM9X_H_
 #define RADIO_RFM9X_H_
 
-#if USE_FREERTOS == 1
 
 #include "spidrv.h"
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
-
-#include "FreeRTOS.h"
-#include "semphr.h"
-#include "queue.h"
-#include "task.h"
 
 
 // The crystal oscillator frequency of the module
@@ -26,7 +20,7 @@
 #define RH_RSSI_OFFSET (-137)
 
 // Maximum a packet can be copied from chip to local (reserve 1 byte for memory alignment)
-#define RADIO_RFM9X_RW_BUFFER_SIZE (0xFEUL)
+#define RADIO_RFM9X_RW_BUFFER_SIZE (0xFFUL)
 
 #define RADIO_RFM9X_DEFAULT_RX_TIMEOUT (2000) // ms
 #define RADIO_RFM9X_DEFAULT_TX_TIMEOUT (2000) // ms
@@ -42,24 +36,6 @@ typedef enum
 	RADIO_RFM9X_MODEM_FSK = 0,
 	RADIO_RFM9X_MODEM_LORA = 1
 } radio_rfm9x_modem_t;
-
-
-/**
- * @brief Internal LoRa state machine properties
- */
-typedef enum
-{
-	RADIO_RFM9X_FSM_RX_IDLE,
-	RADIO_RFM9X_FSM_RX_DONE,
-	RADIO_RFM9X_FSM_TX,
-	RADIO_RFM9X_FSM_TX_DONE,
-
-	// some error handlers
-	RADIO_RFM9X_FSM_RX_ERROR,
-	RADIO_RFM9X_FSM_RX_TIMEOUT,
-	RADIO_RFM9X_FSM_TX_TIMEOUT
-
-} radio_rfm9x_fsm_state_t;
 
 
 /**
@@ -125,20 +101,19 @@ typedef enum
 
 
 /**
- * @brief Physical layer message payload
+ * @brief Generic callback function scheme
  */
 typedef struct
 {
-	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
-	uint8_t size;
-} radio_rfm9x_msg_t;
+	void * callback_function;
+	void * args;
+} radio_rfm9x_callback_t;
 
 
-typedef void (*on_rx_done_isr_handler)(radio_rfm9x_msg_t *msg, int16_t rssi, int8_t snr) ;
-typedef void (*on_tx_done_isr_handler)(void);
-typedef void (*on_rx_error_isr_handler)(void);
-typedef void (*on_tx_timeout_handler)(void);
-typedef void (*on_rx_timeout_isr_handler)(void);
+typedef void (*on_rx_done_isr_handler)(void * msg, uint16_t size, int16_t rssi, int8_t snr, void * args) ;
+typedef void (*on_tx_done_isr_handler)(void * args);
+typedef void (*on_rx_error_isr_handler)(void * args);
+typedef void (*on_rx_timeout_isr_handler)(void * args);
 
 
 /**
@@ -156,33 +131,15 @@ typedef struct
 
 	// SPI driver
 	SPIDRV_HandleData_t spi_handle_data;
-	SemaphoreHandle_t spi_access_mutex;
-
-	// packet queue
-	QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue_pri;
-	QueueHandle_t rx_queue;
-
-	// state machine
-	radio_rfm9x_fsm_state_t fsm_state;
-	TaskHandle_t fsm_thread_handler;
-	SemaphoreHandle_t fsm_tx_done;
-	SemaphoreHandle_t fsm_poll_event;
 
 	// radio status
 	radio_rfm9x_op_t radio_op_state;
 
-	// link quality
-	int16_t last_packet_rssi;
-	int8_t last_packet_snr;
-
 	// handlers
-	on_rx_done_isr_handler on_rx_done_isr;
-	on_tx_done_isr_handler on_tx_done_isr;
-	on_rx_error_isr_handler on_rx_error_isr;
-	on_rx_timeout_isr_handler on_rx_timeout_isr;
-	on_tx_timeout_handler on_tx_timeout; // tx_timeout is executed in thread mode
-
+	radio_rfm9x_callback_t on_rx_done_isr;
+	radio_rfm9x_callback_t on_tx_done_isr;
+	radio_rfm9x_callback_t on_rx_error_isr;
+	radio_rfm9x_callback_t on_rx_timeout_isr;
 } radio_rfm9x_t;
 
 
@@ -287,42 +244,76 @@ void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable);
 
 /**
  * @brief Configure transceiver LNA
+ * @param obj the transceiver object
  * @param lna_gain LNA gain settings, please refer to datasheet. 0x0 indicates no changes
  * @param boost_on true if turn LNA boost on, 150% LNA current
  */
 void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on);
 
 /**
- * @brief Send bytes to transceiver
+ * @brief Write data to transceiver and set transceiver mode to transmit
  * @param obj the transceiver object
- * @param msg message buffer @see radio_rfm9x_msg_t. The message buffer have maximum payload length, @see RADIO_RFM9X_RW_BUFFER_SIZE
- * @param timeout_ms maximum block time, portMAX_DELAY if block forever
- * @return whether message is transmitted successfully within timeout, if maximum block time is configured
+ * @param buffer data
+ * @param size the length of data
  */
-bool radio_rfm9x_send_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
-#define radio_rfm9x_send(obj, msg) \
-		radio_rfm9x_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
-#define radio_rfm9x_send_block(obj, msg) \
-		radio_rfm9x_send_timeout((obj), (msg), portMAX_DELAY)
+void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size);
 
 /**
- * @brief Receive bytes from transceiver
- * @param obj the transceiver object
- * @param msg message buffer @see radio_rfm9x_msg_t. The message buffer have maximum payload length, @see RADIO_RFM9X_RW_BUFFER_SIZE
- * @param timeout_ms maximum block time, portMAX_DELAY if block forever
- * @return whether received message is valid, if maximum block time is specified
+ * @brief Toggle the transceiver mode to stand by
+ *
+ * Note: low power, ready to switch states, passive data sensing is not available
+ *
+ * @param obj the transciever
  */
-bool radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, radio_rfm9x_msg_t * msg, uint32_t timeout_ms);
-#define radio_rfm9x_recv(obj, msg) \
-		radio_rfm9x_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
-#define radio_rfm9x_recv_block(obj, msg) \
-		radio_rfm9x_recv_timeout((obj), (msg), portMAX_DELAY)
+void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
+
+/**
+ * @brief Toggle the transceiver mode to Tx (Transmit)
+ * @param obj the transceiver object
+ */
+void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj);
+
+/**
+ * @brief Toggle the transceiver mode to Rx (active continuous receive)
+ * @param obj the transceiver object
+ */
+void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj);
+
+/**
+ * @brief Toggle the transceiver mode to Sleep (low power mode)
+ * @param obj the transceiver
+ */
+void radio_rfm9x_set_opmode_sleep(radio_rfm9x_t * obj);
+
+
+static inline void radio_rfm9x_set_rx_done_isr_callback(radio_rfm9x_t * obj, on_rx_done_isr_handler callback_function, void * args)
+{
+	obj->on_rx_done_isr.callback_function = callback_function;
+	obj->on_rx_done_isr.args = args;
+}
+
+static inline void radio_rfm9x_set_tx_done_isr_callback(radio_rfm9x_t * obj, on_tx_done_isr_handler callback_function, void * args)
+{
+	obj->on_tx_done_isr.callback_function = callback_function;
+	obj->on_tx_done_isr.args = args;
+}
+
+static inline void radio_rfm9x_set_rx_error_isr_callback(radio_rfm9x_t * obj, on_rx_error_isr_handler callback_function, void * args)
+{
+	obj->on_rx_error_isr.callback_function = callback_function;
+	obj->on_rx_error_isr.args = args;
+}
+
+static inline void radio_rfm9x_set_rx_timeout_isr_callback(radio_rfm9x_t * obj, on_rx_timeout_isr_handler callback_function, void * args)
+{
+	obj->on_rx_timeout_isr.callback_function = callback_function;
+	obj->on_rx_timeout_isr.args = args;
+}
 
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // USE_FREERTOS == 1
 
 #endif // RADIO_RFM9X_H_

@@ -71,7 +71,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     // detect the existence of IMU
-    DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
+    // DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
 
 }
 
