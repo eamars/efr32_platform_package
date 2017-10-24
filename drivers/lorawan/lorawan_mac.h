@@ -18,6 +18,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
+#include "queue.h"
 
 typedef struct
 {
@@ -48,6 +49,10 @@ typedef struct
 	bool mac_command_in_next_tx;
 
 	bool is_lora_mac_network_joined;
+
+	// rx thread (to prevent data to be processed in interrupt handler that might take extreme long time)
+	xQueueHandle rx_queue_pri;
+	xTaskHandle rx_thread_handle;
 
 
 } lorawan_mac_t;
