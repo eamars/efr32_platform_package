@@ -28,7 +28,7 @@
  * @param  enable     enable pin for the load switch on the imu
  * @param  int_1      immu interupt pin 1
  * @param  int_2      imu interupt pin 2
- * @return            if already intalised will not redinalise the imu
+ * @return            if already intalised will not redinalise the
  */
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2)
 {
@@ -71,7 +71,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     // detect the existence of IMU
-    // DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
+    DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
 
 }
 
