@@ -10,6 +10,11 @@
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
 
+#if USE_FREERTOS == 1
+#include "FreeRTOS.h"
+#include "timers.h"
+#endif
+
 
 // The crystal oscillator frequency of the module
 #define RH_RF95_FXOSC 32000000.0
@@ -114,7 +119,9 @@ typedef void (*on_rx_done_isr_handler)(void * msg, uint16_t size, int16_t rssi, 
 typedef void (*on_tx_done_isr_handler)(void * args);
 typedef void (*on_rx_error_isr_handler)(void * args);
 typedef void (*on_rx_timeout_isr_handler)(void * args);
-
+#if USE_FREERTOS == 1
+typedef void (*on_tx_timeout_handler)(void * args);
+#endif
 
 /**
  * @brief RFM9X transceiver object
@@ -140,6 +147,13 @@ typedef struct
 	radio_rfm9x_callback_t on_tx_done_isr;
 	radio_rfm9x_callback_t on_rx_error_isr;
 	radio_rfm9x_callback_t on_rx_timeout_isr;
+
+#if USE_FREERTOS == 1
+	radio_rfm9x_callback_t on_tx_timeout_handler;
+	xTimerHandle rx_timeout_timer;
+	xTimerHandle tx_timeout_timer;
+#endif
+
 } radio_rfm9x_t;
 
 
@@ -270,14 +284,20 @@ void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
 /**
  * @brief Toggle the transceiver mode to Tx (Transmit)
  * @param obj the transceiver object
+ * @param timeout_ms timeout in ms indicating when tx should be expired and return to default state (stdby)
  */
-void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj);
+void radio_rfm9x_set_opmode_tx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms);
+#define radio_rfm9x_set_opmode_tx(obj) \
+		radio_rfm9x_set_opmode_tx_timeout((obj), (0))
 
 /**
  * @brief Toggle the transceiver mode to Rx (active continuous receive)
  * @param obj the transceiver object
+ * @param timeout_ms timeout in ms indicating when rx should be expired and return to default state (stdby)
  */
-void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj);
+void radio_rfm9x_set_opmode_rx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms);
+#define radio_rfm9x_set_opmode_rx(obj) \
+		radio_rfm9x_set_opmode_rx_timeout((obj), (0))
 
 /**
  * @brief Toggle the transceiver mode to Sleep (low power mode)
@@ -309,6 +329,14 @@ static inline void radio_rfm9x_set_rx_timeout_isr_callback(radio_rfm9x_t * obj, 
 	obj->on_rx_timeout_isr.callback_function = callback_function;
 	obj->on_rx_timeout_isr.args = args;
 }
+
+#if USE_FREERTOS == 1
+static inline void radio_rfm9x_set_tx_timeout_handler_callback(radio_rfm9x_t * obj, on_tx_timeout_handler callback_function, void * args)
+{
+	obj->on_tx_timeout_handler.callback_function = callback_function;
+	obj->on_tx_timeout_handler.args = args;
+}
+#endif
 
 
 #ifdef __cplusplus

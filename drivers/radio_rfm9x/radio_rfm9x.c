@@ -245,6 +245,11 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 		if (obj->on_rx_done_isr.callback_function)
 			((on_rx_done_isr_handler) obj->on_rx_done_isr.callback_function)(buffer, size, rssi, snr,
 			                                                                 obj->on_rx_done_isr.args);
+
+#if USE_FREERTOS == 1
+		// stop the rx timout timer
+		xTimerStop(obj->rx_timeout_timer, portMAX_DELAY);
+#endif
 	}
 
 	// crc error
@@ -266,6 +271,11 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 		// transmit done
 		if (obj->on_tx_done_isr.callback_function)
 			((on_tx_done_isr_handler) obj->on_tx_done_isr.callback_function)(obj->on_tx_done_isr.args);
+
+#if USE_FREERTOS == 1
+		// stop the tx timeout timer
+		xTimerStop(obj->tx_timeout_timer, portMAX_DELAY);
+#endif
 	}
 
 	// cad done
@@ -286,6 +296,44 @@ static void radio_rfm9x_dio0_isr_pri(uint8_t pin, radio_rfm9x_t * obj)
 
 	}
 }
+
+
+#if USE_FREERTOS == 1
+static void radio_rfm9x_on_timer_timeout(TimerHandle_t xTimer)
+{
+	DRV_ASSERT(xTimer);
+
+	xTimerStop(xTimer, portMAX_DELAY);
+
+	radio_rfm9x_t * obj = (radio_rfm9x_t *) pvTimerGetTimerID(xTimer);
+
+
+	switch (obj->radio_op_state)
+	{
+		case RADIO_RFM9X_OP_RX:
+		{
+			if (obj->on_rx_timeout_isr.callback_function)
+				((on_rx_timeout_isr_handler) obj->on_rx_timeout_isr.callback_function)(obj->on_rx_timeout_isr.args);
+
+			break;
+		}
+
+		case RADIO_RFM9X_OP_TX:
+		{
+			if (obj->on_tx_timeout_handler.callback_function)
+				((on_rx_timeout_isr_handler) obj->on_tx_timeout_handler.callback_function)(obj->on_tx_timeout_handler.args);
+			break;
+		}
+
+		default:
+		{
+			break;
+		}
+	}
+
+}
+
+#endif
 
 
 void radio_rfm9x_hard_reset(radio_rfm9x_t * obj)
@@ -333,6 +381,12 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	DRV_ASSERT(find_pin_function(spi_mosi_map, obj->mosi, NULL, &mosi_loc));
 	DRV_ASSERT(find_pin_function(spi_clk_map, obj->clk, NULL, &clk_loc));
 	DRV_ASSERT(find_pin_function(spi_cs_map, obj->cs, NULL, &cs_loc));
+
+#if USE_FREERTOS == 1
+	// initialize timer
+	obj->rx_timeout_timer = xTimerCreate("rfm_rx_timer", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+	obj->tx_timeout_timer = xTimerCreate("rfm_tx_timer", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+#endif
 
 	// configure spi
 	spi_init_data.port = usart_base;
@@ -575,6 +629,11 @@ void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj)
 
 	if (obj->radio_op_state != RADIO_RFM9X_OP_STDBY)
 	{
+#if USE_FREERTOS == 1
+		// stop all timers before entering sleep state
+		xTimerStop(obj->rx_timeout_timer, portMAX_DELAY);
+		xTimerStop(obj->tx_timeout_timer, portMAX_DELAY);
+#endif
 		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_STDBY);
 
 		obj->radio_op_state = RADIO_RFM9X_OP_STDBY;
@@ -582,7 +641,7 @@ void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj)
 }
 
 
-void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj)
+void radio_rfm9x_set_opmode_tx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms)
 {
 	DRV_ASSERT(obj);
 
@@ -592,12 +651,20 @@ void radio_rfm9x_set_opmode_tx(radio_rfm9x_t * obj)
 		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_TX);
 		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x01 << 6, 0xC0); // interrupt on tx done
 
+#if USE_FREERTOS == 1
+		if (timeout_ms != 0)
+		{
+			xTimerChangePeriod(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+			xTimerStart(obj->rx_timeout_timer, portMAX_DELAY);
+		}
+#endif
+
 		obj->radio_op_state = RADIO_RFM9X_OP_TX;
 	}
 }
 
 
-void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj)
+void radio_rfm9x_set_opmode_rx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms)
 {
 	DRV_ASSERT(obj);
 
@@ -611,6 +678,14 @@ void radio_rfm9x_set_opmode_rx(radio_rfm9x_t * obj)
 		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_RX);
 		radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x00 << 6, 0xC0); // interrupt on rx done
 
+#if USE_FREERTOS == 1
+		if (timeout_ms != 0)
+		{
+			xTimerChangePeriod(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+			xTimerStart(obj->rx_timeout_timer, portMAX_DELAY);
+		}
+#endif
+
 		obj->radio_op_state = RADIO_RFM9X_OP_RX;
 	}
 }
@@ -622,6 +697,11 @@ void radio_rfm9x_set_opmode_sleep(radio_rfm9x_t * obj)
 
 	if (obj->radio_op_state != RADIO_RFM9X_OP_SLEEP)
 	{
+#if USE_FREERTOS == 1
+		// stop all timers before entering sleep state
+		xTimerStop(obj->rx_timeout_timer, portMAX_DELAY);
+		xTimerStop(obj->tx_timeout_timer, portMAX_DELAY);
+#endif
 		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
 
 		obj->radio_op_state = RADIO_RFM9X_OP_SLEEP;
