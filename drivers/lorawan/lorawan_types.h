@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+
+
 /**
  * @brief LoRaWAN MAC message type
  */
@@ -124,6 +126,12 @@ typedef union
 		uint8_t adr             : 1;
 	};
 } lorawan_mac_fhdr_fctrl_dl_t;
+
+typedef enum
+{
+	LORAWAN_UP_LINK = 0,
+	LORAWAN_DOWN_LINK = 1,
+} lorawan_mac_comm_direction_t;
 
 
 #endif // LORAWAN_TYPES_H_
