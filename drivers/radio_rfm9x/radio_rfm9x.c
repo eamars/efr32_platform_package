@@ -383,8 +383,8 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	// reset fifo pointer
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
 
-	// set rx mode
-	radio_rfm9x_set_opmode_rx(obj);
+	// set stdby mode
+	radio_rfm9x_set_opmode_stdby(obj);
 }
 
 
