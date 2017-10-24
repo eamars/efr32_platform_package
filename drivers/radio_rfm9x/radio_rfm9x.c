@@ -552,6 +552,8 @@ void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size)
 	DRV_ASSERT(buffer);
 	DRV_ASSERT(size);
 
+	radio_rfm9x_set_opmode_stdby(obj);
+
 	// set fifo pointer
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0E_FIFO_TX_BASE_ADDR, 0x00);
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);

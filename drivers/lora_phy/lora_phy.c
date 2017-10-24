@@ -89,7 +89,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 			case LORA_PHY_FSM_TX_DONE:
 			{
 				// enter rx mode
-				radio_rfm9x_set_opmode_rx(obj->radio);
+				radio_rfm9x_set_opmode_sleep(obj->radio);
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 			}
 
@@ -103,7 +103,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 				}
 
 				// enter rx mode
-				radio_rfm9x_set_opmode_rx(obj->radio);
+				radio_rfm9x_set_opmode_sleep(obj->radio);
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 
 				break;
@@ -112,7 +112,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 			case LORA_PHY_FSM_RX_ERROR:
 			{
 				// enter rx mode
-				radio_rfm9x_set_opmode_rx(obj->radio);
+				radio_rfm9x_set_opmode_sleep(obj->radio);
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 
 				break;
@@ -121,7 +121,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 			case LORA_PHY_FSM_RX_TIMEOUT:
 			{
 				// enter rx mode
-				radio_rfm9x_set_opmode_rx(obj->radio);
+				radio_rfm9x_set_opmode_sleep(obj->radio);
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 
 				break;
@@ -130,7 +130,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 			case LORA_PHY_FSM_TX_TIMEOUT:
 			{
 				// enter rx mode
-				radio_rfm9x_set_opmode_rx(obj->radio);
+				radio_rfm9x_set_opmode_sleep(obj->radio);
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 
 				break;
