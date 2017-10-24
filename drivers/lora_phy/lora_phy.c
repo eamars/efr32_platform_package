@@ -154,6 +154,9 @@ void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio)
 	// copy variables
 	obj->radio = radio;
 
+	// set radio to sleep default state
+	radio_rfm9x_set_opmode_sleep(obj->radio);
+
 	// register callback function
 	radio_rfm9x_set_rx_done_isr_callback(obj->radio, (void *) lora_phy_on_rx_done_isr, obj);
 	radio_rfm9x_set_tx_done_isr_callback(obj->radio, (void *) lora_phy_on_tx_done_isr, obj);
