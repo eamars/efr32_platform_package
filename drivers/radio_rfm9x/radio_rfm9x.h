@@ -32,6 +32,9 @@
 
 #define RADIO_RFM9X_CHANNEL_RSSI_THRESHOLD (-60) // dBm
 
+// radio wakeup time from sleep
+#define RADIO_RFM9X_WAKEUP_TIME 1 // ms
+
 
 /**
  * @brief RFM9X supports (G)FSK or LoRa frontend mode
@@ -280,6 +283,15 @@ void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size);
  * @param obj the transciever
  */
 void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
+
+/**
+ * @brief Set public network access
+ *
+ * Note: For some reason this API is not mentioned anywhere in RFM9x datasheet. Please use with caution!
+ *
+ * @param obj the transceiver
+ */
+void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable);
 
 /**
  * @brief Toggle the transceiver mode to Tx (Transmit)
