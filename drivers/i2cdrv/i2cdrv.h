@@ -21,13 +21,6 @@
 	#include "dmadrv.h"
 #endif
 
-
-#if I2C_USE_MUTEX == 1
-	#include "FreeRTOS.h"
-	#include "semphr.h"
-#endif
-
-
 typedef struct
 {
 	I2C_TypeDef * base;
@@ -38,10 +31,6 @@ typedef struct
 #if I2C_USE_DMA == 1
 	unsigned int tx_dma_ch;
 	unsigned int rx_dma_ch;
-#endif
-
-#if I2C_USE_MUTEX == 1
-	SemaphoreHandle_t access_mutex;
 #endif
 
 } i2cdrv_t;
