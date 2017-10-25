@@ -294,6 +294,13 @@ void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
 void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable);
 
 /**
+ * @brief Generate random number from the radio antenna
+ * @param obj the transceiver
+ * @return a 32bit random number
+ */
+uint32_t radio_rfm9x_generate_random_number(radio_rfm9x_t * obj);
+
+/**
  * @brief Toggle the transceiver mode to Tx (Transmit)
  * @param obj the transceiver object
  * @param timeout_ms timeout in ms indicating when tx should be expired and return to default state (stdby)

@@ -754,10 +754,46 @@ void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable)
 
 	if (enable)
 	{
+		 // Note: 0x39, aka SYNC register, is one of the undocumented register in RFM9x chip
 		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PUBLIC_SYNWORD);
 	}
 	else
 	{
 		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PRIVATE_SYNCWORD);
 	}
+}
+
+
+uint32_t radio_rfm9x_generate_random_number(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	uint32_t rnd = 0;
+
+	// backup previous transceiver opmode
+	radio_rfm9x_op_t prev_opmode = radio_rfm9x_get_opmode_pri(obj);
+
+	// backup interrupt interrupts
+	uint8_t prev_int_mask_reg = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK);
+
+	// mask all interrupts
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK, 0xff);
+
+	// set the transceiver to rx_continuous mode
+	radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_RX);
+
+	for (uint8_t i = 0; i < 32; i++)
+	{
+		// Note: 0x2C, aka Wideband RSSI register, is one of the undocumented register in RFM9x chip
+		rnd |= ((uint32_t) radio_rfm9x_reg_read_pri(obj, 0x2C) & 0x01) << i;
+		delay_ms(1);
+	}
+
+	// restore interrupt masks
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK, prev_int_mask_reg);
+
+	// restore previous op mode
+	radio_rfm9x_set_opmode_pri(obj, prev_opmode);
+
+	return rnd;
 }

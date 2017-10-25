@@ -4,12 +4,14 @@
  * @author Ran Bao
  * @file lorawan_mac.c
  */
+#include <math.h>
+#include <stdlib.h>
 
 #include "lorawan_mac.h"
 #include "drv_debug.h"
 #include "lorawan_types.h"
 #include "lorawan_mac_crypto.h"
-
+#include "utils.h"
 
 /*!
  * Class A&B receive delay 1 in ms
@@ -21,75 +23,109 @@
  */
 #define RECEIVE_DELAY2                              2000
 
-
+#define JOIN_ACCEPT_DELAY1                          5000
+#define JOIN_ACCEPT_DELAY2                          6000
+#define MAX_FCNT_GAP                                16384
+#define ADR_ACK_LIMIT                               64
+#define ADR_ACK_DELAY                               32
+#define ACK_TIMEOUT                                 1000 // random delay between 1 to 3 sec
+#define SYNC_WORD                                   0x34
+#define PREAMBLE_LEN                                8
 #define MIC_LEN ( 4 )
-
 #define LORAWAN_MAX_FCNT_GAP 16384
 
 
-/**
- * @brief Physical layer message payload
- */
-typedef struct
+static void lorawan_compute_rx_window_parameters_pri(lorawan_mac_t * obj, lorawan_data_rate_t data_rate, uint32_t rx_error,
+                                                     lorawan_mac_rx_config_params_t * rx_config_param)
 {
-	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE];
-	int16_t size;
-	int16_t rssi;
-	int8_t snr;
+	double symbol_time = 0.0;
 
-} lorawan_mac_msg_t;
+	// copy datarate
+	rx_config_param->data_rate = data_rate;
 
+	// get bandwidth from lookup table
+	rx_config_param->bandwidth = lorawan_mac_bandwidth_lookup_table[data_rate];
 
-/*!
- * AES encryption/decryption cipher network session key
- */
-static uint8_t lorawan_mac_network_session_key[] =
-		{
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-		};
+	if (data_rate == LORAWAN_DATARATE_7)
+	{
+		// fsk mode
+		symbol_time = (1.0 / (double) lorawan_mac_data_rate_lookup_table[data_rate]) * 8.0; // 1 symbol equals to 1 byte ( 8bits )
+	}
+	else
+	{
+		// lora mode
+		symbol_time =
+				((double) (1 << lorawan_mac_data_rate_lookup_table[data_rate]) /
+				 (double) lorawan_mac_bandwidth_lookup_table[data_rate]) * 1e3;
+	}
 
-/*!
- * AES encryption/decryption cipher application session key
- */
-static uint8_t lorawan_mac_application_session_key[] =
-		{
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-		};
+	// compute number of symbols
+	rx_config_param->rx_window_timeout =
+			MAX(
+					(uint32_t) ceil(((2 * obj->mac_params.min_rx_symbols - 8) * symbol_time + 2 * rx_error) / symbol_time),
+					obj->mac_params.min_rx_symbols
+			);
 
-static inline void lorawan_mac_rx_window_setup(lorawan_mac_t * obj, uint32_t freq, radio_rfm9x_sf_t sf, radio_rfm9x_bw_t bw,
-                                        uint16_t timeout, bool rx_contineous)
-{
-	// set the radio to standby mode allow configuration
-	radio_rfm9x_set_opmode_stdby(obj->radio);
-
-	// set frequency
-	radio_rfm9x_set_channel(obj->radio, freq);
-
-	// set datarate
-	radio_rfm9x_set_spreading_factor(obj->radio, sf);
-
-	// set bandwidth
-	radio_rfm9x_set_bandwidth(obj->radio, bw);
-
-	// set rx mode
-	radio_rfm9x_set_opmode_rx_timeout(obj->radio, rx_contineous ? 0 : timeout);
+	rx_config_param->rx_offset =
+			(int32_t) ceil((4.0 * symbol_time) - ((rx_config_param->rx_window_timeout * symbol_time) / 2.0) -
+			               RADIO_RFM9X_WAKEUP_TIME);
 }
 
-static inline void on_lorawan_mac_rx_window_timer1(lorawan_mac_t * obj)
+
+static bool lorawan_mac_rx_window_setup_pri(lorawan_mac_t * obj, uint32_t freq, lorawan_data_rate_t data_rate, radio_rfm9x_bw_t bw,
+                                        uint32_t timeout, bool rx_contineous)
+{
+	if (obj->radio->radio_op_state == RADIO_RFM9X_OP_STDBY)
+	{
+		// set frequency
+		radio_rfm9x_set_channel(obj->radio, freq);
+
+		if (data_rate == LORAWAN_DATARATE_7)
+		{
+			// fsk
+			DRV_ASSERT(false);
+		}
+		else
+		{
+			// lora
+
+			// set bandwidth
+			radio_rfm9x_set_bandwidth(obj->radio, bw);
+
+			// set spreading factor
+			radio_rfm9x_set_spreading_factor(obj->radio, lorawan_mac_data_rate_lookup_table[data_rate]);
+		}
+
+		// set rx mode
+		radio_rfm9x_set_opmode_rx_timeout(obj->radio, rx_contineous ? 0 : obj->mac_params.max_rx_window);
+
+		return true;
+	}
+
+	return false;
+}
+
+static inline void lorawan_mac_rx_window_timer1_handler_pri(lorawan_mac_t * obj)
 {
 	if (obj->device_class == LORAWAN_CLASS_C)
 	{
 		radio_rfm9x_set_opmode_stdby(obj->radio);
-
-		// lorawan_mac_rx_window_setup();
+#if USE_BAND_868 == 1
+		lorawan_mac_rx_window_setup_pri(obj,
+		                                lorawan_mac_channel_frequency_lookup_table[obj->channel],
+			                            obj->rx_window_param1.data_rate,
+			                            obj->rx_window_param1.bandwidth,
+			                            obj->rx_window_param1.rx_window_timeout,
+			                            false);
+#else
+#error "You should define a frequency band!"
+#endif
 	}
 
 	radio_rfm9x_set_opmode_rx(obj->radio);
 }
 
-static inline void on_lorawan_mac_rx_window_timer2(lorawan_mac_t * obj)
+static inline void lorawan_mac_rx_window_timer2_handler_pri(lorawan_mac_t * obj)
 {
 	bool rx_contineous = false;
 
@@ -98,22 +134,43 @@ static inline void on_lorawan_mac_rx_window_timer2(lorawan_mac_t * obj)
 		rx_contineous = true;
 	}
 
-	//	if (lorawan_mac_rx_window_setup())
-	//	{
-	//		obj->rx_slot = true;
-	//	}
+	if (lorawan_mac_rx_window_setup_pri(obj,
+		                                obj->mac_params.rx2_channel_params.frequency,
+		                                obj->rx_window_param2.data_rate,
+		                                obj->rx_window_param2.bandwidth,
+		                                obj->rx_window_param2.rx_window_timeout,
+		                                rx_contineous)
+	)
+	{
+		obj->rx_slot = true;
+	}
 }
 
-static inline void on_lorawan_mac_ack_timeout(lorawan_mac_t * obj)
+static inline void lorawan_mac_ack_handler_pri(lorawan_mac_t * obj)
+{
+	if (obj->node_ack_requested)
+	{
+		obj->ack_timeout_retry = true;
+		// TODO: change loramac state
+	}
+	if (obj->device_class == LORAWAN_CLASS_C)
+	{
+		// TODO: mac done
+	}
+}
+
+static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 {
 
 }
 
 static inline void lorawan_mac_prepare_rx_done_abort_pri(lorawan_mac_t * obj)
 {
+	STATE_SET(obj->state, LORAWAN_MAC_RX_ABORT);
+
 	if (obj->node_ack_requested)
 	{
-		on_lorawan_mac_ack_timeout(obj);
+		lorawan_mac_ack_handler_pri(obj);
 	}
 
 	// trigger mac state check
@@ -130,7 +187,7 @@ static void lorawan_mac_rx_window_timer1_callback(TimerHandle_t xTimer)
 	// restore the timer id (which is used to store the parameter
 	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
-	on_lorawan_mac_rx_window_timer1(obj);
+	lorawan_mac_rx_window_timer1_handler_pri(obj);
 }
 
 static void lorawan_mac_rx_window_timer2_callback(TimerHandle_t xTimer)
@@ -142,7 +199,7 @@ static void lorawan_mac_rx_window_timer2_callback(TimerHandle_t xTimer)
 	// restore the timer id (which is used to store the parameter
 	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
-	on_lorawan_mac_rx_window_timer2(obj);
+	lorawan_mac_rx_window_timer2_handler_pri(obj);
 }
 
 static void lorawan_mac_ack_timeout_callback(TimerHandle_t xTimer)
@@ -154,12 +211,7 @@ static void lorawan_mac_ack_timeout_callback(TimerHandle_t xTimer)
 	// restore the timer id (which is used to store the parameter
 	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
-	on_lorawan_mac_ack_timeout(obj);
-}
-
-static void on_lorawan_mac_state_check_timeout(lorawan_mac_t * obj)
-{
-
+	lorawan_mac_ack_handler_pri(obj);
 }
 
 static void lorawan_mac_state_check_timeout_callback(TimerHandle_t xTimer)
@@ -171,7 +223,7 @@ static void lorawan_mac_state_check_timeout_callback(TimerHandle_t xTimer)
 	// restore the timer id (which is used to store the parameter
 	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
-	on_lorawan_mac_state_check_timeout(obj);
+	lorawan_mac_state_check_handler_pri(obj);
 }
 
 static void lorawan_mac_process_mac_commands_pri(lorawan_mac_t * obj, uint8_t * payload, uint8_t mac_index, uint8_t cmd_size, int8_t snr)
@@ -182,13 +234,13 @@ static void lorawan_mac_process_mac_commands_pri(lorawan_mac_t * obj, uint8_t * 
 static void lorawan_mac_on_rx_done_isr(uint8_t * msg, int16_t size, int16_t rssi, int8_t snr, lorawan_mac_t * obj)
 {
 	// encapsulate packet in lorawan_mac_msg
-	lorawan_mac_msg_t rx_msg;
+	lorawan_mac_msg_ext_t rx_msg;
 
 	// copy variables
-	rx_msg.size = size;
+	rx_msg.msg.size = size;
 	rx_msg.rssi = rssi;
 	rx_msg.snr  = snr;
-	memcpy(rx_msg.buffer, msg, (size_t) rx_msg.size);
+	memcpy(rx_msg.msg.buffer, msg, (size_t) rx_msg.msg.size);
 
 	// send to thread
 	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -241,41 +293,17 @@ static void lorawan_mac_on_rx_timeout_isr(lorawan_mac_t * obj)
 
 }
 
-static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
-{
-	// reset variables
-	obj->rx_window_delay1 = RECEIVE_DELAY1;
-	obj->rx_window_delay2 = RECEIVE_DELAY2;
-
-	// reset counters
-	obj->uplink_counter = 0;
-	obj->downlink_counter = 0;
-
-	// reset states
-	obj->node_ack_requested = false;
-	obj->srv_ack_requested = false;
-	obj->mac_command_in_next_tx = false;
-
-	// reset network states
-	obj->is_lora_mac_network_joined = false;
-
-}
-
 
 static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 {
 	while (1)
 	{
 		// block read data from radio
-		lorawan_mac_msg_t rx_msg;
+		lorawan_mac_msg_ext_t rx_msg;
 		DRV_ASSERT(xQueueReceive(obj->rx_queue_pri, &rx_msg, portMAX_DELAY));
 
 		// TODO; The most data processing can actually be done in thread.
-		uint8_t * raw_packet_buffer = rx_msg.buffer;
-
-		// initialize variables
-		uint8_t * network_session_key = lorawan_mac_network_session_key;
-		uint8_t * application_session_key = lorawan_mac_application_session_key;
+		uint8_t * raw_packet_buffer = rx_msg.msg.buffer;
 
 		// counters
 		uint16_t downlink_counter;
@@ -316,19 +344,19 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 					return;
 				}
 
-				lorawan_mac_join_decrypt(rx_msg.buffer + 1, (uint16_t) (rx_msg.size - 1), lorawan_app_key, decoded_payload + 1);
+				lorawan_mac_join_decrypt(rx_msg.msg.buffer + 1, (uint16_t) (rx_msg.msg.size - 1), lorawan_app_key, decoded_payload + 1);
 
 				decoded_payload[0] = mac_header->byte;
 
-				lorawan_mac_join_compute_mic(decoded_payload, (uint16_t) (rx_msg.size - MIC_LEN), lorawan_app_key, &calc_mic);
+				lorawan_mac_join_compute_mic(decoded_payload, (uint16_t) (rx_msg.msg.size - MIC_LEN), lorawan_app_key, &calc_mic);
 
 				// get rx_mic
-				uint32_t * rx_mic = (uint32_t *) &rx_msg.buffer[rx_msg.size - MIC_LEN];
+				uint32_t * rx_mic = (uint32_t *) &rx_msg.msg.buffer[rx_msg.msg.size - MIC_LEN];
 
 				if (*rx_mic == calc_mic)
 				{
 					lorawan_mac_join_compute_session_key(lorawan_app_key, decoded_payload + 1, lorawan_mac_dev_nonce,
-					                                     lorawan_mac_network_session_key, lorawan_mac_application_session_key);
+					                                     obj->network_session_key, obj->application_session_key);
 					// TODO: get lora mac net id
 					// TODO: get lora mac device addr
 					// TODO: read DL settings
@@ -348,7 +376,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				raw_packet_buffer += 4;
 
 				// tell if the destination is the local device
-				if (*dest_dev_addr != obj->lora_mac_dev_addr)
+				if (*dest_dev_addr != obj->device_addr)
 				{
 					// TODO: multicast?
 					multicast = true;
@@ -357,12 +385,10 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				{
 					// TODO:
 					multicast = false;
-					network_session_key = lorawan_mac_network_session_key;
-					application_session_key = lorawan_mac_application_session_key;
 				}
 
 				// read frame control
-				lorawan_mac_fhdr_fctrl_ul_t * fctrl = (lorawan_mac_fhdr_fctrl_ul_t *) raw_packet_buffer;
+				lorawan_mac_fhdr_fctrl_t * fctrl = (lorawan_mac_fhdr_fctrl_t *) raw_packet_buffer;
 				raw_packet_buffer += 1;
 
 				// read 2 byte fcnt
@@ -377,7 +403,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				uint8_t * frmpayload = raw_packet_buffer;
 
 				// read 4 byte mic
-				uint32_t * rx_mic = (uint32_t *) &rx_msg.buffer[rx_msg.size - MIC_LEN];
+				uint32_t * rx_mic = (uint32_t *) &rx_msg.msg.buffer[rx_msg.msg.size - MIC_LEN];
 
 				// calculate downlink counter different
 				uint16_t counter_diff = *fcnt - obj->downlink_counter;
@@ -393,7 +419,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				}
 
 				uint32_t calc_mic = 0;
-				lorawan_mac_compute_mic(rx_msg.buffer, (uint16_t) (rx_msg.size - MIC_LEN), network_session_key, *dest_dev_addr,
+				lorawan_mac_compute_mic(rx_msg.msg.buffer, (uint16_t) (rx_msg.msg.size - MIC_LEN), obj->network_session_key, *dest_dev_addr,
 				                        LORAWAN_DOWN_LINK, obj->downlink_counter, &calc_mic);
 
 				// check for the maximum allowed counter difference
@@ -432,16 +458,16 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 
 					// process payload and mac commands
 					uint8_t port = frmpayload[0];
-					uint8_t frame_length = (uint8_t) (rx_msg.size - MIC_LEN - (frmpayload - rx_msg.buffer));
+					uint8_t frame_length = (uint8_t) (rx_msg.msg.size - MIC_LEN - (frmpayload - rx_msg.msg.buffer));
 
-					if (((rx_msg.size - 4) - (frmpayload - rx_msg.buffer)) > 0 )
+					if (((rx_msg.msg.size - 4) - (frmpayload - rx_msg.msg.buffer)) > 0 )
 					{
 						// if the port is 0, it indicates that the FRMPayload contains MAC command only
 						if (port == 0)
 						{
 							if (fctrl->foptslen == 0)
 							{
-								lorawan_mac_payload_decrypt(frmpayload + 1, frame_length, network_session_key,
+								lorawan_mac_payload_decrypt(frmpayload + 1, frame_length, obj->network_session_key,
 								                            *dest_dev_addr,
 								                            LORAWAN_DOWN_LINK, obj->downlink_counter, decoded_payload);
 
@@ -457,10 +483,10 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 							if (fctrl->foptslen > 0)
 							{
 								// decode options field MAC command, omit the fport
-								lorawan_mac_process_mac_commands_pri(obj, rx_msg.buffer, 8, (uint8_t) (frmpayload - rx_msg.buffer - 1),
+								lorawan_mac_process_mac_commands_pri(obj, rx_msg.msg.buffer, 8, (uint8_t) (frmpayload - rx_msg.msg.buffer - 1),
 								                                     rx_msg.snr);
 							}
-							lorawan_mac_payload_decrypt(frmpayload, frame_length, application_session_key,
+							lorawan_mac_payload_decrypt(frmpayload, frame_length, obj->application_session_key,
 							                            *dest_dev_addr,
 							                            LORAWAN_DOWN_LINK, obj->downlink_counter, decoded_payload);
 						}
@@ -469,7 +495,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 					{
 						if (fctrl->foptslen > 0)
 						{
-							lorawan_mac_process_mac_commands_pri(obj, rx_msg.buffer, 8, (uint8_t) (frmpayload - rx_msg.buffer - 1), rx_msg.snr);
+							lorawan_mac_process_mac_commands_pri(obj, rx_msg.msg.buffer, 8, (uint8_t) (frmpayload - rx_msg.msg.buffer - 1), rx_msg.snr);
 						}
 					}
 
@@ -535,13 +561,198 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 }
 
 
-void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
+static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header,
+                                          lorawan_mac_fhdr_fctrl_t * fctrl,
+                                          uint8_t fport, void * buffer, uint16_t size)
+{
+	uint8_t * packet_ptr = obj->internal_message_buffer.buffer;
+
+	obj->internal_message_buffer.size = size;
+
+	obj->internal_message_buffer.buffer[0] = mac_header->byte;
+	packet_ptr += 1;
+
+	switch(mac_header->message_type)
+	{
+		case LORAWAN_MHDR_JOIN_REQUEST:
+		{
+			memcpy(packet_ptr, &obj->application_eui64, 8);
+			packet_ptr += 8;
+
+			memcpy(packet_ptr, &obj->device_eui64, 8);
+			packet_ptr += 8;
+
+			// read a random number to fill in device nonce
+			obj->device_nonce = (uint16_t) random();
+
+			memcpy(packet_ptr, &obj->device_nonce, 2);
+			packet_ptr += 2;
+
+			// compute mic
+			uint32_t mic = 0;
+			lorawan_mac_join_compute_mic(obj->internal_message_buffer.buffer, (uint8_t) (packet_ptr - obj->internal_message_buffer.buffer),
+			                             obj->application_session_key, &mic);
+
+			memcpy(packet_ptr, &mic, 4);
+			packet_ptr += 4;
+
+			break;
+		}
+
+		case LORAWAN_MHDR_CONFIRMED_DATA_UP:
+		{
+			obj->node_ack_requested = true;
+
+			// NO BREAK!
+		}
+
+		case LORAWAN_MHDR_UNCONFIRMED_DATA_UP:
+		{
+			if (!obj->is_lora_mac_network_joined)
+			{
+				return LORAWAN_MAC_STATUS_NO_NETWORK_JOINED;
+			}
+
+			fctrl->adrackreq = adr_next_data_rate();
+
+			if (obj->srv_ack_requested)
+			{
+				obj->srv_ack_requested = false;
+				fctrl->ack = 1;
+			}
+
+			memcpy(packet_ptr, &obj->device_addr, 4);
+			packet_ptr += 4;
+
+			*packet_ptr = fctrl->byte;
+			packet_ptr += 1;
+
+			memcpy(packet_ptr, &obj->uplink_counter, 2);
+			packet_ptr += 2;
+
+			// copy mac command
+			if (obj->internal_message_buffer.size > 0)
+			{
+
+			}
+
+		}
+	}
+
+	return LORAWAN_MAC_STATUS_OK;
+}
+
+
+static lorawan_mac_status_t lorawan_mac_schedule_tx_pri(lorawan_mac_t * obj)
+{
+	return LORAWAN_MAC_STATUS_OK;
+}
+
+
+static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
+{
+	// set default state for internal state machine
+	obj->state = LORAWAN_MAC_IDLE;
+
+	// set default LoRaWAN device class to class A
+	obj->device_class = LORAWAN_CLASS_A;
+
+	// reset rf channel
+	obj->channel = 0;
+
+	// TODO: reset lorawan device address
+	obj->device_addr = 0x0;
+
+	// reset internal buffer
+	memset(&obj->internal_message_buffer, 0x0, sizeof(lorawan_mac_msg_t));
+
+	// reset device nonce
+	obj->device_nonce = 0;
+
+	// TODO: reset rx window delay
+	obj->rx_window_delay1 = RECEIVE_DELAY1;
+	obj->rx_window_delay2 = RECEIVE_DELAY2;
+
+	// reset counters
+	obj->uplink_counter = 0;
+	obj->downlink_counter = 0;
+
+	// reset states
+	obj->node_ack_requested = false;
+	obj->ack_timeout_retry = false;
+	obj->srv_ack_requested = false;
+	obj->mac_command_in_next_tx = false;
+	obj->is_lora_mac_network_joined = false;
+	obj->rx_slot = false;
+	obj->adr_ctrl_on = false;
+
+	// features
+	obj->repeater_support = false;
+
+	// reset encryption keys
+	memset(obj->network_session_key, 0x0, sizeof(obj->network_session_key));
+	memset(obj->application_session_key, 0x0, sizeof(obj->application_session_key));
+
+	// TODO: reset rx windows parameters
+	obj->rx_window_param1;
+	obj->rx_window_param2;
+
+	// TODO: reset mac parameters
+	obj->mac_params;
+
+}
+
+
+void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * device_eui64, uint64_t * application_eui64)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(radio);
 
 	// copy variables
-	obj->radio = radio;
+	{
+		obj->radio = radio;
+		memcpy(&obj->device_eui64, device_eui64, sizeof(uint64_t));
+		memcpy(&obj->application_eui64, application_eui64, sizeof(uint64_t));
+	}
+
+
+	// initialize radio
+	{
+		// configure the radio
+		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
+
+		// set bandwidth
+		radio_rfm9x_set_bandwidth(obj->radio, RADIO_RFM9X_BW_125K);
+
+		// set coding rate
+		radio_rfm9x_set_coding_rate(obj->radio, RADIO_RFM9X_CR_4_5);
+
+		// set spreading factor
+		radio_rfm9x_set_spreading_factor(obj->radio, RADIO_RFM9X_SF_128);
+
+		// enable crc
+		radio_rfm9x_set_crc_enable(obj->radio, true);
+
+		// set preamble length
+		radio_rfm9x_set_preamble_length(obj->radio, 8);
+
+		// set operating frequency
+		radio_rfm9x_set_channel(obj->radio, 867000000UL);
+
+		// set tx power
+		radio_rfm9x_set_tx_power(obj->radio, 23);
+
+		// generate a random number as seed
+		srandom(radio_rfm9x_generate_random_number(obj->radio));
+
+		// set public network
+		radio_rfm9x_set_public_network(obj->radio, true);
+
+		// set the radio to sleep state
+		radio_rfm9x_set_opmode_sleep(obj->radio);
+	}
+
+
 
 	// reset variables to its default value
 	lorawan_mac_internal_reset_pri(obj);
@@ -562,4 +773,35 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
 
 	// create rx thread handler
 	xTaskCreate((void *) lorawan_mac_rx_thread, "mac_rx", 400, obj, 3, &obj->rx_thread_handle);
+}
+
+
+
+lorawan_mac_status_t lorawan_mac_send(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header, uint8_t fport, void * buffer, uint16_t size)
+{
+	lorawan_mac_status_t status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+
+	// create a frame control byte
+	lorawan_mac_fhdr_fctrl_t fctrl;
+	fctrl.byte = 0;
+
+	// set fctrl
+	fctrl.foptslen = 0,
+	fctrl.fpending = 0;
+	fctrl.ack = 0;
+	fctrl.adrackreq = 0;
+	fctrl.adr = (uint8_t) (obj->adr_ctrl_on ? 1 : 0);
+
+	// prepare frame
+	if ((status = lorawan_mac_prepare_frame_pri(obj, mac_header, &fctrl, fport, buffer, size)) != LORAWAN_MAC_STATUS_OK)
+	{
+		return status;
+	}
+
+	if ((status = lorawan_mac_schedule_tx_pri(obj)) != LORAWAN_MAC_STATUS_OK)
+	{
+		return status;
+	}
+
+	return status;
 }
