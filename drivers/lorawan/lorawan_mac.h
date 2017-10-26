@@ -54,8 +54,9 @@ typedef struct
 	// current rf channel
 	uint8_t channel;
 
-	// internal message buffer
+	// internal properties
 	lorawan_mac_msg_t internal_message_buffer;
+	lorawan_mac_cmd_msg_t internal_mac_command_message_buffer;
 	uint16_t device_nonce;
 
 	// reception window delay

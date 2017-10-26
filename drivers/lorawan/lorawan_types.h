@@ -203,5 +203,11 @@ typedef struct
 	int8_t snr;
 } lorawan_mac_msg_ext_t;
 
+typedef struct
+{
+	uint8_t buffer[15];
+	uint8_t size;
+} lorawan_mac_cmd_msg_t;
+
 
 #endif // LORAWAN_TYPES_H_
