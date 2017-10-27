@@ -19,6 +19,9 @@
 #include "irq.h"
 #include "yield.h"
 
+#define RFM9X_PRIVATE_SYNCWORD 0x12
+#define RFM9X_PUBLIC_SYNWORD 0x34
+
 extern const pio_map_t spi_mosi_map[];
 extern const pio_map_t spi_miso_map[];
 extern const pio_map_t spi_clk_map[];
@@ -741,5 +744,20 @@ void radio_rfm9x_set_opmode_sleep(radio_rfm9x_t * obj)
 		radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_SLEEP);
 
 		obj->radio_op_state = RADIO_RFM9X_OP_SLEEP;
+	}
+}
+
+
+void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable)
+{
+	DRV_ASSERT(obj);
+
+	if (enable)
+	{
+		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PUBLIC_SYNWORD);
+	}
+	else
+	{
+		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PRIVATE_SYNCWORD);
 	}
 }

@@ -122,12 +122,6 @@ void i2cdrv_init(i2cdrv_t *obj, pio_t sda, pio_t scl, pio_t enable)
 	ret = DMADRV_AllocateChannel(&obj->rx_dma_ch, NULL);
 	assert(ret != ECODE_OK);
 #endif
-
-#if I2C_USE_MUTEX == 1
-	// initialize mutex
-	obj->access_mutex = xSemaphoreCreateMutex();
-	assert(obj->access_mutex);
-#endif
 }
 
 void i2cdrv_deinit(i2cdrv_t *obj)
@@ -144,14 +138,6 @@ void i2cdrv_deinit(i2cdrv_t *obj)
 #if I2C_USE_DMA == 1
 	DMADRV_DeInit();
 #endif
-
-#if I2C_USE_MUTEX == 1
-	assert(obj->access_mutex);
-	vSemaphoreDelete(obj->access_mutex);
-
-	obj->access_mutex = NULL;
-#endif
-
 	// revoke variables
 	obj->sda = NC;
 	obj->scl = NC;
@@ -255,17 +241,6 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 	// 10 bit address - use format XXXX XAAX AAAA AAAA
 	seq->addr <<= 1;
 
-#if 0 // I2C_USE_MUTEX == 1
-	// TODO: Use CORE_ATOMIC_SECTION to ensure accessing to I2C is exclusive.
-	// It looks like the FreeRTOS is not functioning properly in some extreme cases
-
-	// enter mutex section
-	if (__IS_INTERRUPT())
-		xSemaphoreTakeFromISR(obj->access_mutex, NULL);
-	else
-		xSemaphoreTake(obj->access_mutex, portMAX_DELAY);
-#endif
-
 	CORE_ATOMIC_SECTION(
 	    // start transfer
 		ret = I2C_TransferInit(obj->base, seq);
@@ -281,16 +256,6 @@ static I2C_TransferReturn_TypeDef i2cdrv_transfer_pri(i2cdrv_t *obj, I2C_Transfe
 			ret = I2C_Transfer(obj->base);
 		}
 	);
-
-	return ret;
-
-#if 0 // I2C_USE_MUTEX == 1
-	// exit mutex section
-	if (__IS_INTERRUPT())
-		xSemaphoreGiveFromISR(obj->access_mutex, NULL);
-	else
-		xSemaphoreGive(obj->access_mutex);
-#endif
 
 	return ret;
 }
