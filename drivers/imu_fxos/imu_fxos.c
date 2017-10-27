@@ -536,7 +536,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         else if (interupt_1 == true)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
-            halSetLed(BOARDLED1);
+            //halSetLed(BOARDLED1);
             Vector_Threshold[0] = VECTOR_THRESH_OPEN >> 8 | 0x80;
             Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_OPEN ;
 
@@ -545,7 +545,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         else
         {
             obj->door_state = IMU_EVENT_DOOR_CLOSE;
-            halClearLed(BOARDLED1);
+            //halClearLed(BOARDLED1);
             Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
             Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
 
