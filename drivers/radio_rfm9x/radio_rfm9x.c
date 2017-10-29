@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
+#include <math.h>
 
 #include "em_core.h"
 #include "spidrv.h"
@@ -383,6 +384,9 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 	obj->cs = cs;
 	obj->dio0 = dio0;
 
+	// reset internal variable
+	memset(&obj->config, 0x0, sizeof(obj->config));
+
 	// find spi peripheral functions
 	DRV_ASSERT(find_pin_function(spi_miso_map, obj->miso, (void **) &usart_base, &miso_loc));
 	DRV_ASSERT(find_pin_function(spi_mosi_map, obj->mosi, NULL, &mosi_loc));
@@ -457,6 +461,9 @@ void radio_rfm9x_set_channel(radio_rfm9x_t * obj, uint32_t freq)
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_06_FRF_MSB, (uint8_t) ((freq >> 16) & 0xff));
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_07_FRF_MID, (uint8_t) ((freq >> 8) & 0xff));
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_08_FRF_LSB, (uint8_t) (freq & 0xff));
+
+	// keep local copy
+	obj->config.frequency = freq;
 }
 
 
@@ -490,6 +497,9 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 
 	// restore previous op mode
 	radio_rfm9x_set_opmode_pri(obj, prev_opmode);
+
+	// keep local copy
+	obj->config.modem = modem;
 }
 
 
@@ -530,6 +540,10 @@ void radio_rfm9x_set_tx_power_use_rfo(radio_rfm9x_t * obj, int8_t power_dbm, boo
 		// My measurements show 20dBm is correct
 		radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_09_PA_CONFIG, (uint8_t) (RH_RF95_PA_SELECT | (power_dbm - 5)));
 	}
+
+
+	// keep local copy
+	obj->config.tx_power = power_dbm;
 }
 
 
@@ -539,6 +553,9 @@ void radio_rfm9x_set_preamble_length(radio_rfm9x_t * obj, uint16_t bytes)
 
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_20_PREAMBLE_MSB, (uint8_t) (bytes >> 8));
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_21_PREAMBLE_LSB, (uint8_t) (bytes & 0xff));
+
+	// keep local copy
+	obj->config.preamble_length = bytes;
 }
 
 
@@ -547,6 +564,9 @@ void radio_rfm9x_set_bandwidth(radio_rfm9x_t * obj, radio_rfm9x_bw_t bandwidth)
 	DRV_ASSERT(obj);
 
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_1D_MODEM_CONFIG1, ((uint8_t) bandwidth) << 4, 0xf0); // mask: 0b11110000
+
+	// keep local copy
+	obj->config.bandwidth = bandwidth;
 }
 
 
@@ -555,6 +575,9 @@ void radio_rfm9x_set_coding_rate(radio_rfm9x_t * obj, radio_rfm9x_cr_t coding_ra
 	DRV_ASSERT(obj);
 
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_1D_MODEM_CONFIG1, ((uint8_t) coding_rate) << 1, 0xe); // mask: 0b00001110
+
+	// keep local copy
+	obj->config.coding_rate = coding_rate;
 }
 
 
@@ -563,6 +586,9 @@ void radio_rfm9x_set_implicit_header_mode_on(radio_rfm9x_t * obj, bool is_implic
 	DRV_ASSERT(obj);
 
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_1D_MODEM_CONFIG1, (uint8_t) (is_implicit_header ? 0x1 : 0x0), 0x1);
+
+	// keep local copy
+	obj->config.implicit_header = is_implicit_header;
 }
 
 
@@ -571,6 +597,9 @@ void radio_rfm9x_set_spreading_factor(radio_rfm9x_t * obj, radio_rfm9x_sf_t spre
 	DRV_ASSERT(obj);
 
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_1E_MODEM_CONFIG2, ((uint8_t) spreading_factor) << 4, 0xf0);
+
+	// keep local copy
+	obj->config.spreading_factor = spreading_factor;
 }
 
 
@@ -579,6 +608,9 @@ void radio_rfm9x_set_crc_enable(radio_rfm9x_t * obj, bool crc_enable)
 	DRV_ASSERT(obj);
 
 	radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_1E_MODEM_CONFIG2, (uint8_t) (crc_enable ? 0x1 : 0x0) << 2, 0x4);
+
+	// keep local copy
+	obj->config.crc_enable = crc_enable;
 }
 
 
@@ -754,10 +786,123 @@ void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable)
 
 	if (enable)
 	{
+		 // Note: 0x39, aka SYNC register, is one of the undocumented register in RFM9x chip
 		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PUBLIC_SYNWORD);
 	}
 	else
 	{
 		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PRIVATE_SYNCWORD);
+	}
+}
+
+
+uint32_t radio_rfm9x_generate_random_number(radio_rfm9x_t * obj)
+{
+	DRV_ASSERT(obj);
+
+	uint32_t rnd = 0;
+
+	// backup previous transceiver opmode
+	radio_rfm9x_op_t prev_opmode = radio_rfm9x_get_opmode_pri(obj);
+
+	// backup interrupt interrupts
+	uint8_t prev_int_mask_reg = radio_rfm9x_reg_read_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK);
+
+	// mask all interrupts
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK, 0xff);
+
+	// set the transceiver to rx_continuous mode
+	radio_rfm9x_set_opmode_pri(obj, RADIO_RFM9X_OP_RX);
+
+	for (uint8_t i = 0; i < 32; i++)
+	{
+		// Note: 0x2C, aka Wideband RSSI register, is one of the undocumented register in RFM9x chip
+		rnd |= ((uint32_t) radio_rfm9x_reg_read_pri(obj, 0x2C) & 0x01) << i;
+		delay_ms(1);
+	}
+
+	// restore interrupt masks
+	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_11_IRQ_FLAGS_MASK, prev_int_mask_reg);
+
+	// restore previous op mode
+	radio_rfm9x_set_opmode_pri(obj, prev_opmode);
+
+	return rnd;
+}
+
+
+uint32_t radio_rfm9x_get_time_on_air(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem, uint8_t packet_length)
+{
+	DRV_ASSERT(obj);
+
+	uint32_t time_on_air = 0;
+
+	switch (modem)
+	{
+		case RADIO_RFM9X_MODEM_LORA:
+		{
+			// read current bandwidth
+			uint32_t bw = 0;
+			switch (obj->config.bandwidth)
+			{
+				case RADIO_RFM9X_BW_125K:
+					bw = 125000UL;
+					break;
+				case RADIO_RFM9X_BW_250K:
+					bw = 250000UL;
+					break;
+				case RADIO_RFM9X_BW_500K:
+					bw = 500000UL;
+					break;
+				default:
+					DRV_ASSERT(false);
+					break;
+			}
+
+			// calculate premable duration
+			double r_s = (double) bw / (1 << obj->config.spreading_factor);
+			double t_s = 1 / r_s; // symbol period
+			double t_preamble = (obj->config.preamble_length + 4.25) * t_s;
+
+			// calculate payload period
+			double t_payload =
+					(t_s * (8.0 +
+							ceil((8.0 * packet_length - 4.0 * obj->config.spreading_factor + (obj->config.implicit_header ? 24.0 : 44.0)) / (4.0 * obj->config.spreading_factor)) *
+									obj->config.coding_rate + 4.0));
+
+			// convert to ms
+			time_on_air = (uint32_t) floor((t_preamble + t_payload) * 1e3 + 0.999);
+
+			return time_on_air;
+		}
+
+		case RADIO_RFM9X_MODEM_FSK:
+		{
+			DRV_ASSERT(false);
+			return 0;
+		}
+		default:
+			DRV_ASSERT(false);
+			return 0;
+	}
+}
+
+
+void radio_rfm9x_set_max_payload_length(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem, uint8_t max_length)
+{
+	switch (modem)
+	{
+		case RADIO_RFM9X_MODEM_LORA:
+		{
+			radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_23_MAX_PAYLOAD_LENGTH, max_length);
+			break;
+		}
+		case RADIO_RFM9X_MODEM_FSK:
+		{
+			DRV_ASSERT(false);
+		}
+		default:
+			DRV_ASSERT(false);
+			break;
 	}
 }

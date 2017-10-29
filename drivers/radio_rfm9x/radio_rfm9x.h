@@ -145,6 +145,20 @@ typedef struct
 	// radio status
 	radio_rfm9x_op_t radio_op_state;
 
+	struct
+	{
+		uint32_t frequency;
+		radio_rfm9x_modem_t modem;
+		int8_t tx_power;
+		uint16_t preamble_length;
+		radio_rfm9x_bw_t bandwidth;
+		radio_rfm9x_cr_t coding_rate;
+		radio_rfm9x_sf_t spreading_factor;
+		bool crc_enable;
+		bool implicit_header;
+
+	} config;
+
 	// handlers
 	radio_rfm9x_callback_t on_rx_done_isr;
 	radio_rfm9x_callback_t on_tx_done_isr;
@@ -292,6 +306,30 @@ void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
  * @param obj the transceiver
  */
 void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable);
+
+/**
+ * @brief Generate random number from the radio antenna
+ * @param obj the transceiver
+ * @return a 32bit random number
+ */
+uint32_t radio_rfm9x_generate_random_number(radio_rfm9x_t * obj);
+
+/**
+ * @brief Calculate time on air for given packet length with current configuration
+ * @param obj the transceiver
+ * @param modem LoRa or FSK modem
+ * @param packet_length the packet length
+ * @return time on air in ms
+ */
+uint32_t radio_rfm9x_get_time_on_air(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem, uint8_t packet_length);
+
+/**
+ * @brief Set the maximum number of bytes in threshold. Once exceeded, throw a CRC error
+ * @param obj the transceiver
+ * @param modem LoRa or FSK modem
+ * @param max_length the maximum packet length
+ */
+void radio_rfm9x_set_max_payload_length(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem, uint8_t max_length);
 
 /**
  * @brief Toggle the transceiver mode to Tx (Transmit)

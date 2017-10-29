@@ -4,13 +4,13 @@
  * @file lorawan_mac_crypto.h
  * @author Semtech
  */
-
+#include <string.h>
 #include "lorawan_mac_crypto.h"
 
 void lorawan_mac_compute_mic(const uint8_t * buffer, uint16_t size, const uint8_t * key, uint32_t addr,
                              lorawan_mac_comm_direction_t direction, uint32_t counter, uint32_t * mic)
 {
-	*mic = 0;
+	*mic = 0xffffffff;
 }
 
 void lorawan_mac_join_decrypt(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint8_t * out_buffer)
@@ -20,7 +20,7 @@ void lorawan_mac_join_decrypt(const uint8_t * in_buffer, uint16_t size, const ui
 
 void lorawan_mac_join_compute_mic(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint32_t * mic)
 {
-	*mic = 0;
+	*mic = 0xffffffff;
 }
 
 void lorawan_mac_join_compute_session_key(const uint8_t * aes_key, const uint8_t * app_nonce, uint16_t dev_nonce,
@@ -32,5 +32,11 @@ void lorawan_mac_join_compute_session_key(const uint8_t * aes_key, const uint8_t
 void lorawan_mac_payload_decrypt(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint32_t address,
                                  lorawan_mac_comm_direction_t direction, uint32_t counter, uint8_t * out_buffer)
 {
+	memcpy(out_buffer, in_buffer, size);
+}
 
+void lorawan_mac_payload_encrypt(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint32_t address,
+                                 lorawan_mac_comm_direction_t direction, uint32_t counter, uint8_t * out_buffer)
+{
+	memcpy(out_buffer, in_buffer, size);
 }
