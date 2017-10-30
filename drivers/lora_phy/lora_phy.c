@@ -7,7 +7,9 @@
 
 #if USE_FREERTOS == 1
 
+#include <common/subg_packet_v2.h>
 #include "lora_phy.h"
+#include "subg_packet_v2.h"
 
 static void lora_phy_on_rx_done_isr(uint8_t * buffer, int16_t size, int16_t rssi, int8_t snr, lora_phy_t * obj)
 {
@@ -50,6 +52,22 @@ static void lora_phy_on_rx_timeout_isr(lora_phy_t * obj)
 	xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
+
+static void lora_phy_on_rx_window_timeout(TimerHandle_t xTimer)
+{
+	DRV_ASSERT(xTimer);
+	xTimerStop(xTimer, 0);
+
+	// read radio object
+	lora_phy_t * obj = (lora_phy_t *) pvTimerGetTimerID(xTimer);
+
+	// if the receive window is still open, then put the device to sleep state, otherwise leave the device as is
+	if (obj->radio->radio_op_state == RADIO_RFM9X_OP_RX)
+	{
+		radio_rfm9x_set_opmode_sleep(obj->radio);
+	}
+}
+
 static void lora_phy_fsm_thread(lora_phy_t * obj)
 {
 	while (1)
@@ -68,6 +86,11 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 				lora_phy_msg_t tx_msg;
 				if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
 				{
+					// give seq id
+					subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) tx_msg.buffer;
+					header->seq_id = obj->local_seq_id++;
+
+					// send to phy layer handler
 					radio_rfm9x_send(obj->radio, tx_msg.buffer, tx_msg.size);
 					obj->fsm_state = LORA_PHY_FSM_TX;
 				}
@@ -89,9 +112,12 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 
 			case LORA_PHY_FSM_TX_DONE:
 			{
-				// enter rx mode
-				radio_rfm9x_set_opmode_sleep(obj->radio);
+				// enter active receive mode for first receive window
+				radio_rfm9x_set_opmode_rx_timeout(obj->radio, 1000);
+
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
+
+				break;
 			}
 
 			case LORA_PHY_FSM_RX_DONE:
@@ -100,11 +126,48 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 				lora_phy_msg_t rx_msg;
 				while (xQueueReceive(obj->rx_queue_pri, &rx_msg, 0))
 				{
+					// filter the packet with wrong packet size
+					if (rx_msg.size < SUBG_PACKET_V2_HEADER_SIZE)
+					{
+						continue;
+					}
+
+					// filter the packet with wrong protocol version
+					subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) rx_msg.buffer;
+					if (header->protocol_version < SUBG_PACKET_V2_PROTOCOL_VER)
+					{
+						continue;
+					}
+
+					// filter the packet with wrong destination
+					if (header->dest_id8 != obj->device_id8)
+					{
+						continue;
+					}
+
+					// ack the received packet
+					lora_phy_msg_t tx_msg;
+					tx_msg.size = sizeof(subg_packet_v2_cmd_t);
+					subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
+
+					// build packet
+					ack_packet->header.dest_id8 = header->src_id8;
+					ack_packet->header.src_id8 = obj->device_id8;
+					ack_packet->header.packet_type = (uint8_t) SUBG_PACKET_V2_TYPE_CMD;
+					ack_packet->header.protocol_version = SUBG_PACKET_V2_PROTOCOL_VER;
+
+					ack_packet->command = (uint8_t) SUBG_PACKET_V2_CMD_ACK;
+					ack_packet->payload = header->seq_id;
+
+					// transmit ack
+					lora_phy_send(obj, &tx_msg);
+
+					// send filtered packet to upper layer
 					xQueueSend(obj->rx_queue, &rx_msg, 0);
 				}
 
-				// enter rx mode
 				radio_rfm9x_set_opmode_sleep(obj->radio);
+
 				obj->fsm_state = LORA_PHY_FSM_RX_IDLE;
 
 				break;
@@ -147,13 +210,18 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 	}
 }
 
-void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio)
+void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio, uint8_t device_id8)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(radio);
 
 	// copy variables
 	obj->radio = radio;
+	obj->device_id8 = device_id8;
+	obj->local_seq_id = 0;
+
+	// setup retransmit
+	obj->retransmit.is_prev_packet_acked = true;
 
 	// set radio to sleep default state
 	radio_rfm9x_set_opmode_sleep(obj->radio);
