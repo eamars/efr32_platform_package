@@ -159,7 +159,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 					ack_packet->payload = header->seq_id;
 
 					// transmit ack
-					lora_phy_send(obj, &tx_msg);
+					lora_phy_send_block(obj, &tx_msg);
 
 					// send filtered packet to upper layer
 					xQueueSend(obj->rx_queue, &rx_msg, 0);
