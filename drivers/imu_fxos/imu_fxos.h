@@ -13,9 +13,9 @@
 #include <stdint.h>
 #include "i2cdrv.h"
 #include "pio_defs.h"
-
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
@@ -699,6 +699,8 @@ typedef struct
     QueueHandle_t imu_event_queue;
     imu_event_t last_event;
     uint32_t last_call;
+    TaskHandle_t ImuTempHandler;
+    int16_t temp;
 
 } imu_FXOS8700CQ_t;
 
@@ -739,6 +741,7 @@ void       FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj);
 int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
 
