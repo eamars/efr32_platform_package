@@ -9,8 +9,7 @@
 
 #include <stdint.h>
 
-#define SUBG_PACKET_V2_PROTOCOL_VER (0x02)
-#define SUBG_PACKET_V2_HEADER_SIZE (sizeof(subg_packet_v2_header_t))
+#define SUBG_PACKET_V2_HEADER_SIZE (3)
 #define SUBG_PACKET_V2_DATA_SIZE ((12) + SUBG_PACKET_V2_HEADER_SIZE)
 #define SUBG_PACKET_V2_CMD_SIZE ((6) + SUBG_PACKET_V2_HEADER_SIZE)
 
@@ -31,10 +30,8 @@ typedef enum
 typedef struct __attribute__ ((packed))
 {
 	uint8_t protocol_version;
-	uint8_t src_id8;
-	uint8_t dest_id8;
+	uint8_t device_id8;
 	uint8_t packet_type;
-	uint8_t seq_id;
 } subg_packet_v2_header_t;
 
 
