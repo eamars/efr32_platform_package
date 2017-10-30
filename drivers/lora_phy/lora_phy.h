@@ -17,6 +17,7 @@
 #include "queue.h"
 #include "task.h"
 #include "semphr.h"
+#include "timers.h"
 
 /**
  * @brief Internal LoRa state machine properties
@@ -43,11 +44,19 @@ typedef struct
 	uint8_t size;
 } lora_phy_msg_t;
 
+typedef struct
+{
+	bool is_prev_packet_acked;
+	lora_phy_msg_t prev_packet;
+	xTimerHandle retransmission_timer;
+} lora_phy_retransmit_t;
 
 typedef struct
 {
 	// transceiver driver
 	radio_rfm9x_t * radio;
+	uint8_t device_id8;
+	uint8_t local_seq_id;
 
 	// packet queue
 	QueueHandle_t tx_queue;
@@ -63,6 +72,9 @@ typedef struct
 	// link quality
 	int16_t last_packet_rssi;
 	int8_t last_packet_snr;
+
+	// retransmit
+	lora_phy_retransmit_t retransmit;
 } lora_phy_t;
 
 
@@ -70,7 +82,7 @@ typedef struct
 extern "C" {
 #endif
 
-void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio);
+void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio, uint8_t device_id8);
 
 /**
  * @brief Send bytes to transceiver

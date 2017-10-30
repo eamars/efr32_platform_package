@@ -395,8 +395,11 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
 #if USE_FREERTOS == 1
 	// initialize timer
-	obj->rx_timeout_timer = xTimerCreate("rfm_rx_timer", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
-	obj->tx_timeout_timer = xTimerCreate("rfm_tx_timer", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+	obj->rx_timeout_timer = xTimerCreate("rfm_rx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+	obj->tx_timeout_timer = xTimerCreate("rfm_tx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+
+	DRV_ASSERT(obj->rx_timeout_timer);
+	DRV_ASSERT(obj->tx_timeout_timer);
 #endif
 
 	// configure spi
