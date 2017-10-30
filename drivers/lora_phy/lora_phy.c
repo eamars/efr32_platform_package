@@ -7,7 +7,6 @@
 
 #if USE_FREERTOS == 1
 
-#include <common/subg_packet_v2.h>
 #include "lora_phy.h"
 #include "subg_packet_v2.h"
 
