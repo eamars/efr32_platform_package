@@ -15,7 +15,7 @@ void lorawan_mac_compute_mic(const uint8_t * buffer, uint16_t size, const uint8_
 
 void lorawan_mac_join_decrypt(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint8_t * out_buffer)
 {
-
+	memcpy(out_buffer, in_buffer, size);
 }
 
 void lorawan_mac_join_compute_mic(const uint8_t * in_buffer, uint16_t size, const uint8_t * key, uint32_t * mic)
