@@ -61,6 +61,7 @@ void GPIOINT_Init(void)
 
 void GPIOINT_CallbackRegister(uint8_t pin, GPIOINT_IrqCallbackPtr_t callbackPtr)
 {
+	// make sure you haven't register the callback previously
 	DRV_ASSERT(!gpioCallbacks[pin].callback);
 	CORE_ATOMIC_SECTION(
 			gpioCallbacks[pin].callback = (void *) callbackPtr;
@@ -71,6 +72,7 @@ void GPIOINT_CallbackRegister(uint8_t pin, GPIOINT_IrqCallbackPtr_t callbackPtr)
 
 void GPIOINT_CallbackRegisterWithArgs(uint8_t pin, GPIOINT_IrqCallbackPtrWithArgs_t callbackPtr, void * args)
 {
+	// make sure you haven't register the callback previously
 	DRV_ASSERT(!gpioCallbacks[pin].callback);
 	CORE_ATOMIC_SECTION(
 			gpioCallbacks[pin].callback = (void *) callbackPtr;
@@ -110,5 +112,9 @@ void GPIO_ODD_IRQHandler(void)
 
 void GPIOINT_CallbackUnRegister(uint8_t pin)
 {
-	GPIOINT_CallbackRegister(pin, NULL);
+	// make sure you know what you are doing
+	DRV_ASSERT(gpioCallbacks[pin].callback);
+	CORE_ATOMIC_SECTION(
+			gpioCallbacks[pin].callback = NULL;
+	)
 }
