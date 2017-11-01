@@ -72,7 +72,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     // detect the existence of IMU
     DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
-    xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler);
+
 
 }
 
@@ -614,6 +614,9 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
  */
 void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
 {
+     // creates the temperature adjusting que(this is here instead of the init as the temp code needs the int to initalised first)
+    xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler);
+
     GPIO_PinModeSet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), gpioModeInput, 0);
     GPIO_PinModeSet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), gpioModeInput, 0);
 
@@ -633,7 +636,6 @@ void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
  */
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 {
-    GPIO_IntDisable(PIO_PIN(obj->int_2));
 	// initialize the task tick handler
 	portTickType xLastWakeTime;
     int16_t temperature_imu;
@@ -652,9 +654,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             obj->y_origin = obj->y_origin - temp_change;
             obj->z_origin = obj->z_origin + (temp_change*2);
             interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-            GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) NULL, (void *) obj);
+            GPIOINT_CallbackUnRegister(PIO_PIN(obj->int_2));
             FXOS8700CQ_Magnetic_Vector(obj);
-            delay_ms(200);
+            delay_ms(1000);
             GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
             if (interrupt_check !=(bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2)))
             {
