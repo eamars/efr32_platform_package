@@ -174,7 +174,7 @@ void FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t ran
 void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (M_ACAL_MASK | MAG_ACTIVE| M_OSR_100_HZ) );      // OSR=2, hybrid mode (TO, Aug 2012) auto calibrate mode on
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE | M_OSR_400_HZ));      // OSR=400, mag only mode (TO, Aug 2012) auto calibrate mode off
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_100_HZ);       // OSR =2 in auto sleep mode
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
@@ -438,9 +438,9 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_PollMagnetometer(obj ,&mag_raw);
     FXOS8700CQ_StandbyMode (obj);
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE | M_OSR_400_HZ) ); // turns auto calibrate mode off
-    obj->x_origin = abs(mag_raw.x);
-    obj->y_origin = abs(mag_raw.y);
-    obj->z_origin = abs(mag_raw.z);
+    obj->x_origin = mag_raw.x;
+    obj->y_origin = mag_raw.y;
+    obj->z_origin = mag_raw.z;
     obj->start_position = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
     obj->calibrated = true;
     FXOS8700CQ_ActiveMode (obj);
@@ -479,6 +479,7 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_StandbyMode (obj);
     uint8_t Vector_Threshold[2] = {0};
     uint8_t ref[6] = {0};
+    rawdata_t mag_raw;
 
     ref[1] = obj->x_origin;
     ref[0] = obj->x_origin >> 8;
@@ -492,7 +493,7 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
 
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
     obj->temp = FXOS8700CQ_GetTemperature(obj);
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK));
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector ena bleld,procs wake up,interupt on pin 2 enlabeled
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
@@ -632,25 +633,46 @@ void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
  */
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 {
+    GPIO_IntDisable(PIO_PIN(obj->int_2));
 	// initialize the task tick handler
 	portTickType xLastWakeTime;
     int16_t temperature_imu;
+    int16_t temp_change;
+    bool interrupt_check;
 	// get last execution time
 	xLastWakeTime = xTaskGetTickCount();
-
 	while (1)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
-        if (abs(obj->temp - temperature_imu) > 2 && (obj->door_state ==IMU_EVENT_DOOR_CLOSE))
+        temp_change = temperature_imu - obj->temp;
+        if (abs(temp_change) > 3)
         {
-            FXOS8700CQ_Set_Origin(obj);
+            //FXOS8700CQ_Set_Origin(obj);
+            obj->x_origin = obj->x_origin - temp_change;
+            obj->y_origin = obj->y_origin - temp_change;
+            obj->z_origin = obj->z_origin + (temp_change*2);
+            interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
+            GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) NULL, (void *) obj);
             FXOS8700CQ_Magnetic_Vector(obj);
-            obj ->temp = temperature_imu;
+            delay_ms(200);
+            GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
+            if (interrupt_check !=(bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2)))
+            {
+                FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
+            }
         }
-		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(60000));
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(5000));
 	}
 }
 
+
+void FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj)
+{
+    rawdata_t mag_raw;
+    FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+    obj->vector = sqrt(((mag_raw.x - obj->x_origin)^2) + ((mag_raw.y - obj->y_origin)^2) + ((mag_raw.z - obj->z_origin)^2));
+
+}
 
 
 void FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask)
