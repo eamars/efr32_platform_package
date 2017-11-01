@@ -138,6 +138,8 @@ typedef struct
 	uint16_t packet_len;
 } lorawan_tx_config_params_t;
 
+
+
 typedef enum
 {
 	LORAWAN_MAC_IDLE                = 0x00,
@@ -199,6 +201,7 @@ typedef struct
 	uint8_t channel; // channel index;
 	uint8_t last_tx_channel;
 	bool last_tx_is_join_request;
+	bool skip_indication;
 
 	uint32_t rx_window1_delay;
 	uint32_t rx_window2_delay;
