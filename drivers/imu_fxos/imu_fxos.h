@@ -670,9 +670,9 @@ typedef struct rawdata {
 
 typedef enum
 {
-   IMU_EVENT_DOOR_OPEN,
-   IMU_EVENT_DOOR_CLOSE,
-   IMU_EVENT_CALIBRATING
+   IMU_EVENT_DOOR_OPEN = 0,
+   IMU_EVENT_DOOR_CLOSE = 1,
+   IMU_EVENT_CALIBRATING = 2
 } imu_event_t;
 
 
