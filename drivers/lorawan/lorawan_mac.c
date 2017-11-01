@@ -472,6 +472,8 @@ static void lorawan_mac_on_tx_done_isr(lorawan_mac_t * obj)
 	else
 	{
 		// MCPS
+		obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_OK;
+		obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX2_TIMEOUT;
 
 		if (obj->mac_flags.byte == 0)
 		{
@@ -481,7 +483,7 @@ static void lorawan_mac_on_tx_done_isr(lorawan_mac_t * obj)
 	}
 
 	// verify if the last uplink was a join request
-	if (obj->mac_flags.mlme_req == 1 && false) //  MlmeConfirm.MlmeRequest == MLME_JOIN
+	if (obj->mac_flags.mlme_req == 1 && obj->mlme_confirm.mlme_request == MLME_JOIN) //  MlmeConfirm.MlmeRequest == MLME_JOIN
 	{
 		obj->last_tx_is_join_request = true;
 	}
@@ -497,7 +499,7 @@ static void lorawan_mac_on_tx_done_isr(lorawan_mac_t * obj)
 
 	if (obj->node_ack_requested == false)
 	{
-		// TODO: McpsConfirm.Status = LORAMAC_EVENT_INFO_STATUS_OK;
+		obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_OK;
 		obj->channels_nb_rep_counter += 1;
 	}
 }
@@ -527,6 +529,21 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 		lorawan_mac_msg_ext_t rx_msg;
 		DRV_ASSERT(xQueueReceive(obj->rx_queue_pri, &rx_msg, portMAX_DELAY));
 
+		// configure mcps
+		obj->mcps_confirm.ack_received = false;
+		obj->mcps_indication.rssi = rx_msg.rssi;
+		obj->mcps_indication.snr = rx_msg.snr;
+		obj->mcps_indication.rx_slot = obj->rx_slot;
+		obj->mcps_indication.port = 0;
+		obj->mcps_indication.multicast = 0;
+		obj->mcps_indication.frame_pending = 0;
+		obj->mcps_indication.buffer = NULL;
+		obj->mcps_indication.buffer_size = 0;
+		obj->mcps_indication.rx_data = false;
+		obj->mcps_indication.ack_received = false;
+		obj->mcps_indication.downlink_counter = 0;
+		obj->mcps_indication.mcps_indication = MCPS_UNCONFIRMED;
+
 		// put the radio to sleep state and stop the rx2 timer
 		radio_rfm9x_set_opmode_sleep(obj->radio);
 		xTimerStop(obj->rx_window2_timer, portMAX_DELAY);
@@ -547,7 +564,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 			{
 				if (obj->is_lorawan_network_joined)
 				{
-					// McpsIndication.Status = LORAMAC_EVENT_INFO_STATUS_ERROR;
+					obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_ERROR;
 					lorawan_mac_prepare_rx_done_abort_pri(obj);
 					return;
 				}
@@ -636,14 +653,14 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 						}
 					}
 
-					// TODO: MlmeConfirm.Status = LORAMAC_EVENT_INFO_STATUS_OK;
+					obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_OK;
 					obj->is_lorawan_network_joined = true;
 
 					obj->mac_params.channels_data_rate = mac_params_defaults.channels_data_rate;
 				}
 				else
 				{
-					// TODO: MlmeConfirm.Status = LORAMAC_EVENT_INFO_STATUS_JOIN_FAIL;
+					obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_JOIN_FAIL;
 				}
 
 				break;
@@ -656,7 +673,26 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 			}
 			case LORAWAN_MHDR_UNCONFIRMED_DATA_DOWN:
 			{
-				// TODO: Check the received payload size
+				// check the maximum packet length
+				uint8_t max_packet_length = 0;
+				if (obj->repeater_support)
+				{
+					max_packet_length = lorawan_get_max_payload_of_data_rate_repeater(
+							obj->mcps_indication.rx_datarate);
+				}
+				else
+				{
+					max_packet_length = lorawan_get_max_payload_of_data_rate(
+							obj->mcps_indication.rx_datarate);
+				}
+
+				if (MAX(0,
+				        (int16_t)((int16_t) rx_msg.msg.size - (uint16_t) LORAWAN_FRMPAYLOAD_OVERHEAD)) > max_packet_length)
+				{
+					obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_ERROR;
+					lorawan_mac_prepare_rx_done_abort_pri(obj);
+					return;
+				}
 
 				// create variables
 				uint8_t * nwk_session_key = obj->nwk_session_key;
@@ -666,6 +702,8 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				bool is_mic_ok = false;
 				uint32_t mic_cal = 0;
 				uint32_t mic_rx = 0;
+				uint8_t port = 0xff;
+				uint8_t frame_length;
 
 				// copy address
 				uint32_t address;
@@ -673,7 +711,7 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				packet_ptr += 4;
 
 				// check the packet destination
-				bool multicast = false;
+				uint8_t multicast = false;
 				if (address != obj->device_addr)
 				{
 					// TODO: we don't do with multicast for now
@@ -746,23 +784,22 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				// check for maximum counter difference
 				if (frame_counter_diff >= LORAWAN_EU868_MAX_FCNT_GAP)
 				{
-					// McpsIndication.Status = LORAMAC_EVENT_INFO_STATUS_DOWNLINK_TOO_MANY_FRAMES_LOSS;
-					// McpsIndication.DownLinkCounter = downLinkCounter;
+					obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_DOWNLINK_TOO_MANY_FRAMES_LOSS;
+					obj->mcps_indication.downlink_counter = downlink_counter;
 					lorawan_mac_prepare_rx_done_abort_pri(obj);
 					return;
 				}
 
 				if (is_mic_ok)
 				{
-					/*
-					McpsIndication.Status = LORAMAC_EVENT_INFO_STATUS_OK;
-					McpsIndication.Multicast = multicast;
-					McpsIndication.FramePending = fCtrl.Bits.FPending;
-					McpsIndication.Buffer = NULL;
-					McpsIndication.BufferSize = 0;
-					McpsIndication.DownLinkCounter = downLinkCounter;
+					obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_OK;
+					obj->mcps_indication.multicast = multicast;
+					obj->mcps_indication.frame_pending = frame_control->fpending;
+					obj->mcps_indication.buffer = NULL;
+					obj->mcps_indication.buffer_size = 0;
+					obj->mcps_indication.downlink_counter = downlink_counter;
 
-					McpsConfirm.Status = LORAMAC_EVENT_INFO_STATUS_OK;*/
+					obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_OK;
 
 					obj->adr_ack_counter = 0;
 					obj->mac_commands_buffer_to_repeat_index = 0;
@@ -770,13 +807,17 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 					if (multicast)
 					{
 						// TODO: We don't deal with multicast in this case
+						obj->mcps_indication.mcps_indication = MCPS_MULTICAST;
+
+						// TODO: Handle multicast
 						DRV_ASSERT(false);
 					}
+					else
 					{
 						if (mac_header->message_type == LORAWAN_MHDR_CONFIRMED_DATA_DOWN)
 						{
 							obj->srv_ack_requested = true;
-							// TODO: McpsIndication.McpsIndication = MCPS_CONFIRMED;
+							obj->mcps_indication.mcps_indication = MCPS_CONFIRMED;
 
 							if (obj->downlink_counter == downlink_counter && obj->downlink_counter != 0)
 							{
@@ -787,13 +828,12 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 						else
 						{
 							obj->srv_ack_requested = false;
-
-							// TODO: McpsIndication.McpsIndication = MCPS_UNCONFIRMED;
+							obj->mcps_indication.mcps_indication = MCPS_UNCONFIRMED;
 
 							if (obj->downlink_counter == downlink_counter && obj->downlink_counter != 0)
 							{
-								// McpsIndication.Status = LORAMAC_EVENT_INFO_STATUS_DOWNLINK_REPEATED;
-								// McpsIndication.DownLinkCounter = downLinkCounter;
+								obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_DOWNLINK_REPEATED;
+								obj->mcps_indication.downlink_counter = downlink_counter;
 								lorawan_mac_prepare_rx_done_abort_pri(obj);
 								return;
 							}
@@ -802,6 +842,69 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 						obj->downlink_counter = downlink_counter;
 					}
 
+					// before parsing the payload and mac command, we need to reset mac_command_buffer here.
+					// error will be handled in on_mac_status_check_timer_ev
+					if (obj->mcps_confirm.mcps_request == MCPS_CONFIRMED)
+					{
+						if (frame_control->ack == 1)
+						{
+							obj->mac_commands_buffer_index = 0;
+						}
+					}
+					else
+					{
+						obj->mac_commands_buffer_index = 0;
+					}
+
+					// process payload and mac commands
+					if (((rx_msg.msg.size - 4) - app_payload_start_idx) > 0)
+					{
+						port = rx_msg.msg.buffer[app_payload_start_idx++];
+						frame_length = (uint8_t) ((rx_msg.msg.size - 4) - app_payload_start_idx);
+
+						obj->mcps_indication.port = port;
+
+						if (port == 0)
+						{
+							if (frame_control->foptslen == 0)
+							{
+								lorawan_mac_payload_decrypt(rx_msg.msg.buffer + app_payload_start_idx,
+								                            frame_length,
+								                            nwk_session_key,
+								                            address,
+								                            LORAWAN_DOWN_LINK,
+								                            downlink_counter,
+								                            obj->mac_rx_payload);
+
+								// decode frame payload mac command
+								lorawan_mac_process_mac_commands_pri(obj,
+								                                     obj->mac_rx_payload,
+								                                     0,
+								                                     frame_length,
+								                                     rx_msg.snr);
+
+							}
+							else
+							{
+								obj->skip_indication = true;
+							}
+						}
+						else
+						{
+							if (frame_control->foptslen > 0)
+							{
+								// decode optional mac command, omit the fport
+								lorawan_mac_process_mac_commands_pri(obj,
+								                                     rx_msg.msg.buffer,
+								                                     8,
+								                                     (uint8_t) (app_payload_start_idx - 1),
+								                                     rx_msg.snr);
+
+							}
+
+							lorawan_mac_payload_decrypt(rx_msg.msg.buffer + app_payload_start_idx, frame_length, app_session_key, address, LORAWAN_DOWN_LINK)
+						}
+					}
 
 				}
 
