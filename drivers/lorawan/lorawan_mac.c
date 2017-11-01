@@ -61,7 +61,11 @@ static const lorawan_mac_params_t mac_params_defaults =
 		};
 #endif
 
-static int32_t randr( int32_t min, int32_t max )
+// function declearation
+static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj);
+
+
+static inline int32_t randr( int32_t min, int32_t max )
 {
 	return (int32_t) random() % (max - min + 1) + min;
 }
@@ -228,22 +232,7 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
 
 		// select bandwidth
-		if (rx_config->bandwidth == 125000UL)
-		{
-			radio_rfm9x_set_bandwidth(obj->radio, RADIO_RFM9X_BW_125K);
-		}
-		else if (rx_config->bandwidth == 250000UL)
-		{
-			radio_rfm9x_set_bandwidth(obj->radio, RADIO_RFM9X_BW_250K);
-		}
-		else if (rx_config->bandwidth == 500000UL)
-		{
-			radio_rfm9x_set_bandwidth(obj->radio, RADIO_RFM9X_BW_500K);
-		}
-		else
-		{
-			DRV_ASSERT(false);
-		}
+		radio_rfm9x_set_bandwidth(obj->radio, (radio_rfm9x_bw_t) (rx_config->bandwidth + 7));
 
 		// set data rate
 		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
@@ -273,7 +262,7 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 }
 
 
-static inline void lorawan_mac_rx_window_timer1_handler_pri(lorawan_mac_t * obj)
+static void lorawan_mac_rx_window_timer1_handler_pri(lorawan_mac_t * obj)
 {
 	int8_t dr;
 
@@ -301,7 +290,7 @@ static inline void lorawan_mac_rx_window_timer1_handler_pri(lorawan_mac_t * obj)
 	                                                                       : obj->mac_params.max_rx_window);
 }
 
-static inline void lorawan_mac_rx_window_timer2_handler_pri(lorawan_mac_t * obj)
+static void lorawan_mac_rx_window_timer2_handler_pri(lorawan_mac_t * obj)
 {
 	int8_t dr;
 	obj->rx_window2_config.channel = obj->channel;
@@ -329,7 +318,7 @@ static inline void lorawan_mac_rx_window_timer2_handler_pri(lorawan_mac_t * obj)
 	}
 }
 
-static inline void lorawan_mac_ack_handler_pri(lorawan_mac_t * obj)
+static void lorawan_mac_ack_handler_pri(lorawan_mac_t * obj)
 {
 	if (obj->node_ack_requested)
 	{
@@ -343,9 +332,85 @@ static inline void lorawan_mac_ack_handler_pri(lorawan_mac_t * obj)
 	}
 }
 
+static void lorawan_mac_tx_delay_handler_pri(lorawan_mac_t * obj)
+{
+	lorawan_mac_header_t mac_header;
+	lorawan_mac_fhdr_fctrl_t frame_control;
+
+	uint16_t nb_trials;
+
+	STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_DELAYED);
+
+	if (obj->mac_flags.mlme_req == 1 && obj->mlme_confirm.mlme_request == MLME_JOIN)
+	{
+		lorawan_mac_internal_reset_pri(obj);
+
+		nb_trials = (uint16_t) (obj->join_request_trials + 1);
+
+	}
+}
+
 static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 {
+	bool tx_timeout = false;
 
+	if (obj->mac_flags.mac_done == 1)
+	{
+		if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_RX_ABORT))
+		{
+			STATE_CLEAR(obj->mac_state, LORAWAN_MAC_RX_ABORT);
+			STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+		}
+
+		if (obj->mac_flags.mlme_req == 1 || obj->mac_flags.mcps_req == 1)
+		{
+			if (obj->mcps_confirm.status == LORAWAN_EVENT_INFO_STATUS_TX_TIMEOUT ||
+					obj->mlme_confirm.status == LORAWAN_EVENT_INFO_STATUS_TX_TIMEOUT)
+			{
+				// stop transmit cycle due to tx_timeout
+				STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+				obj->mac_commands_buffer_index = 0;
+				obj->mcps_confirm.nb_retries = obj->ack_timeout_retries_counter;
+				obj->mcps_confirm.ack_received = false;
+				obj->mcps_confirm.tx_time_on_air = 0;
+				tx_timeout = true;
+			}
+		}
+
+		if (obj->node_ack_requested == false && tx_timeout == false)
+		{
+			if (obj->mac_flags.mlme_req == 1 || obj->mac_flags.mcps_req == 1)
+			{
+				if (obj->mac_flags.mlme_req == 1 && obj->mlme_confirm.mlme_request == MLME_JOIN)
+				{
+					// procedure for joining request
+					obj->mlme_confirm.nb_retries = obj->join_request_trials;
+
+					if (obj->mlme_confirm.status == LORAWAN_EVENT_INFO_STATUS_OK)
+					{
+						// node join successfully
+						obj->uplink_counter = 0;
+						obj->channels_nb_rep_counter = 0;
+						STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+					}
+					else
+					{
+						if (obj->join_request_trials >= obj->max_join_request_trials)
+						{
+							STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+						}
+						else
+						{
+							obj->mac_flags.mac_done = 0;
+
+							// send the same frame again
+
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 static inline void lorawan_mac_prepare_rx_done_abort_pri(lorawan_mac_t * obj)
@@ -411,6 +476,18 @@ static void lorawan_mac_state_check_timeout_callback(TimerHandle_t xTimer)
 	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
 
 	lorawan_mac_state_check_handler_pri(obj);
+}
+
+static void lorawan_mac_tx_delayed_timeout_callback(TimerHandle_t xTimer)
+{
+	DRV_ASSERT(xTimer);
+
+	xTimerStop(xTimer, 0);
+
+	// restore the timer id (which is used to store the parameter
+	lorawan_mac_t * obj = (lorawan_mac_t *) pvTimerGetTimerID(xTimer);
+
+	lorawan_mac_tx_delay_handler_pri(obj);
 }
 
 static void lorawan_mac_process_mac_commands_pri(lorawan_mac_t * obj, uint8_t * payload, uint8_t mac_index, uint8_t cmd_size, int8_t snr)
@@ -506,18 +583,94 @@ static void lorawan_mac_on_tx_done_isr(lorawan_mac_t * obj)
 
 static void lorawan_mac_on_rx_error_isr(lorawan_mac_t * obj)
 {
+	if (obj->device_class != LORAWAN_CLASS_C)
+	{
+		radio_rfm9x_set_opmode_sleep(obj->radio);
+	}
+	else
+	{
+		lorawan_mac_rx_window_timer2_handler_pri(obj);
+	}
+
+	// error during rx1 window
+	if (obj->rx_slot == 0)
+	{
+		if (obj->node_ack_requested)
+		{
+			obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX1_ERROR;
+		}
+
+		obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX1_ERROR;
+
+		// if time >= rx_window2_delay
+		// then set mac_done
+	}
+	else
+	{
+		// error during rx2 window
+		if (obj->node_ack_requested)
+		{
+			obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX2_ERROR;
+			obj->mac_flags.mac_done = 1;
+		}
+	}
 
 }
 
 static void lorawan_mac_on_rx_timeout_isr(lorawan_mac_t * obj)
 {
+	if (obj->device_class != LORAWAN_CLASS_C)
+	{
+		radio_rfm9x_set_opmode_sleep(obj->radio);
+	}
+	else
+	{
+		lorawan_mac_rx_window_timer2_handler_pri(obj);
+	}
 
+	if (obj->rx_slot == 0)
+	{
+		if (obj->node_ack_requested)
+		{
+			obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX1_TIMEOUT;
+		}
+
+		obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX1_TIMEOUT;
+
+		// if time >= rx_window2_delay
+		// then set mac_done
+	}
+	else
+	{
+		if (obj->node_ack_requested)
+		{
+			obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX2_TIMEOUT;
+		}
+
+		obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_RX2_TIMEOUT;
+
+		if (obj->device_class != LORAWAN_CLASS_C)
+		{
+			obj->mac_flags.mac_done = 1;
+		}
+	}
 }
 
 
 static void lorawan_mac_on_tx_timeout_handler(lorawan_mac_t * obj)
 {
+	if (obj->device_class != LORAWAN_CLASS_C)
+	{
+		radio_rfm9x_set_opmode_sleep(obj->radio);
+	}
+	else
+	{
+		lorawan_mac_rx_window_timer2_handler_pri(obj);
+	}
 
+	obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_TX_TIMEOUT;
+	obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_TX_TIMEOUT;
+	obj->mac_flags.mac_done = 1;
 }
 
 
@@ -902,48 +1055,99 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 
 							}
 
-							lorawan_mac_payload_decrypt(rx_msg.msg.buffer + app_payload_start_idx, frame_length, app_session_key, address, LORAWAN_DOWN_LINK)
+							lorawan_mac_payload_decrypt(rx_msg.msg.buffer + app_payload_start_idx,
+							                            frame_length,
+							                            app_session_key, address,
+							                            LORAWAN_DOWN_LINK,
+							                            downlink_counter,
+							                            obj->mac_rx_payload);
+
+							if (obj->skip_indication == false)
+							{
+								obj->mcps_indication.buffer = obj->mac_rx_payload;
+								obj->mcps_indication.buffer_size = frame_length;
+								obj->mcps_indication.rx_data = true;
+							}
 						}
 					}
 
+					else
+					{
+						if (frame_control->foptslen > 0)
+						{
+							// decode options field mac command
+							lorawan_mac_process_mac_commands_pri(obj,
+							                                     rx_msg.msg.buffer,
+							                                     8,
+							                                     (uint8_t) app_payload_start_idx,
+							                                     rx_msg.snr);
+
+						}
+					}
+
+					if (obj->skip_indication == false)
+					{
+						if (frame_control->ack == 1)
+						{
+							obj->mcps_confirm.ack_received = true;
+							obj->mcps_indication.ack_received = true;
+
+							// skip the acktimeout timer as no more retranmission are needed
+							xTimerStop(obj->ack_timeout_timer, portMAX_DELAY);
+						}
+						else
+						{
+							obj->mcps_confirm.ack_received = false;
+
+							if (obj->ack_timeout_retries_counter > obj->ack_timeout_retries)
+							{
+								// no more retransmission is needed
+								xTimerStop(obj->ack_timeout_timer, portMAX_DELAY);
+							}
+						}
+					}
+
+					obj->mac_flags.mcps_ind = 1;
+					obj->mac_flags.mcps_ind_skip = (uint8_t) obj->skip_indication;
+
+				}
+				else
+				{
+					obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_MIC_FAIL;
+					lorawan_mac_prepare_rx_done_abort_pri(obj);
+					return;
 				}
 
-
-			}
-
-			case LORAWAN_MHDR_JOIN_REQUEST:
-			{
-				break;
-			}
-
-			case LORAWAN_MHDR_UNCONFIRMED_DATA_UP:
-			{
-				break;
-			}
-
-			case LORAWAN_MHDR_CONFIRMED_DATA_UP:
-			{
-				break;
-			}
-
-
-
-			case LORAWAN_MHDR_RFU:
-			{
 				break;
 			}
 
 			case LORAWAN_MHDR_PROPRIETARY:
 			{
+				memcpy(obj->mac_rx_payload, packet_ptr, (size_t) rx_msg.msg.size);
+
+				obj->mcps_indication.mcps_indication = MCPS_PROPRIETARY;
+				obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_OK;
+				obj->mcps_indication.buffer = obj->mac_rx_payload;
+				obj->mcps_indication.buffer_size = (uint8_t) (rx_msg.msg.size - (packet_ptr - rx_msg.msg.buffer));
+
+				obj->mac_flags.mcps_ind = 1;
+
 				break;
 			}
 
 			default:
 			{
-				DRV_ASSERT(false);
+				obj->mcps_indication.status = LORAWAN_EVENT_INFO_STATUS_ERROR;
+				lorawan_mac_prepare_rx_done_abort_pri(obj);
 				break;
 			}
 		}
+
+		obj->mac_flags.mac_done = 1;
+
+		// trigger on_mac_check_timer_event asap
+		xTimerChangePeriod(obj->mac_state_check_timer, pdMS_TO_TICKS(1), portMAX_DELAY);
+		xTimerStart(obj->mac_state_check_timer, portMAX_DELAY);
 	}
 }
 
@@ -1190,7 +1394,7 @@ static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
 
 	// set join params
 	obj->join_request_trials = 0;
-	obj->max_join_request_trails = LORAWAN_MAX_JOIN_REQUEST_TRAILS;
+	obj->max_join_request_trials = LORAWAN_MAX_JOIN_REQUEST_TRAILS;
 	obj->repeater_support = false;
 
 	// reset defaults from template
@@ -1304,6 +1508,7 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * dev
 	obj->rx_window2_timer = xTimerCreate("rxw_t2", pdMS_TO_TICKS(1000), pdFALSE, obj, lorawan_mac_rx_window_timer2_callback);
 	obj->ack_timeout_timer = xTimerCreate("ack_t", pdMS_TO_TICKS(1000), pdFALSE, obj, lorawan_mac_ack_timeout_callback);
 	obj->mac_state_check_timer = xTimerCreate("mac_chk", pdMS_TO_TICKS(1), pdFALSE, obj, lorawan_mac_state_check_timeout_callback);
+	obj->tx_delayed_timer = xTimerCreate("txd", pdMS_TO_TICKS(1), pdFALSE, obj, lorawan_mac_tx_delayed_timeout_callback);
 
 	// create rx queue for internal data transaction
 	obj->rx_queue_pri = xQueueCreate(2, sizeof(lorawan_mac_msg_t));

@@ -369,6 +369,7 @@ typedef struct
 	xTimerHandle rx_window2_timer;
 	xTimerHandle ack_timeout_timer;
 	xTimerHandle mac_state_check_timer;
+	xTimerHandle tx_delayed_timer;
 
 	// addresses (4 bytes)
 	uint64_t device_eui64; // unique device identification
@@ -387,7 +388,7 @@ typedef struct
 	lorawan_mac_params_t mac_params;
 
 	uint8_t join_request_trials;
-	uint8_t max_join_request_trails;
+	uint8_t max_join_request_trials;
 	bool repeater_support;
 	bool duty_cycle_on;
 	bool is_lorawan_network_joined;
