@@ -144,7 +144,20 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 						continue;
 					}
 
-					// ack the received packet
+					// send filtered packet to upper layer
+					xQueueSend(obj->rx_queue, &rx_msg, 0);
+
+					// do not ack the ack packet received
+					if (header->packet_type == SUBG_PACKET_V2_TYPE_CMD)
+					{
+						subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) rx_msg.buffer;
+						if (cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
+						{
+							continue;
+						}
+					}
+
+					// ack the received packet (both command and data, except for ack packet)
 					lora_phy_msg_t tx_msg;
 					tx_msg.size = sizeof(subg_packet_v2_cmd_t);
 					subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
@@ -159,10 +172,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
 					ack_packet->payload = header->seq_id;
 
 					// transmit ack
-					lora_phy_send(obj, &tx_msg);
-
-					// send filtered packet to upper layer
-					xQueueSend(obj->rx_queue, &rx_msg, 0);
+					lora_phy_send_block(obj, &tx_msg);
 				}
 
 				radio_rfm9x_set_opmode_sleep(obj->radio);
