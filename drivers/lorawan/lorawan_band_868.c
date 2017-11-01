@@ -124,4 +124,36 @@ uint8_t lorawan_adr_next(lorawan_adr_next_params_t * adr_next, int8_t * dr_out, 
 	return adr_ack_req;
 }
 
+
+int8_t lorawan_get_alternate_dr(uint16_t nb_trials)
+{
+	int8_t data_rate = 0;
+
+	if (nb_trials % 48 == 0)
+	{
+		data_rate = DR_0;
+	}
+	else if (nb_trials % 32 == 0)
+	{
+		data_rate = DR_1;
+	}
+	else if (nb_trials % 24 == 0)
+	{
+		data_rate = DR_2;
+	}
+	else if (nb_trials % 16 == 0)
+	{
+		data_rate = DR_3;
+	}
+	else if (nb_trials % 8 == 0)
+	{
+		data_rate = DR_4;
+	}
+	else
+	{
+		data_rate = DR_5;
+	}
+	return data_rate;
+}
+
 #endif

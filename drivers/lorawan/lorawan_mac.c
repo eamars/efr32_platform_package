@@ -63,6 +63,9 @@ static const lorawan_mac_params_t mac_params_defaults =
 
 // function declearation
 static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj);
+static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header,
+                                                          lorawan_mac_fhdr_fctrl_t * fctrl,
+                                                          uint8_t fport, void * buffer, uint16_t size);
 
 
 static inline int32_t randr( int32_t min, int32_t max )
@@ -346,6 +349,15 @@ static void lorawan_mac_tx_delay_handler_pri(lorawan_mac_t * obj)
 		lorawan_mac_internal_reset_pri(obj);
 
 		nb_trials = (uint16_t) (obj->join_request_trials + 1);
+		obj->mac_params.channels_data_rate = lorawan_get_alternate_dr(nb_trials);
+
+		mac_header.byte = 0;
+		mac_header.message_type = LORAWAN_MHDR_JOIN_REQUEST;
+
+		frame_control.byte = 0;
+		frame_control.adr = (uint8_t) obj->adr_ctrl_on;
+
+		lorawan_mac_prepare_frame_pri(obj, &mac_header, &frame_control, 0, NULL, 0);
 
 	}
 }

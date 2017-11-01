@@ -224,5 +224,6 @@ int8_t lorawan_appy_data_rate_offset(uint8_t downlink_dwell_time, int8_t dr, int
 int8_t lorawan_compute_phy_tx_power(int8_t tx_power_idx, float max_eirp, float antenna_gain);
 uint8_t lorawan_adr_next(lorawan_adr_next_params_t * adr_next, int8_t * dr_out, int8_t * tx_power_out,
                          uint32_t * adr_ack_counter);
+int8_t lorawan_get_alternate_dr(uint16_t nb_trials);
 
 #endif
