@@ -56,6 +56,10 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->current_compass = 0;
     obj->current_heading = 0;
 
+	// initialize door state and calibrate state
+	obj->calibrated = false;
+	obj->door_state = IMU_EVENT_CALIBRATING;
+
     //intalise que
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
@@ -443,6 +447,7 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
     obj->z_origin = abs(mag_raw.z);
     obj->start_position = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
     obj->calibrated = true;
+	obj->door_state = IMU_EVENT_DOOR_CLOSE;
     FXOS8700CQ_ActiveMode (obj);
 
 }
