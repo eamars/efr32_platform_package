@@ -113,8 +113,62 @@ static void lorawan_compute_rx_window_parameters_pri(lorawan_mac_t * obj, int8_t
 			               RADIO_RFM9X_WAKEUP_TIME);
 }
 
+lorawan_mac_status_t lorawan_channel_add(lorawan_mac_t * obj, uint8_t channel_id, lorawan_channel_params_t * params)
+{
+	DRV_ASSERT(obj);
+	DRV_ASSERT(params);
 
+	bool dr_valid = false;
 
+	// validate current state
+	if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_RUNNING))
+	{
+		if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_CONFIG) != LORAWAN_MAC_TX_CONFIG)
+		{
+			return LORAWAN_MAC_STATUS_BUSY;
+		}
+	}
+
+	if (channel_id > LORAWAN_EU868_MAX_NB_CHANNELS)
+	{
+		return LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+	}
+
+	// TODO: validate range
+	// TODO: other validation
+
+	memcpy(&obj->channels[channel_id], &params, sizeof(obj->channels[channel_id]));
+
+	// set channel mask
+	BITS_SET(obj->channels_mask[0], (1 << channel_id));
+	return LORAWAN_MAC_STATUS_OK;
+}
+
+lorawan_mac_status_t lorawan_channel_remove(lorawan_mac_t * obj, uint8_t channel_id)
+{
+	DRV_ASSERT(obj);
+
+	// validate current state
+	if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_RUNNING))
+	{
+		if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_CONFIG) != LORAWAN_MAC_TX_CONFIG)
+		{
+			return LORAWAN_MAC_STATUS_BUSY;
+		}
+	}
+
+	if (channel_id < LORAWAN_EU868_NUMB_DEFAULT_CHANNELS)
+	{
+		return LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+	}
+
+	// remove channel
+	memset(&obj->channels[channel_id], 0x0, sizeof(obj->channels[0]));
+
+	// remove channel mask
+	BITS_CLEAR(obj->channels_mask[0], (1 << channel_id));
+
+}
 
 static lorawan_mac_status_t lorawan_mac_send_frame_on_channel(lorawan_mac_t * obj, uint8_t channel)
 {
@@ -869,6 +923,15 @@ static lorawan_mac_status_t lorawan_add_mac_command_pri(lorawan_mac_t * obj, uin
 			}
 			break;
 		}
+		default:
+		{
+			return LORAWAN_MAC_STATUS_SERVICE_UNKNOWN;
+		}
+	}
+
+	if (status == LORAWAN_MAC_STATUS_OK)
+	{
+		obj->mac_commands_in_next_tx = true;
 	}
 
 	return status;
@@ -879,7 +942,21 @@ static uint8_t lorawan_new_channel_req(lorawan_mac_t * obj, lorawan_new_channel_
 {
 	uint8_t status = 0x03;
 
-	// TODO: implement channel add & remove
+	if (new_channel_req->new_channel->frequency == 0)
+	{
+		// remove the channel
+		lorawan_channel_remove(obj, new_channel_req->channel_id);
+
+		status &= 0xfc;
+	}
+	else
+	{
+		// add the channel
+		if (lorawan_channel_add(obj, new_channel_req->channel_id, new_channel_req->new_channel) != LORAWAN_MAC_STATUS_OK)
+		{
+			status &= 0xfc;
+		}
+	}
 
 	return status;
 }
@@ -1249,6 +1326,48 @@ static void lorawan_mac_on_rx_timeout_isr(lorawan_mac_t * obj)
 }
 
 
+void lorawan_apply_cf_list_pri(lorawan_mac_t * obj, lorawan_apply_cf_list_params_t * apply_cf_list)
+{
+	lorawan_channel_params_t new_channel;
+
+	// setup default datarate range
+	new_channel.data_rate_range.value = (DR_5 << 4) | DR_0;
+
+	if (apply_cf_list->size != 16)
+	{
+		return;
+	}
+
+	for (uint8_t i = 0, chan_idx = LORAWAN_EU868_NUMB_DEFAULT_CHANNELS;
+	     chan_idx < LORAWAN_EU868_MAX_NB_CHANNELS;
+	     i += 3, chan_idx += 1)
+	{
+		if (chan_idx < (LORAWAN_EU868_NUMB_CHANNELS_CF_LIST + LORAWAN_EU868_NUMB_DEFAULT_CHANNELS))
+		{
+			memcpy(&new_channel.frequency, &apply_cf_list->payload[i], 3);
+			new_channel.frequency *= 100;
+
+			new_channel.rx1_frequency = 0;
+		}
+		else
+		{
+			new_channel.frequency = 0;
+			new_channel.data_rate_range.value = 0;
+			new_channel.rx1_frequency = 0;
+		}
+
+		if (new_channel.frequency != 0)
+		{
+			lorawan_channel_add(obj, chan_idx, &new_channel);
+		}
+		else
+		{
+			lorawan_channel_remove(obj, chan_idx);
+		}
+	}
+}
+
+
 static void lorawan_mac_on_tx_timeout_handler(lorawan_mac_t * obj)
 {
 	if (obj->device_class != LORAWAN_CLASS_C)
@@ -1357,46 +1476,12 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 					obj->mac_params.receive_delay_1 *= 1000;
 					obj->mac_params.receive_delay_2 = obj->mac_params.receive_delay_1 + 1000;
 
-					// cf list
-					uint8_t * cf_list_payload = &obj->mac_rx_payload[13];
-					uint8_t cf_list_size = (uint8_t) (rx_msg.msg.size - 17);
+					// apply cf list
+					lorawan_apply_cf_list_params_t apply_cf_list;
+					apply_cf_list.payload = &obj->mac_rx_payload[13];
+					apply_cf_list.size = (uint8_t) (rx_msg.msg.size - 17);
 
-
-					if (cf_list_size == 16)
-					{
-						lorawan_channel_params_t new_channel;
-
-						// setup default datarate range
-						new_channel.data_rate_range.value = (DR_5 << 4) | DR_0;
-
-						for (uint8_t i = 0, chan_idx = LORAWAN_EU868_NUMB_DEFAULT_CHANNELS;
-						     chan_idx < LORAWAN_EU868_MAX_NB_CHANNELS;
-						     i+=3, chan_idx+=1)
-						{
-							if (chan_idx < (LORAWAN_EU868_NUMB_CHANNELS_CF_LIST + LORAWAN_EU868_NUMB_DEFAULT_CHANNELS))
-							{
-								memcpy(&new_channel.frequency, &cf_list_payload[i], 3);
-								new_channel.frequency *= 100;
-
-								new_channel.rx1_frequency = 0;
-							}
-							else
-							{
-								new_channel.frequency = 0;
-								new_channel.data_rate_range.value = 0;
-								new_channel.rx1_frequency = 0;
-							}
-
-							if (new_channel.frequency != 0)
-							{
-								// TODO: add channel
-							}
-							else
-							{
-								// TODO: remove channel
-							}
-						}
-					}
+					lorawan_apply_cf_list_pri(obj, &apply_cf_list);
 
 					obj->mlme_confirm.status = LORAWAN_EVENT_INFO_STATUS_OK;
 					obj->is_lorawan_network_joined = true;
@@ -1551,7 +1636,6 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 
 					if (multicast)
 					{
-						// TODO: We don't deal with multicast in this case
 						obj->mcps_indication.mcps_indication = MCPS_MULTICAST;
 
 						// TODO: Handle multicast
@@ -1744,6 +1828,74 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 }
 
 
+
+static uint8_t lorawan_parse_mac_commands_to_repeat_pri(lorawan_mac_t * obj, uint8_t * cmd_buf_in, uint8_t length, uint8_t * cmd_buf_out)
+{
+	uint8_t cmd_count = 0;
+
+	if (!cmd_buf_in || !cmd_buf_out)
+	{
+		return 0;
+	}
+
+	for (uint8_t i = 0; i < length; i++)
+	{
+		switch(cmd_buf_in[i])
+		{
+			case LORAWAN_MAC_CMD_DL_CHANNEL_ANS:
+			{
+				// NO BREAK!
+			}
+			case LORAWAN_MAC_CMD_RX_PARAM_SETUP_ANS:
+			{
+				cmd_buf_out[cmd_count++] = cmd_buf_in[i++];
+				cmd_buf_out[cmd_count++] = cmd_buf_in[i];
+				break;
+			}
+			case LORAWAN_MAC_CMD_RX_TIMING_SETUP_ANS:
+			{
+				cmd_buf_out[cmd_count++] = cmd_buf_in[i];
+				break;
+			}
+			case LORAWAN_MAC_CMD_DEV_STATUS_ANS:
+			{
+				// 2 bytes payload
+				i += 2;
+				break;
+			}
+			case LORAWAN_MAC_CMD_LINK_ADR_ANS:
+			{
+				// NO BREAK!
+				break;
+			}
+			case LORAWAN_MAC_CMD_NEW_CHANNEL_ANS:
+			{
+				// 1 byte payload
+				i += 1;
+				break;
+			}
+			case LORAWAN_MAC_CMD_TX_PARAM_SETUP_ANS:
+			{
+				// NO BREAK!
+			}
+			case LORAWAN_MAC_CMD_DUTY_CYCLE_ANS:
+			{
+				// NO BREAK!
+			}
+			case LORAWAN_MAC_CMD_LINK_CHECK_REQ:
+			{
+				// 0 byte payload
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
+	return cmd_count;
+}
+
+
 static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header,
                                           lorawan_mac_fhdr_fctrl_t * fctrl,
                                           uint8_t fport, void * buffer, uint16_t size)
@@ -1873,7 +2025,11 @@ static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, l
 			}
 
 			obj->mac_commands_in_next_tx = false;
-			obj->mac_commands_buffer_to_repeat_index = 0; //TODO: ParseMacCommandsToRepeat
+			obj->mac_commands_buffer_to_repeat_index =
+					lorawan_parse_mac_commands_to_repeat_pri(obj,
+					                                         obj->mac_commands_buffer,
+					                                         obj->mac_commands_buffer_index,
+					                                         obj->mac_commands_buffer_to_repeat);
 			if (obj->mac_commands_buffer_to_repeat_index > 0)
 			{
 				obj->mac_commands_in_next_tx = true;
@@ -2033,6 +2189,8 @@ static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
 	// misc
 	obj->adr_ctrl_on = false;
 
+	// generate a random number as seed
+	srandom(radio_rfm9x_generate_random_number(obj->radio));
 }
 
 
@@ -2051,41 +2209,12 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * dev
 
 	// initialize radio
 	{
-		// configure the radio
-		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
-
-		// set bandwidth
-		radio_rfm9x_set_bandwidth(obj->radio, RADIO_RFM9X_BW_125K);
-
-		// set coding rate
-		radio_rfm9x_set_coding_rate(obj->radio, RADIO_RFM9X_CR_4_5);
-
-		// set spreading factor
-		radio_rfm9x_set_spreading_factor(obj->radio, RADIO_RFM9X_SF_128);
-
-		// enable crc
-		radio_rfm9x_set_crc_enable(obj->radio, true);
-
-		// set preamble length
-		radio_rfm9x_set_preamble_length(obj->radio, 8);
-
-		// set operating frequency
-		radio_rfm9x_set_channel(obj->radio, 866000000UL);
-
-		// set tx power
-		radio_rfm9x_set_tx_power(obj->radio, 23);
-
-		// generate a random number as seed
-		srandom(radio_rfm9x_generate_random_number(obj->radio));
-
 		// set public network
 		radio_rfm9x_set_public_network(obj->radio, true);
 
 		// set the radio to sleep state
 		radio_rfm9x_set_opmode_sleep(obj->radio);
 	}
-
-
 
 	// reset variables to its default value
 	lorawan_mac_internal_reset_pri(obj);
@@ -2132,6 +2261,11 @@ lorawan_mac_status_t lorawan_mac_send(lorawan_mac_t * obj, lorawan_mac_header_t 
 	{
 		return status;
 	}
+
+	// reset confirm parameters
+	obj->mcps_confirm.nb_retries = 0;
+	obj->mcps_confirm.ack_received = false;
+	obj->mcps_confirm.uplink_counter = obj->uplink_counter;
 
 	if ((status = lorawan_mac_schedule_tx_pri(obj)) != LORAWAN_MAC_STATUS_OK)
 	{

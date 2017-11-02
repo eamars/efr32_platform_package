@@ -384,7 +384,7 @@ typedef struct
 typedef struct
 {
 	lorawan_channel_params_t * new_channel;
-	int8_t channel_id;
+	uint8_t channel_id;
 } lorawan_new_channel_req_params_t;
 
 typedef struct
@@ -399,6 +399,12 @@ typedef struct
 	uint8_t channel_id;
 	uint32_t rx1_frequency;
 } lorawan_dl_channel_req_params_t;
+
+typedef struct
+{
+	uint8_t * payload;
+	uint8_t size;
+} lorawan_apply_cf_list_params_t;
 
 typedef struct
 {
@@ -468,8 +474,8 @@ typedef struct
 	uint16_t device_nonce;
 
 	uint8_t * app_key;
-	uint8_t * nwk_session_key;
-	uint8_t * app_session_key;
+	uint8_t nwk_session_key[16];
+	uint8_t app_session_key[16];
 
 	// local buffer
 	uint8_t mac_commands_buffer[LORAWAN_MAC_COMMAND_MAX_LENGTH];
