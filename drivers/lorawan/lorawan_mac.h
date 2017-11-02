@@ -358,6 +358,13 @@ typedef struct
 
 typedef struct
 {
+	void (*on_mac_mcps_confirm)(mcps_confirm_t * mcps_confirm);
+	void (*on_mac_mcps_indication)(mcps_indication_t * mcps_indication);
+	void (*on_mac_mlme_confirm)(mlme_confirm_t * mlme_confirm);
+} lorawan_mac_primitives_t;
+
+typedef struct
+{
 	radio_rfm9x_t * radio;
 
 	// rx thread (to prevent data to be processed in interrupt handler that might take extreme long time)
@@ -407,6 +414,7 @@ typedef struct
 	uint8_t last_tx_channel;
 	bool last_tx_is_join_request;
 	bool skip_indication;
+	bool is_uplink_counter_fixed;
 
 	uint32_t rx_window1_delay;
 	uint32_t rx_window2_delay;
@@ -439,6 +447,9 @@ typedef struct
 	mcps_confirm_t mcps_confirm;
 	mcps_indication_t mcps_indication;
 	mlme_confirm_t mlme_confirm;
+
+	// upper layer layer event function
+	lorawan_mac_primitives_t * mac_primitives;
 
 } lorawan_mac_t;
 

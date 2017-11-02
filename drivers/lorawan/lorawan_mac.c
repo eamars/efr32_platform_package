@@ -37,6 +37,7 @@
 #define MIC_LEN ( 4 )
 #define LORAWAN_MAX_FOPTS_LENGTH                    15
 #define LORAWAN_FRMPAYLOAD_OVERHEAD                 13 // MHDR(1) + FHDR(7) + Port(1) + MIC(4)
+#define MAX_ACK_RETRIES                             8
 
 #if USE_BAND_868 == 1
 static const lorawan_mac_params_t mac_params_defaults =
@@ -66,6 +67,7 @@ static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj);
 static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header,
                                                           lorawan_mac_fhdr_fctrl_t * fctrl,
                                                           uint8_t fport, void * buffer, uint16_t size);
+static lorawan_mac_status_t lorawan_mac_schedule_tx_pri(lorawan_mac_t * obj);
 
 
 static inline int32_t randr( int32_t min, int32_t max )
@@ -177,13 +179,18 @@ static lorawan_mac_status_t lorawan_mac_send_frame_on_channel(lorawan_mac_t * ob
 
 		// calculate on the air time
 		time_on_air = radio_rfm9x_get_time_on_air(obj->radio, RADIO_RFM9X_MODEM_LORA, (uint8_t) tx_config.packet_len);
+	}
 
-		// TODO: setup mac layer status check timer
+	obj->mcps_confirm.tx_time_on_air = time_on_air;
+	obj->mlme_confirm.tx_time_on_air = time_on_air;
 
-		if (obj->is_lorawan_network_joined == false)
-		{
-			obj->join_request_trials += 1;
-		}
+	// start the mac layer status check timer
+	xTimerChangePeriod(obj->mac_state_check_timer, MAC_STATE_CHECK_TIMEOUT, portMAX_DELAY);
+	xTimerStart(obj->mac_state_check_timer, portMAX_DELAY);
+
+	if (obj->is_lorawan_network_joined == false)
+	{
+		obj->join_request_trials += 1;
 	}
 
 	// transmit now
@@ -358,8 +365,9 @@ static void lorawan_mac_tx_delay_handler_pri(lorawan_mac_t * obj)
 		frame_control.adr = (uint8_t) obj->adr_ctrl_on;
 
 		lorawan_mac_prepare_frame_pri(obj, &mac_header, &frame_control, 0, NULL, 0);
-
 	}
+
+	lorawan_mac_schedule_tx_pri(obj);
 }
 
 static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
@@ -416,12 +424,165 @@ static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 							obj->mac_flags.mac_done = 0;
 
 							// send the same frame again
-
+							lorawan_mac_tx_delay_handler_pri(obj);
 						}
+					}
+				}
+				else
+				{
+					// procedure for all other frames
+					if (obj->channels_nb_rep_counter >= obj->mac_params.channels_nb_rep || obj->mac_flags.mcps_ind == 1)
+					{
+						if (obj->mac_flags.mcps_ind == 0)
+						{
+							obj->mac_commands_buffer_index = 0;
+							obj->adr_ack_counter += 1;
+						}
+
+						obj->channels_nb_rep_counter = 0;
+
+						if (!obj->is_uplink_counter_fixed)
+						{
+							obj->uplink_counter += 1;
+						}
+
+						STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+					}
+					else
+					{
+						obj->mac_flags.mac_done = 0;
+
+						// send the same frame again
+						lorawan_mac_tx_delay_handler_pri(obj);
 					}
 				}
 			}
 		}
+
+		if (obj->mac_flags.mcps_ind == 1)
+		{
+			// received a frame
+			if (obj->mcps_confirm.ack_received || obj->ack_timeout_retries_counter > obj->ack_timeout_retries)
+			{
+
+				obj->ack_timeout_retry = false;
+				obj->node_ack_requested = false;
+				if (!obj->is_uplink_counter_fixed)
+				{
+					obj->uplink_counter += 1;
+				}
+
+				obj->mcps_confirm.nb_retries = obj->ack_timeout_retries_counter;
+
+				STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+			}
+		}
+
+		if (obj->ack_timeout_retry == true && STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_DELAYED) == 0)
+		{
+			// retransmission procedure for confirmed uplinks
+			obj->ack_timeout_retry = false;
+			if (obj->ack_timeout_retries_counter < obj->ack_timeout_retries && obj->ack_timeout_retries_counter <= MAX_ACK_RETRIES)
+			{
+				obj->ack_timeout_retries_counter += 1;
+
+				if (obj->ack_timeout_retries_counter % 2 == 1)
+				{
+					// get next lower dr
+					if (obj->mac_params.channels_data_rate != LORAWAN_EU868_TX_MIN_DATARATE)
+					{
+						obj->mac_params.channels_data_rate -= 1;
+					}
+					else
+					{
+						obj->mac_params.channels_data_rate = LORAWAN_EU868_TX_MIN_DATARATE;
+					}
+				}
+
+				// try to send the frame again
+				if (lorawan_mac_schedule_tx_pri(obj) == LORAWAN_MAC_STATUS_OK)
+				{
+					obj->mac_flags.mac_done = 0;
+				}
+				else
+				{
+					// dr is not applicable for the payload size
+					obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_TX_DR_PAYLOAD_SIZE_ERROR;
+
+					obj->mac_commands_buffer_index = 0;
+					STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+					obj->node_ack_requested = false;
+					obj->mcps_confirm.ack_received = false;
+					obj->mcps_confirm.nb_retries = obj->ack_timeout_retries_counter;
+					obj->mcps_confirm.datarate = (uint8_t) obj->mac_params.channels_data_rate;
+
+					if (!obj->is_uplink_counter_fixed)
+					{
+						obj->uplink_counter += 1;
+					}
+				}
+			}
+
+			else
+			{
+				// TODO: reset regional defaults
+
+				STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
+
+				obj->mac_commands_buffer_index = 0;
+				obj->node_ack_requested = false;
+				obj->mcps_confirm.ack_received = false;
+				obj->mcps_confirm.nb_retries = obj->ack_timeout_retries_counter;
+
+				if (!obj->is_uplink_counter_fixed)
+				{
+					obj->uplink_counter += 1;
+				}
+			}
+		}
+	}
+
+	// handle reception for class b and c
+	if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_RX))
+	{
+		STATE_CLEAR(obj->mac_state, LORAWAN_MAC_RX);
+	}
+	if (obj->mac_state == LORAWAN_MAC_IDLE)
+	{
+		if (obj->mac_flags.mcps_req == 1)
+		{
+			obj->mac_primitives->on_mac_mcps_confirm(&obj->mcps_confirm);
+			obj->mac_flags.mcps_req = 0;
+		}
+
+		if (obj->mac_flags.mlme_req == 1)
+		{
+			obj->mac_primitives->on_mac_mlme_confirm(&obj->mlme_confirm);
+			obj->mac_flags.mlme_req = 0;
+		}
+
+		obj->mac_flags.mac_done = 0;
+	}
+	else
+	{
+		xTimerChangePeriod(obj->mac_state_check_timer, MAC_STATE_CHECK_TIMEOUT, portMAX_DELAY);
+		xTimerStart(obj->mac_state_check_timer, portMAX_DELAY);
+	}
+
+	if (obj->mac_flags.mcps_ind == 1)
+	{
+		if (obj->device_class == LORAWAN_CLASS_C)
+		{
+			// active rx2 window for class C device
+			lorawan_mac_rx_window_timer2_handler_pri(obj);
+		}
+		if (obj->mac_flags.mcps_ind_skip == 0)
+		{
+			obj->mac_primitives->on_mac_mcps_indication(&obj->mcps_indication);
+		}
+
+		obj->mac_flags.mcps_ind_skip = 0;
+		obj->mac_flags.mcps_ind = 0;
 	}
 }
 
@@ -1436,6 +1597,7 @@ static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
 	obj->mac_commands_in_next_tx = false;
 	obj->last_tx_is_join_request = false;
 	obj->skip_indication = false;
+	obj->is_uplink_counter_fixed = false;
 
 	// skip multi cast
 
