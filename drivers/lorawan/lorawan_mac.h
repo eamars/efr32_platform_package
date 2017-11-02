@@ -68,7 +68,7 @@ typedef union
 typedef struct
 {
 	uint32_t frequency;
-	uint8_t data_rate;
+	int8_t data_rate;
 } lorawan_rx2_channel_params_t;
 
 typedef struct
@@ -84,7 +84,7 @@ typedef struct
 	uint32_t join_accept_delay_1;
 	uint32_t join_accept_delay_2;
 	uint8_t channels_nb_rep;
-	uint8_t rx1_dr_offset;
+	int8_t rx1_dr_offset;
 	lorawan_rx2_channel_params_t rx2_channel;
 	uint8_t uplink_dwell_time;
 	uint8_t downlink_dwell_time;
@@ -110,7 +110,7 @@ typedef struct
 	uint32_t rx1_frequency;
 	lorawan_data_rate_range_t data_rate_range;
 	uint8_t band;
-} lorawan_channel_t;
+} lorawan_channel_params_t;
 
 typedef struct
 {
@@ -218,7 +218,7 @@ typedef struct
 	mcps_t mcps_request;
 	lorawan_mac_event_info_status_t status;
 
-	uint8_t datarate;
+	int8_t datarate;
 	int8_t tx_power;
 	bool ack_received;
 	uint8_t nb_retries;
@@ -333,7 +333,7 @@ typedef struct
 	uint8_t * app_session_key;
 	bool enable_public_network;
 	bool enable_repeater_support;
-	lorawan_channel_t * channel_list;
+	lorawan_channel_params_t * channel_list;
 	lorawan_rx2_channel_params_t rx2_channel;
 	lorawan_rx2_channel_params_t rx2_default_channel;
 	uint16_t * channels_mask;
@@ -362,6 +362,43 @@ typedef struct
 	void (*on_mac_mcps_indication)(mcps_indication_t * mcps_indication);
 	void (*on_mac_mlme_confirm)(mlme_confirm_t * mlme_confirm);
 } lorawan_mac_primitives_t;
+
+typedef struct
+{
+	uint8_t * payload;
+	uint8_t payload_size;
+	uint8_t uplink_dwell_time;
+	bool adr_enabled;
+	int8_t current_data_rate;
+	int8_t current_tx_power;
+	uint8_t current_nb_rep;
+} lorawan_link_adr_req_params_t;
+
+typedef struct
+{
+	int8_t data_rate;
+	int8_t dr_offset;
+	uint32_t frequency;
+} lorawan_rx_param_setup_req_params_t;
+
+typedef struct
+{
+	lorawan_channel_params_t * new_channel;
+	int8_t channel_id;
+} lorawan_new_channel_req_params_t;
+
+typedef struct
+{
+	uint8_t uplink_dwell_time;
+	uint8_t downlink_dwell_time;
+	uint8_t max_eirp;
+} lorawan_tx_param_setup_req_params_t;
+
+typedef struct
+{
+	uint8_t channel_id;
+	uint32_t rx1_frequency;
+} lorawan_dl_channel_req_params_t;
 
 typedef struct
 {
@@ -412,6 +449,7 @@ typedef struct
 	bool mac_commands_in_next_tx;
 	uint8_t channel; // channel index;
 	uint8_t last_tx_channel;
+	uint16_t channels_mask[LORAWAN_EU868_JOIN_CHANNELS];
 	bool last_tx_is_join_request;
 	bool skip_indication;
 	bool is_uplink_counter_fixed;
@@ -421,7 +459,7 @@ typedef struct
 
 	bool adr_ctrl_on;
 
-	lorawan_channel_t channels[LORAWAN_EU868_MAX_NB_CHANNELS];
+	lorawan_channel_params_t channels[LORAWAN_EU868_MAX_NB_CHANNELS];
 
 	uint8_t rx_slot;
 	lorawan_rx_config_params_t rx_window1_config;

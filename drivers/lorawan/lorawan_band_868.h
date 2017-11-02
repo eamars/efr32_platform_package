@@ -208,6 +208,7 @@
  */
 #define  LORAWAN_EU868_LC3                                   { 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
 
+#define LORAWAN_EU868_CHANNELS_MASK_SIZE 1
 
 /*!
  * LoRaMac channels which are allowed for the join procedure
