@@ -437,6 +437,8 @@ typedef struct
 	// parameters
 	lorawan_mac_params_t mac_params;
 
+	TickType_t aggregated_last_tx_done_time;
+
 	uint8_t join_request_trials;
 	uint8_t max_join_request_trials;
 	bool repeater_support;
@@ -472,7 +474,6 @@ typedef struct
 	lorawan_rx_config_params_t rx_window2_config;
 
 	uint16_t device_nonce;
-
 	uint8_t * app_key;
 	uint8_t nwk_session_key[16];
 	uint8_t app_session_key[16];
@@ -499,7 +500,7 @@ typedef struct
 
 void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * device_eui64, uint64_t * application_eui64);
 
-lorawan_mac_status_t lorawan_mac_send(lorawan_mac_t * obj, lorawan_mac_header_t * mac_header, uint8_t fport, void * buffer, uint16_t size);
+lorawan_mac_status_t lorawan_mlme_request(lorawan_mac_t * obj, mlme_req_t * mlme_req);
 
 #endif // USE_FREERTOS == 1
 

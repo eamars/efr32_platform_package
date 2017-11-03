@@ -194,19 +194,19 @@
  * LoRaMac default channel 1
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define  LORAWAN_EU868_LC1                                   { 868100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
+#define  LORAWAN_EU868_LC1                                   { 866100000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
 
 /*!
  * LoRaMac default channel 2
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define  LORAWAN_EU868_LC2                                   { 868300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
+#define  LORAWAN_EU868_LC2                                   { 866300000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
 
 /*!
  * LoRaMac default channel 3
  * Channel = { Frequency [Hz], RX1 Frequency [Hz], { ( ( DrMax << 4 ) | DrMin ) }, Band }
  */
-#define  LORAWAN_EU868_LC3                                   { 868500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
+#define  LORAWAN_EU868_LC3                                   { 866500000, 0, { ( ( DR_5 << 4 ) | DR_0 ) }, 1 }
 
 #define LORAWAN_EU868_CHANNELS_MASK_SIZE 1
 
@@ -215,7 +215,7 @@
  */
 #define  LORAWAN_EU868_JOIN_CHANNELS                         ( uint16_t )( LC( 1 ) | LC( 2 ) | LC( 3 ) )
 
-uint8_t lorawan_get_bandwidth(int8_t dr_idx);
+radio_rfm9x_bw_t lorawan_get_bandwidth(int8_t dr_idx);
 uint8_t lorawan_get_max_payload_of_data_rate_repeater(int8_t dr_idx);
 uint8_t lorawan_get_max_payload_of_data_rate(int8_t dr_idx);
 int8_t lorawan_get_phy_data_rate(int8_t dr_idx);

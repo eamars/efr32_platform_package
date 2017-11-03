@@ -14,17 +14,17 @@ static const uint8_t max_payload_of_data_rate_repeater[] = { 51, 51, 51, 115, 22
 
 static const uint8_t max_payload_of_data_rate[] = { 51, 51, 51, 115, 242, 242, 242, 242 };
 
-uint8_t lorawan_get_bandwidth(int8_t dr_idx)
+radio_rfm9x_bw_t lorawan_get_bandwidth(int8_t dr_idx)
 {
 	switch (bandwidths[dr_idx])
 	{
 		default:
 		case 125000:
-			return 0;
+			return RADIO_RFM9X_BW_125K;
 		case 250000:
-			return 1;
+			return RADIO_RFM9X_BW_250K;
 		case 500000:
-			return 2;
+			return RADIO_RFM9X_BW_500K;
 	}
 }
 
