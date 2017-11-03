@@ -318,6 +318,7 @@ typedef enum
 	MIB_UPLINK_COUNTER,
 	MIB_DOWNLINK_COUNTER,
 	MIB_MULTICAST_CHANNEL,
+	MIB_SYSTEM_MAX_RX_ERROR,
 	MIB_MIN_RX_SYMBOLS,
 	MIB_ANTENNA_GAIN
 } mib_t;
@@ -355,6 +356,12 @@ typedef struct
 	uint8_t min_rx_symbols;
 	float antenna_gain;
 } mib_param_t;
+
+typedef struct
+{
+	mib_t type;
+	mib_param_t param;
+} mib_request_confirm_t;
 
 typedef struct
 {
@@ -405,6 +412,18 @@ typedef struct
 	uint8_t * payload;
 	uint8_t size;
 } lorawan_apply_cf_list_params_t;
+
+typedef enum
+{
+	LORAWAN_CHANNELS_MASK,
+	LORAWAN_CHANNELS_DEFAULT_MASK
+} lorawan_channels_mask_t;
+
+typedef struct
+{
+	uint16_t * channels_mask_in;
+	lorawan_channels_mask_t channels_mask_type;
+} lorawan_channel_mask_set_params_t;
 
 typedef struct
 {
@@ -501,6 +520,8 @@ typedef struct
 void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * device_eui64, uint64_t * application_eui64);
 
 lorawan_mac_status_t lorawan_mlme_request(lorawan_mac_t * obj, mlme_req_t * mlme_req);
+lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_request_confirm_t * mib_set);
+
 
 #endif // USE_FREERTOS == 1
 

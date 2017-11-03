@@ -2150,6 +2150,30 @@ static lorawan_mac_status_t lorawan_mac_schedule_tx_pri(lorawan_mac_t * obj)
 }
 
 
+bool lorawan_channel_mask_set(lorawan_mac_t * obj, lorawan_channel_mask_set_params_t * channel_mask_set_params)
+{
+	switch(channel_mask_set_params->channels_mask_type)
+	{
+		case LORAWAN_CHANNELS_MASK:
+		{
+			memcpy(obj->channels_mask, channel_mask_set_params->channels_mask_in, 1);
+			break;
+		}
+		case LORAWAN_CHANNELS_DEFAULT_MASK:
+		{
+			// TODO: overwrite channel default mask
+			DRV_ASSERT(false);
+			break;
+		}
+		default:
+			DRV_ASSERT(false);
+			return false;
+	}
+
+	return true;
+}
+
+
 static void lorawan_mac_reset_params_pri(lorawan_mac_t * obj)
 {
 	obj->is_lorawan_network_joined = false;
@@ -2436,6 +2460,259 @@ lorawan_mac_status_t lorawan_mlme_request(lorawan_mac_t * obj, mlme_req_t * mlme
 	{
 		obj->node_ack_requested = false;
 		obj->mac_flags.mlme_req = 0;
+	}
+
+	return status;
+}
+
+
+lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_request_confirm_t * mib_set)
+{
+	DRV_ASSERT(obj);
+	DRV_ASSERT(mib_set);
+
+	lorawan_mac_status_t status = LORAWAN_MAC_STATUS_OK;
+	lorawan_channel_mask_set_params_t channel_mask_set_params;
+
+	if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_RUNNING))
+	{
+		return LORAWAN_MAC_STATUS_BUSY;
+	}
+
+	switch(mib_set->type)
+	{
+		case MIB_DEVICE_CLASS:
+		{
+			obj->device_class = mib_set->param.device_class;
+			switch(obj->device_class)
+			{
+				case LORAWAN_CLASS_A:
+				{
+					radio_rfm9x_set_opmode_sleep(obj->radio);
+					break;
+				}
+				case LORAWAN_CLASS_B:
+				{
+					break;
+				}
+				case LORAWAN_CLASS_C:
+				{
+					obj->node_ack_requested = false;
+					lorawan_mac_rx_window_timer2_handler_pri(obj);
+					break;
+				}
+				default:
+				{
+					DRV_ASSERT(false);
+					break;
+				}
+			}
+
+			break;
+		}
+		case MIB_NETWORK_JOINED:
+		{
+			obj->is_lorawan_network_joined = mib_set->param.is_network_joined;
+			break;
+		}
+		case MIB_ADR:
+		{
+			obj->adr_ctrl_on = mib_set->param.adr_enable;
+			break;
+		}
+		case MIB_NET_ID:
+		{
+			obj->network_id = mib_set->param.net_id;
+			break;
+		}
+		case MIB_DEV_ADDR:
+		{
+			obj->device_addr = mib_set->param.device_addr;
+			break;
+		}
+		case MIB_NWK_SESSION_KEY:
+		{
+			if (mib_set->param.nwk_session_key)
+			{
+				memcpy(obj->nwk_session_key, mib_set->param.nwk_session_key, sizeof(obj->nwk_session_key));
+			}
+			else
+			{
+				DRV_ASSERT(false);
+				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+			}
+			break;
+		}
+		case MIB_PUBLIC_NETWORK:
+		{
+			radio_rfm9x_set_public_network(obj->radio, mib_set->param.enable_public_network);
+			break;
+		}
+		case MIB_REPEATER_SUPPORT:
+		{
+			obj->repeater_support = mib_set->param.enable_repeater_support;
+			break;
+		}
+		case MIB_RX2_CHANNEL:
+		{
+			// TODO: verify the data rate
+
+			obj->mac_params.rx2_channel = mib_set->param.rx2_channel;
+
+			if (obj->device_class == LORAWAN_CLASS_C && obj->is_lorawan_network_joined)
+			{
+				// compute rx2 window params
+				lorawan_compute_rx_window_parameters_pri(obj,
+				                                         obj->mac_params.rx2_channel.data_rate,
+				                                         obj->mac_params.min_rx_symbols,
+				                                         obj->mac_params.system_max_rx_error,
+				                                         &obj->rx_window2_config);
+
+				obj->rx_window2_config.channel = obj->channel;
+				obj->rx_window2_config.frequency = obj->mac_params.rx2_channel.frequency;
+				obj->rx_window2_config.downlink_dwell_time = obj->mac_params.downlink_dwell_time;
+				obj->rx_window2_config.repeater_support = obj->repeater_support;
+				obj->rx_window2_config.window = 1;
+				obj->rx_window2_config.rx_continuous = true;
+
+				if (lorawan_rx_window_setup_pri(obj,
+				                                &obj->rx_window2_config,
+				                                (int8_t *) &obj->mcps_indication.rx_datarate))
+				{
+					// put radio to rx state
+					radio_rfm9x_set_opmode_rx_timeout(obj->radio,
+					                                  obj->rx_window1_config.rx_continuous ? 0 // continuous rx mode
+					                                                                       : obj->mac_params.max_rx_window);
+					obj->rx_slot = obj->rx_window2_config.window;
+				}
+				else
+				{
+					status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+				}
+			}
+
+			break;
+		}
+		case MIB_RX2_DEFAULT_CHANNEL:
+		{
+			// TODO: verify the data rate
+
+			// TODO: update the default parameter (but why)
+			DRV_ASSERT(false);
+			break;
+		}
+		case MIB_CHANNELS_DEFAULT_MASK:
+		{
+			channel_mask_set_params.channels_mask_in = mib_set->param.channels_mask;
+			channel_mask_set_params.channels_mask_type = LORAWAN_CHANNELS_DEFAULT_MASK;
+
+			if (lorawan_channel_mask_set(obj, &channel_mask_set_params) == false)
+			{
+				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+			}
+
+			break;
+		}
+		case MIB_CHANNELS_MASK:
+		{
+			channel_mask_set_params.channels_mask_in = mib_set->param.channels_mask;
+			channel_mask_set_params.channels_mask_type = LORAWAN_CHANNELS_MASK;
+
+			if (lorawan_channel_mask_set(obj, &channel_mask_set_params) == false)
+			{
+				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+			}
+
+			break;
+		}
+		case MIB_CHANNELS_NB_REP:
+		{
+			if (mib_set->param.channel_nb_rep >= 1 && mib_set->param.channel_nb_rep <= 15)
+			{
+				obj->mac_params.channels_nb_rep = mib_set->param.channel_nb_rep;
+			}
+			else
+			{
+				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+			}
+			break;
+		}
+		case MIB_MAX_RX_WINDOW_DURATION:
+		{
+			obj->mac_params.max_rx_window = mib_set->param.max_rx_window;
+			break;
+		}
+		case MIB_RECEIVE_DELAY_1:
+		{
+			obj->mac_params.receive_delay_1 = mib_set->param.receive_delay1;
+			break;
+		}
+		case MIB_RECEIVE_DELAY_2:
+		{
+			obj->mac_params.receive_delay_2 = mib_set->param.receive_delay2;
+			break;
+		}
+		case MIB_JOIN_ACCEPT_DELAY_1:
+		{
+			obj->mac_params.join_accept_delay_1 = mib_set->param.join_accept_delay1;
+			break;
+		}
+		case MIB_JOIN_ACCEPT_DELAY_2:
+		{
+			obj->mac_params.join_accept_delay_2 = mib_set->param.join_accept_delay2;
+			break;
+		}
+		case MIB_CHANNELS_DEFAULT_DATARATE:
+		{
+			// TODO: verify the data rate
+
+			// TODO: update the default data rate (why bother?)
+			DRV_ASSERT(false);
+			break;
+		}
+		case MIB_CHANNELS_DEFAULT_TX_POWER:
+		{
+			// TODO: verify the tx power
+
+			// TODO: update the default tx_power
+			DRV_ASSERT(false);
+			break;
+		}
+		case MIB_UPLINK_COUNTER:
+		{
+			obj->uplink_counter = mib_set->param.uplink_counter;
+			break;
+		}
+		case MIB_DOWNLINK_COUNTER:
+		{
+			obj->downlink_counter = mib_set->param.downlink_counter;
+			break;
+		}
+		case MIB_SYSTEM_MAX_RX_ERROR:
+		{
+			obj->mac_params.system_max_rx_error = mib_set->param.system_max_ex_error;
+
+			// TODO: update default value
+			break;
+		}
+		case MIB_MIN_RX_SYMBOLS:
+		{
+			obj->mac_params.min_rx_symbols = mib_set->param.min_rx_symbols;
+
+			// TODO: update default value
+			break;
+		}
+		case MIB_ANTENNA_GAIN:
+		{
+			obj->mac_params.antenna_gain = mib_set->param.antenna_gain;
+			break;
+		}
+		default:
+		{
+			DRV_ASSERT(false);
+			status = LORAWAN_MAC_STATUS_SERVICE_UNKNOWN;
+			break;
+		}
 	}
 
 	return status;
