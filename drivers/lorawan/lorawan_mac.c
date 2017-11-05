@@ -2538,10 +2538,22 @@ lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_re
 			}
 			else
 			{
-				DRV_ASSERT(false);
 				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+				DRV_ASSERT(false);
 			}
 			break;
+		}
+		case MIB_APP_SESSION_KEY:
+		{
+			if (mib_set->param.app_session_key)
+			{
+				memcpy(obj->app_session_key, mib_set->param.app_session_key, sizeof(obj->app_session_key));
+			}
+			else
+			{
+				status = LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+				DRV_ASSERT(false);
+			}
 		}
 		case MIB_PUBLIC_NETWORK:
 		{
