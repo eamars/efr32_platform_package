@@ -219,6 +219,9 @@ static lorawan_mac_status_t lorawan_mac_send_frame_on_channel(lorawan_mac_t * ob
 		// set preamble
 		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
 
+		// enable CRC
+		radio_rfm9x_set_crc_enable(obj->radio, true);
+
 		// set maximum payload length
 		radio_rfm9x_set_max_payload_length(obj->radio, RADIO_RFM9X_MODEM_LORA, (uint8_t) tx_config.packet_len);
 
@@ -596,13 +599,19 @@ static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 	{
 		if (obj->mac_flags.mcps_req == 1)
 		{
-			obj->mac_primitives->on_mac_mcps_confirm(&obj->mcps_confirm);
+			if (obj->mac_primitives.on_mac_mcps_confirm)
+				obj->mac_primitives.on_mac_mcps_confirm(&obj->mcps_confirm);
+			else
+				DRV_ASSERT(false);
 			obj->mac_flags.mcps_req = 0;
 		}
 
 		if (obj->mac_flags.mlme_req == 1)
 		{
-			obj->mac_primitives->on_mac_mlme_confirm(&obj->mlme_confirm);
+			if (obj->mac_primitives.on_mac_mlme_confirm)
+				obj->mac_primitives.on_mac_mlme_confirm(&obj->mlme_confirm);
+			else
+				DRV_ASSERT(false);
 			obj->mac_flags.mlme_req = 0;
 		}
 
@@ -623,7 +632,10 @@ static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 		}
 		if (obj->mac_flags.mcps_ind_skip == 0)
 		{
-			obj->mac_primitives->on_mac_mcps_indication(&obj->mcps_indication);
+			if (obj->mac_primitives.on_mac_mcps_indication)
+				obj->mac_primitives.on_mac_mcps_indication(&obj->mcps_indication);
+			else
+				DRV_ASSERT(false);
 		}
 
 		obj->mac_flags.mcps_ind_skip = 0;
@@ -1929,11 +1941,11 @@ static lorawan_mac_status_t lorawan_mac_prepare_frame_pri(lorawan_mac_t * obj, l
 	// record the tx_payload_length for further calculation
 	obj->mac_tx_payload_length = size;
 
-	// create a pointer to access internal mac buffer
-	uint8_t * packet_ptr = obj->mac_buffer;
-
 	// copy the mac header for all packet
 	obj->mac_buffer[0] = mac_header->byte;
+
+	// create a pointer to access internal mac buffer (except for the mac_header)
+	uint8_t * packet_ptr = obj->mac_buffer + 1;
 
 	switch(mac_header->message_type)
 	{
@@ -2285,7 +2297,7 @@ static void lorawan_mac_internal_reset_pri(lorawan_mac_t * obj)
 }
 
 
-void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * device_eui64, uint64_t * application_eui64)
+void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(radio);
@@ -2293,8 +2305,9 @@ void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * dev
 	// copy variables
 	{
 		obj->radio = radio;
-		memcpy(&obj->device_eui64, device_eui64, sizeof(uint64_t));
-		memcpy(&obj->application_eui64, application_eui64, sizeof(uint64_t));
+
+		// reset callback functions
+		memset(&obj->mac_primitives, 0x0, sizeof(lorawan_mac_primitives_t));
 	}
 
 
@@ -2466,7 +2479,7 @@ lorawan_mac_status_t lorawan_mlme_request(lorawan_mac_t * obj, mlme_req_t * mlme
 }
 
 
-lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_request_confirm_t * mib_set)
+lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_req_confirm_t * mib_set)
 {
 	DRV_ASSERT(obj);
 	DRV_ASSERT(mib_set);
@@ -2724,6 +2737,108 @@ lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_re
 			DRV_ASSERT(false);
 			status = LORAWAN_MAC_STATUS_SERVICE_UNKNOWN;
 			break;
+		}
+	}
+
+	return status;
+}
+
+
+lorawan_mac_status_t lorawan_mcps_request(lorawan_mac_t * obj, mcps_req_t * mcps_request)
+{
+	DRV_ASSERT(obj);
+	DRV_ASSERT(mcps_request);
+
+
+	if (STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_RUNNING) ||
+	    STATE_CHECK(obj->mac_state, LORAWAN_MAC_TX_DELAYED))
+	{
+		return LORAWAN_MAC_STATUS_BUSY;
+	}
+
+	lorawan_mac_status_t status = LORAWAN_MAC_STATUS_SERVICE_UNKNOWN;
+	lorawan_mac_header_t mac_header;
+	uint8_t fport = 0;
+	void * buffer;
+	uint16_t buffer_size;
+	int8_t data_rate;
+	bool ready_to_send = false;
+
+	mac_header.byte = 0;
+	memset(&obj->mcps_confirm, 0, sizeof(obj->mcps_confirm));
+	obj->mcps_confirm.status = LORAWAN_EVENT_INFO_STATUS_ERROR;
+
+	// reset the ack retries counter every time a new request is issued
+	obj->ack_timeout_retries_counter = 1;
+
+	switch (mcps_request->type)
+	{
+		case MCPS_UNCONFIRMED:
+		{
+			ready_to_send = true;
+			obj->ack_timeout_retries = 1;
+
+			mac_header.message_type = LORAWAN_MHDR_UNCONFIRMED_DATA_UP;
+			fport = mcps_request->req.unconfirmed.fport;
+			buffer = mcps_request->req.unconfirmed.buffer;
+			buffer_size = mcps_request->req.unconfirmed.buffer_size;
+			data_rate = mcps_request->req.unconfirmed.data_rate;
+
+			break;
+		}
+		case MCPS_CONFIRMED:
+		{
+			ready_to_send = true;
+			obj->ack_timeout_retries = mcps_request->req.confirmed.nb_trials;
+
+			mac_header.message_type = LORAWAN_MHDR_CONFIRMED_DATA_UP;
+			fport = mcps_request->req.confirmed.fport;
+			buffer = mcps_request->req.confirmed.buffer;
+			buffer_size = mcps_request->req.confirmed.buffer_size;
+			data_rate = mcps_request->req.confirmed.data_rate;
+
+			break;
+		}
+		case MCPS_PROPRIETARY:
+		{
+			ready_to_send = true;
+			obj->ack_timeout_retries = 1;
+
+			mac_header.message_type = LORAWAN_MHDR_PROPRIETARY;
+			buffer = mcps_request->req.proprietary.buffer;
+			buffer_size = mcps_request->req.proprietary.buffer_size;
+			data_rate = mcps_request->req.proprietary.data_rate;
+
+			break;
+		}
+		default:
+			DRV_ASSERT(false);
+			break;
+	}
+
+	// get minimal possible data rate
+	data_rate = (int8_t) MIN(data_rate, LORAWAN_EU868_TX_MIN_DATARATE);
+
+	if (ready_to_send)
+	{
+		if (obj->adr_ctrl_on == false)
+		{
+			// TODO: verify data rate
+			if (true)
+				obj->mac_params.channels_data_rate = data_rate;
+			else
+				return LORAWAN_MAC_STATUS_PARAMETER_INVALID;
+		}
+
+		status = lorawan_mac_send_pri(obj, &mac_header, fport, buffer, buffer_size);
+		if (status == LORAWAN_MAC_STATUS_OK)
+		{
+			obj->mcps_confirm.mcps_request = mcps_request->type;
+			obj->mac_flags.mcps_req = 1;
+		}
+		else
+		{
+			obj->node_ack_requested = false;
 		}
 	}
 

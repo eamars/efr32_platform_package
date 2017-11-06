@@ -361,7 +361,7 @@ typedef struct
 {
 	mib_t type;
 	mib_param_t param;
-} mib_request_confirm_t;
+} mib_req_confirm_t;
 
 typedef struct
 {
@@ -513,15 +513,15 @@ typedef struct
 	mlme_confirm_t mlme_confirm;
 
 	// upper layer layer event function
-	lorawan_mac_primitives_t * mac_primitives;
+	lorawan_mac_primitives_t mac_primitives;
 
 } lorawan_mac_t;
 
-void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio, uint64_t * device_eui64, uint64_t * application_eui64);
+void lorawan_mac_init(lorawan_mac_t * obj, radio_rfm9x_t * radio);
 
 lorawan_mac_status_t lorawan_mlme_request(lorawan_mac_t * obj, mlme_req_t * mlme_req);
-lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_request_confirm_t * mib_set);
-
+lorawan_mac_status_t lorawan_mib_set_request_confirm(lorawan_mac_t * obj, mib_req_confirm_t * mib_set);
+lorawan_mac_status_t lorawan_mcps_request(lorawan_mac_t * obj, mcps_req_t * mcps_request);
 
 #endif // USE_FREERTOS == 1
 

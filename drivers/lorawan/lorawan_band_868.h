@@ -46,7 +46,7 @@
 /*!
  * Default datarate used by the node
  */
-#define  LORAWAN_EU868_DEFAULT_DATARATE                      DR_0
+#define  LORAWAN_EU868_DEFAULT_DATARATE                      DR_2
 
 /*!
  * Minimal Rx1 receive datarate offset
