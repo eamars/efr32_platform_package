@@ -290,7 +290,7 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
 
 		// select bandwidth
-		radio_rfm9x_set_bandwidth(obj->radio, (radio_rfm9x_bw_t) (rx_config->bandwidth + 7));
+		radio_rfm9x_set_bandwidth(obj->radio, (radio_rfm9x_bw_t) rx_config->bandwidth);
 
 		// set data rate
 		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
@@ -300,6 +300,9 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 
 		// set preamble
 		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
+
+		// enable CRC
+		radio_rfm9x_set_crc_enable(obj->radio, true);
 	}
 
 	if (rx_config->repeater_support)

@@ -148,12 +148,12 @@
 /*!
  * Second reception window channel frequency definition.
  */
-#define  LORAWAN_EU868_RX_WND_2_FREQ                         869525000
+#define  LORAWAN_EU868_RX_WND_2_FREQ                         866525000
 
 /*!
  * Second reception window channel datarate definition.
  */
-#define  LORAWAN_EU868_RX_WND_2_DR                           DR_0
+#define  LORAWAN_EU868_RX_WND_2_DR                           DR_2
 
 /*!
  * Maximum number of bands
