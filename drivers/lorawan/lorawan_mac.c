@@ -15,25 +15,8 @@
 #include "lorawan_mac_crypto.h"
 #include "utils.h"
 
-/*!
- * Class A&B receive delay 1 in ms
- */
-#define RECEIVE_DELAY1                              1000
-
-/*!
- * Class A&B receive delay 2 in ms
- */
-#define RECEIVE_DELAY2                              2000
 
 #define MAC_STATE_CHECK_TIMEOUT                     1000
-
-#define JOIN_ACCEPT_DELAY1                          5000
-#define JOIN_ACCEPT_DELAY2                          6000
-#define MAX_FCNT_GAP                                16384
-#define ADR_ACK_LIMIT                               64
-#define ADR_ACK_DELAY                               32
-#define ACK_TIMEOUT                                 1000 // random delay between 1 to 3 sec
-#define SYNC_WORD                                   0x34
 #define PREAMBLE_LEN                                8
 #define MIC_LEN ( 4 )
 #define LORAWAN_MAX_FOPTS_LENGTH                    15
@@ -190,10 +173,6 @@ static lorawan_mac_status_t lorawan_mac_send_frame_on_channel(lorawan_mac_t * ob
 	int8_t phy_dr = lorawan_get_phy_data_rate(tx_config.data_rate);
 	uint32_t time_on_air = 0;
 
-
-	// setup the radio frequency
-	radio_rfm9x_set_channel(obj->radio, obj->channels[tx_config.channel].frequency);
-
 	if (tx_config.data_rate == DR_7)
 	{
 		// TODO: high speed fsk
@@ -204,23 +183,29 @@ static lorawan_mac_status_t lorawan_mac_send_frame_on_channel(lorawan_mac_t * ob
 		// set radio
 		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
 
-		// set transmit power
-		radio_rfm9x_set_tx_power(obj->radio, phy_tx_power);
-
 		// set bandwidth
 		radio_rfm9x_set_bandwidth(obj->radio, bandwidth);
-
-		// set data rate
-		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
 
 		// set coding rate
 		radio_rfm9x_set_coding_rate(obj->radio, RADIO_RFM9X_CR_4_5);
 
-		// set preamble
-		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
+		// set data rate
+		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
 
 		// enable CRC
 		radio_rfm9x_set_crc_enable(obj->radio, true);
+
+		// disable fixed length payload
+		radio_rfm9x_set_implicit_header_mode_on(obj->radio, false);
+
+		// set preamble
+		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
+
+		// setup the radio frequency
+		radio_rfm9x_set_channel(obj->radio, obj->channels[tx_config.channel].frequency);
+
+		// set transmit power
+		radio_rfm9x_set_tx_power(obj->radio, phy_tx_power);
 
 		// set maximum payload length
 		radio_rfm9x_set_max_payload_length(obj->radio, RADIO_RFM9X_MODEM_LORA, (uint8_t) tx_config.packet_len);
@@ -276,9 +261,6 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 	// get the physical data rate
 	phy_dr = lorawan_get_phy_data_rate(dr);
 
-	// set frequency
-	radio_rfm9x_set_channel(obj->radio, frequency);
-
 	if (dr == DR_7)
 	{
 		// fsk
@@ -286,23 +268,29 @@ static bool lorawan_rx_window_setup_pri(lorawan_mac_t * obj, lorawan_rx_config_p
 	}
 	else
 	{
-		// select radio
+		// set radio
 		radio_rfm9x_set_modem(obj->radio, RADIO_RFM9X_MODEM_LORA);
 
 		// select bandwidth
 		radio_rfm9x_set_bandwidth(obj->radio, (radio_rfm9x_bw_t) rx_config->bandwidth);
 
-		// set data rate
-		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
-
 		// set coding rate
 		radio_rfm9x_set_coding_rate(obj->radio, RADIO_RFM9X_CR_4_5);
 
-		// set preamble
-		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
+		// set data rate
+		radio_rfm9x_set_spreading_factor(obj->radio, (radio_rfm9x_sf_t) phy_dr);
+
+		// set frequency
+		radio_rfm9x_set_channel(obj->radio, frequency);
 
 		// enable CRC
 		radio_rfm9x_set_crc_enable(obj->radio, true);
+
+		// disable fixed length payload
+		radio_rfm9x_set_implicit_header_mode_on(obj->radio, false);
+
+		// set preamble
+		radio_rfm9x_set_preamble_length(obj->radio, PREAMBLE_LEN);
 	}
 
 	if (rx_config->repeater_support)
@@ -576,8 +564,6 @@ static void lorawan_mac_state_check_handler_pri(lorawan_mac_t * obj)
 
 			else
 			{
-				// TODO: reset regional defaults
-
 				STATE_CLEAR(obj->mac_state, LORAWAN_MAC_TX_RUNNING);
 
 				obj->mac_commands_buffer_index = 0;
@@ -1454,8 +1440,6 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 		uint8_t * packet_ptr = rx_msg.msg.buffer;
 
 		lorawan_mac_header_t * mac_header;
-		lorawan_mac_fhdr_fctrl_t * frame_control;
-
 		mac_header = (lorawan_mac_header_t *) packet_ptr;
 		packet_ptr += 1;
 
@@ -1532,15 +1516,28 @@ static void lorawan_mac_rx_thread(lorawan_mac_t * obj)
 				}
 
 				break;
-
+			}
+			case LORAWAN_MHDR_JOIN_REQUEST:
+			{
+				break;
 			}
 
+			case LORAWAN_MHDR_CONFIRMED_DATA_UP:
+			{
+				// NO BREAK!
+			}
+			case LORAWAN_MHDR_UNCONFIRMED_DATA_UP:
+			{
+				// NO BREAK!
+			}
 			case LORAWAN_MHDR_CONFIRMED_DATA_DOWN:
 			{
 				// NO BREAK
 			}
 			case LORAWAN_MHDR_UNCONFIRMED_DATA_DOWN:
 			{
+				lorawan_mac_fhdr_fctrl_t * frame_control;
+
 				// check the maximum packet length
 				uint8_t max_packet_length = 0;
 				if (obj->repeater_support)

@@ -156,6 +156,8 @@ typedef struct
 		radio_rfm9x_sf_t spreading_factor;
 		bool crc_enable;
 		bool implicit_header;
+		bool is_public_network;
+		uint8_t max_payload_length;
 
 	} config;
 

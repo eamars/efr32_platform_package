@@ -327,6 +327,8 @@ static void radio_rfm9x_on_timer_timeout(TimerHandle_t xTimer)
 
 		case RADIO_RFM9X_OP_TX:
 		{
+			// TODO: reset the radio and restore previous settings
+
 			if (obj->on_tx_timeout_handler.callback_function)
 				((on_rx_timeout_isr_handler) obj->on_tx_timeout_handler.callback_function)(obj->on_tx_timeout_handler.args);
 			break;
@@ -337,8 +339,6 @@ static void radio_rfm9x_on_timer_timeout(TimerHandle_t xTimer)
 			break;
 		}
 	}
-
-	radio_rfm9x_set_opmode_stdby(obj);
 }
 
 #endif
@@ -460,13 +460,13 @@ void radio_rfm9x_set_channel(radio_rfm9x_t * obj, uint32_t freq)
 {
 	DRV_ASSERT(obj);
 
+	// keep local copy
+	obj->config.frequency = freq;
+
 	freq = ( uint32_t )( ( double )freq / ( double ) RH_RF95_FSTEP );
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_06_FRF_MSB, (uint8_t) ((freq >> 16) & 0xff));
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_07_FRF_MID, (uint8_t) ((freq >> 8) & 0xff));
 	radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_08_FRF_LSB, (uint8_t) (freq & 0xff));
-
-	// keep local copy
-	obj->config.frequency = freq;
 }
 
 
@@ -796,6 +796,8 @@ void radio_rfm9x_set_public_network(radio_rfm9x_t * obj, bool enable)
 	{
 		radio_rfm9x_reg_write_pri(obj, 0x39, RFM9X_PRIVATE_SYNCWORD);
 	}
+
+	obj->config.is_public_network = enable;
 }
 
 
@@ -908,4 +910,7 @@ void radio_rfm9x_set_max_payload_length(radio_rfm9x_t * obj, radio_rfm9x_modem_t
 			DRV_ASSERT(false);
 			break;
 	}
+
+	// keep local copy
+	obj->config.max_payload_length = max_length;
 }
