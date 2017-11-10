@@ -58,7 +58,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
 	// initialize door state and calibrate state
 	obj->calibrated = false;
-	obj->door_state = IMU_EVENT_CALIBRATING;
+	obj->door_state = IMU_EVENT_DOOR_CLOSE;
 
     //intalise que
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
@@ -76,6 +76,19 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     // detect the existence of IMU
     DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
+
+
+
+    FXOS8700CQ_ConfigureAccelerometer(obj);
+    FXOS8700CQ_ConfigureMagnetometer(obj);
+    //sets inital thresholds (quite leaneant thesholds)
+    obj->vector_threshold_open = 55;
+    obj->vector_threshold_closed = 40;
+    while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
+    FXOS8700CQ_Set_Origin(obj);
+    FXOS8700CQ_Magnetic_Vector(obj);
+
+    FXOS8700CQ_Init_Interupt(obj);
 
 
 }
@@ -185,13 +198,15 @@ void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_ActiveMode (obj);
 }
 
-void FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data)
+uint8_t FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data)
 {
     char raw[6] = {0};
     FXOS8700CQ_ReadByteArray(obj, M_OUT_X_MSB, raw, 6);
     mag_data->x = (raw[0] << 8) | raw[1];           // Return 16-bit, 2's complement magnetometer data
     mag_data->y = (raw[2] << 8) | raw[3];
     mag_data->z = (raw[4] << 8) | raw[5];
+    return (mag_data->x + mag_data->y + mag_data->z);
+
 }
 
 char FXOS8700CQ_MagnetometerStatus(imu_FXOS8700CQ_t * obj)
@@ -438,15 +453,13 @@ void FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj)
 void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
 {
     rawdata_t mag_raw;
-    delay_ms(30);  // wait after configuring before reading
-    FXOS8700CQ_PollMagnetometer(obj ,&mag_raw);
+    while (!(FXOS8700CQ_PollMagnetometer(obj ,&mag_raw)));
     FXOS8700CQ_StandbyMode (obj);
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE | M_OSR_400_HZ) ); // turns auto calibrate mode off
     obj->x_origin = mag_raw.x;
     obj->y_origin = mag_raw.y;
     obj->z_origin = mag_raw.z;
     obj->start_position = 180.0 * atan2(mag_raw.x, mag_raw.z) / (float)M_PI;
-    obj->calibrated = true;
 	obj->door_state = IMU_EVENT_DOOR_CLOSE;
     FXOS8700CQ_ActiveMode (obj);
 
@@ -492,15 +505,15 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     ref[2] = obj->y_origin >> 8;
     ref[5] = obj->z_origin;
     ref[4] = obj->z_origin >> 8;
-    Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
-    Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
+    Vector_Threshold[0] = obj->vector_threshold_open >> 8 | 0x80;
+    Vector_Threshold[1] = (uint8_t)obj->vector_threshold_open ;
 
 
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
     obj->temp = FXOS8700CQ_GetTemperature(obj);
+    FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector ena bleld,procs wake up,interupt on pin 2 enlabeled
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
-    FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
     FXOS8700CQ_ActiveMode (obj);
 }
@@ -536,17 +549,12 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 )
     {
-        if (!obj->calibrated)
-        {
-
-            obj->door_state = IMU_EVENT_CALIBRATING;
-        }
-        else if (interupt_1 == true)
+        if (interupt_1 == true)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
             //halSetLed(BOARDLED1);
-            Vector_Threshold[0] = VECTOR_THRESH_OPEN >> 8 | 0x80;
-            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_OPEN ;
+            Vector_Threshold[0] = obj->vector_threshold_closed >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t)obj->vector_threshold_closed ;
 
 
         }
@@ -554,8 +562,8 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         {
             obj->door_state = IMU_EVENT_DOOR_CLOSE;
             //halClearLed(BOARDLED1);
-            Vector_Threshold[0] = VECTOR_THRESH_CLOSE >> 8 | 0x80;
-            Vector_Threshold[1] = (uint8_t)VECTOR_THRESH_CLOSE ;
+            Vector_Threshold[0] = obj->vector_threshold_open >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t)obj->vector_threshold_open ;
 
 
 
@@ -677,8 +685,31 @@ void FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj)
 {
     rawdata_t mag_raw;
     FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
-    obj->vector = sqrt(((mag_raw.x - obj->x_origin)^2) + ((mag_raw.y - obj->y_origin)^2) + ((mag_raw.z - obj->z_origin)^2));
+    uint16_t mag_x = mag_raw.x;
+    uint16_t mag_y = mag_raw.y;
+    uint16_t mag_z = mag_raw.z;
 
+    uint16_t origin_x = obj->x_origin;
+    uint16_t origin_y = obj->y_origin;
+    uint16_t origin_z = obj->z_origin;
+
+    int32_t dx = mag_x - origin_x;
+    int32_t dy = mag_y - origin_y;
+    int32_t dz = mag_z - origin_z;
+
+
+    obj->vector = sqrt((dx*dx) + (dy*dy) + (dz*dz));
+
+}
+
+void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
+{
+    //Finds the current vector  and adds 5 then a  scaling factor to get the open and closed threshold constants.
+    FXOS8700CQ_Caclculate_Vector(obj);
+    obj->vector_threshold_open = (obj->vector +5)*1.5;
+    obj->vector_threshold_closed = (obj->vector + 5)*1.3;
+    FXOS8700CQ_Magnetic_Vector(obj);
+    obj->calibrated = true;
 }
 
 

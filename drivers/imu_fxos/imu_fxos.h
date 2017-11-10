@@ -19,8 +19,6 @@
 
 #define FXOS8700CQ_ADDRESS    0x1F
 #define M_THRESHOLD           20
-#define VECTOR_THRESH_OPEN    45
-#define VECTOR_THRESH_CLOSE   55
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
@@ -672,7 +670,6 @@ typedef enum
 {
    IMU_EVENT_DOOR_OPEN = 0,
    IMU_EVENT_DOOR_CLOSE = 1,
-   IMU_EVENT_CALIBRATING = 2
 } imu_event_t;
 
 
@@ -692,7 +689,7 @@ typedef struct
     int16_t y_origin;
     int16_t z_origin;
     int16_t start_position;
-    int16_t vector;
+    uint32_t vector;
 
     int16_t current_compass; // The current angle
     int16_t current_heading; // The heading away from calibrated angle
@@ -702,6 +699,10 @@ typedef struct
     uint32_t last_call;
     TaskHandle_t ImuTempHandler;
     int16_t temp;
+
+    TaskHandle_t ImuCalHandler;
+    uint16_t vector_threshold_closed;
+    uint16_t vector_threshold_open;
 
 
 
@@ -723,7 +724,7 @@ void       FXOS8700CQ_FullScaleRange(imu_FXOS8700CQ_t * obj, range_t range);
 void       FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t range);
 
 void       FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data);
+uint8_t       FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data);
 char       FXOS8700CQ_MagnetometerStatus(imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_GetData(imu_FXOS8700CQ_t * obj, rawdata_t *accel_data, rawdata_t *magn_data);
@@ -747,7 +748,8 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
-void FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask);
 void       FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value);
