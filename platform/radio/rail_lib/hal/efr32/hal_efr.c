@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
-
+#include BOARD_HEADER
 #include "em_device.h"
 #include "em_cmu.h"
 #include "em_emu.h"
