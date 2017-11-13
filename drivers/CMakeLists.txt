@@ -15,6 +15,7 @@ SET(ENABLED_DRIVERS
 		temperature_tmp116
 		pa_sky66112
 		radio_rfm9x
+		radio_efr32
 		lorawan
 		lora_phy
         imu_fxos
