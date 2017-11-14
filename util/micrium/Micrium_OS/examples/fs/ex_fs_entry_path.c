@@ -320,11 +320,11 @@ void  Ex_FS_EntryPath_Exec (FS_VOL_HANDLE   vol_handle,
                                                                 /* ...These directory path segments are appended...     */
                                                                 /* ...starting from the volume name.                    */
     p_dir_tbl[0u] = DEF_NULL;                                   /* Root directory.                                      */
-    p_dir_tbl[1u] = "dir0";
-    p_dir_tbl[2u] = "dir0/subdir0";
-    p_dir_tbl[3u] = "dir1";
-    p_dir_tbl[4u] = "dir1/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´";
-    p_dir_tbl[5u] = "dir1/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´/subsubdir0";
+    p_dir_tbl[1u] = "dir10";
+    p_dir_tbl[2u] = "dir10/subdir0";
+    p_dir_tbl[3u] = "dir11";
+    p_dir_tbl[4u] = "dir11/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´";
+    p_dir_tbl[5u] = "dir11/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´/subsubdir0";
 
 
     file_ix = 0u;
@@ -386,7 +386,7 @@ void  Ex_FS_EntryPath_Exec (FS_VOL_HANDLE   vol_handle,
                                                                 /* Create some files with special characters in the name*/
     Mem_Clr((void *)p_path_buf, EX_FS_ENTRY_PATH_MAX_PATH_LEN);
     Str_Copy(p_path_buf, vol_name);
-    Str_Cat(p_path_buf, "/dir0/file-Ã§Ã Ã¨Ã©Ã‡Ã€ÃˆÃ‰.txt");             /* File name with UTF-8 encoding.                       */
+    Str_Cat(p_path_buf, "/dir10/file-Ã§Ã Ã¨Ã©Ã‡Ã€ÃˆÃ‰.txt");     /* File name with UTF-8 encoding.                       */
 
                                                                 /* Create empty file.                                   */
     file_handle = FSFile_Open(FS_WRK_DIR_NULL,                  /* NULL working directory means absolute path used.     */
@@ -405,7 +405,7 @@ void  Ex_FS_EntryPath_Exec (FS_VOL_HANDLE   vol_handle,
 
     Mem_Clr((void *)p_path_buf, EX_FS_ENTRY_PATH_MAX_PATH_LEN);
     Str_Copy(p_path_buf, vol_name);
-    Str_Cat(p_path_buf, "/dir1/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´/file-Ã¯Ã„Ã»Â¿.txt"); /* File name with UTF-8 encoding.                       */
+    Str_Cat(p_path_buf, "/dir11/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´/file-Ã¯Ã„Ã»Â¿.txt"); /* File name with UTF-8 encoding.                       */
 
                                                                 /* Create empty file.                                   */
     file_handle = FSFile_Open(FS_WRK_DIR_NULL,                  /* NULL working directory means absolute path used.     */
@@ -482,7 +482,7 @@ void  Ex_FS_EntryPath_Exec (FS_VOL_HANDLE   vol_handle,
                                                                 /* Create full path to sub-directory.                   */
     Mem_Clr((void *)p_path_buf, EX_FS_ENTRY_PATH_MAX_PATH_LEN);
     Str_Copy(p_path_buf, vol_name);
-    Str_Cat(p_path_buf, "/dir1/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´");
+    Str_Cat(p_path_buf, "/dir11/subdir0-Ã§Ã©Ã Ã€Ã‡Ã«Ã´");
                                                                 /* Open a working directory to specified sub-directory. */
     wrk_dir_handle = FSWrkDir_Open(FS_WRK_DIR_NULL,             /* NULL working directory means absolute path used.     */
                                    p_path_buf,                  /* Buffer containing full path to sub-directory.        */

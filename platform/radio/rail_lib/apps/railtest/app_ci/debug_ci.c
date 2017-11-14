@@ -33,8 +33,8 @@ void setFrequency(int argc, char **argv)
     return;
   }
 
-  if ((RAIL_DebugModeGet() & RAIL_DEBUG_MODE_FREQ_OVERRIDE) == RAIL_DEBUG_MODE_FREQ_OVERRIDE) {
-    if (!RAIL_DebugFrequencyOverride(newFrequency)) {
+  if ((RAIL_GetDebugMode(railHandle) & RAIL_DEBUG_MODE_FREQ_OVERRIDE) == RAIL_DEBUG_MODE_FREQ_OVERRIDE) {
+    if (!RAIL_OverrideDebugFrequency(railHandle, newFrequency)) {
       responsePrint(argv[0], "NewFrequency:%u", newFrequency);
     } else {
       // This won't take effect until we parse divider ranges.
@@ -71,7 +71,7 @@ void setDebugMode(int argc, char **argv)
   uint32_t debugMode;
 
   debugMode = ciGetUnsigned(argv[1]);
-  if (!RAIL_DebugModeSet(debugMode)) {
+  if (!RAIL_SetDebugMode(railHandle, debugMode)) {
     responsePrint(argv[0], "DebugMode:%s", lookupDebugModeString(debugMode));
   } else {
     responsePrintError(argv[0], 0x15, "%d is an invalid debug mode!", debugMode);
@@ -201,8 +201,8 @@ void printDataRates(int argc, char **argv)
 {
   responsePrint(argv[0],
                 "Symbolrate:%d,Bitrate:%d",
-                RAIL_SymbolRateGet(),
-                RAIL_BitRateGet());
+                RAIL_GetSymbolRate(railHandle),
+                RAIL_GetBitRate(railHandle));
 }
 
 #define MAX_RANDOM_BYTES (1024)
@@ -230,7 +230,7 @@ void getRandom(int argc, char **argv)
   }
 
   // Collect the random data
-  result = RAIL_GetRadioEntropy(randomDataBuffer, length);
+  result = RAIL_GetRadioEntropy(railHandle, randomDataBuffer, length);
   if (result != length) {
     responsePrintError(argv[0], 0x11, "Error collecting random data.");
   }
@@ -378,6 +378,9 @@ void setDebugSignal(int argc, char **argv)
     return;
   }
 
+  if (signal == NULL) {
+    return;
+  }
   // Configure the PRS or library signal as needed
   if (signal->isPrs) {
     // Enable this PRS signal
@@ -400,12 +403,23 @@ void forceAssert(int argc, char**argv)
   uint32_t errorCode = ciGetUnsigned(argv[1]);
 
   responsePrint(argv[0], "code:%d", errorCode);
-  RAILCb_AssertFailed(errorCode);
+  RAILCb_AssertFailed(railHandle, errorCode);
 }
 
-void configPrintCallbacks(int argc, char**argv)
+void configPrintEvents(int argc, char**argv)
 {
-  enablePrintCallbacks = ciGetUnsigned(argv[1]);
+  enablePrintEvents = ciGetUnsigned(argv[1]);
 
-  responsePrint(argv[0], "enablePrintCallbacks:0x%x", enablePrintCallbacks);
+  responsePrint(argv[0], "enablePrintEvents:0x%x", enablePrintEvents);
+}
+
+void getAppMode(int argc, char**argv)
+{
+  responsePrint(argv[0], "appMode:%s", currentAppMode());
+}
+
+void getRadioState(int argc, char**argv)
+{
+  responsePrint(argv[0], "radioState:%s",
+                getRfStateName(RAIL_GetRadioState(railHandle)));
 }

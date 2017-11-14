@@ -93,6 +93,8 @@
 #define  EX_CFG_FS_ACTIVE_MEDIA_NAME            "nor0"
 #elif (defined(RTOS_MODULE_FS_STORAGE_SD_CARD_AVAIL) || defined(RTOS_MODULE_FS_STORAGE_SD_SPI_AVAIL))
 #define  EX_CFG_FS_ACTIVE_MEDIA_NAME            "sd0"
+#else
+#define  EX_CFG_FS_ACTIVE_MEDIA_NAME            "None"
 #endif
 #endif
 

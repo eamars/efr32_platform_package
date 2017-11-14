@@ -82,7 +82,7 @@
 // use of the crash or the bootloader data.
 //=============================================================================
 #ifndef CSTACK_SIZE
-  #ifdef RTOS
+  #if (defined(RTOS) || defined(MICRIUMOS))
 // The RTOS will handle the actual CSTACK sizing per-task, but we must
 // still allocate some space for startup and exceptions.
     #define CSTACK_SIZE (128)  // *4 = 512 bytes

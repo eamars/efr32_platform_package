@@ -229,9 +229,11 @@
                                                                 /* See note (5).                                        */
 #define  PP_WEAK(type, name, init_value)  __weak  type  name = init_value
 #elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_ARMCC) || \
-       (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_GNU)   || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_MPLAB_C30))
 #define  PP_WEAK(type, name, init_value)  type  __attribute__ ((weak))  name = init_value
+
+#elif (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_GNU)
+#define  PP_WEAK(type, name, init_value)  extern  type name  __attribute__((weak))
 
 #elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CROSSCORE_BLACKFIN) || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_VDSP))
@@ -310,9 +312,15 @@
 #else
 #warning  "Toolchain does not define PP_ISR_DECL."
 #endif
-#elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CCS)                || \
-       (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_GNU)                || \
-       (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_MPLAB_C30)          || \
+#elif  (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CCS)
+#if    (RTOS_CPU_PORT_NAME == RTOS_CPU_SEL_ARM_V7_AR)
+#define  PP_ISR_DECL(_isr)                              __interrupt void _isr(void)
+#elif  (RTOS_CPU_PORT_NAME == RTOS_CPU_SEL_ARM_V7_M)
+#define  PP_ISR_DECL(_isr)                              void _isr(void)
+#else
+#warning  "Toolchain does not define PP_ISR_DECL."
+#endif
+#elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_MPLAB_C30)          || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CROSSCORE_BLACKFIN) || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_VDSP))
 #warning  "Toolchain does not define PP_ISR_DECL."
@@ -377,9 +385,14 @@
 #else
 #warning  "Toolchain does not define PP_ISR_DEF."
 #endif
-#elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CCS)                || \
-       (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_GNU)                || \
-       (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_MPLAB_C30)          || \
+#elif  (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CCS)
+#if   ((RTOS_CPU_PORT_NAME == RTOS_CPU_SEL_ARM_V7_AR) || \
+       (RTOS_CPU_PORT_NAME == RTOS_CPU_SEL_ARM_V7_M))
+#define  PP_ISR_DEF(_isr)                               PP_ISR_DECL(_isr)
+#else
+#warning  "Toolchain does not define PP_ISR_DEF."
+#endif
+#elif ((RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_MPLAB_C30)          || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_CROSSCORE_BLACKFIN) || \
        (RTOS_TOOLCHAIN == RTOS_TOOLCHAIN_VDSP))
 #warning  "Toolchain does not define PP_ISR_DEF."

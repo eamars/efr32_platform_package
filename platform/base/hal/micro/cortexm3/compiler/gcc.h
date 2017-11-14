@@ -191,7 +191,7 @@ void rtosResetWatchdog(void);
 #else //RAMEXE
   #define RAMFUNC __attribute__ ((long_call, section(".data.ramfunc")))
 #endif //RAMEXE
-#define asm(x) __asm__ (x)
+#define asm(...) __asm__ (__VA_ARGS__)
 #define NO_OPERATION() __asm__ ("nop")
 
 /**

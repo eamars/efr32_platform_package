@@ -10,7 +10,7 @@
 *
 * File    : OS_MEM.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -96,7 +96,7 @@ void  OSMemCreate (OS_MEM       *p_mem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -117,7 +117,7 @@ void  OSMemCreate (OS_MEM       *p_mem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_addr == DEF_NULL) {                                   /* Must pass a valid address for the memory part.       */
+    if (p_addr == (void *)0) {                                  /* Must pass a valid address for the memory part.       */
        *p_err   = OS_ERR_MEM_INVALID_P_ADDR;
         return;
     }
@@ -150,7 +150,7 @@ void  OSMemCreate (OS_MEM       *p_mem,
        *p_link = (void  *)p_blk;                                /* Save pointer to NEXT block in CURRENT block          */
         p_link = (void **)(void *)p_blk;                        /* Position     to NEXT block                           */
     }
-   *p_link             = DEF_NULL;                              /* Last memory block points to NULL                     */
+   *p_link             = (void *)0;                             /* Last memory block points to NULL                     */
 
     CPU_CRITICAL_ENTER();
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
@@ -210,20 +210,20 @@ void  *OSMemGet (OS_MEM  *p_mem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
     OS_TRACE_MEM_GET_ENTER(p_mem);
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_mem == DEF_NULL) {                                    /* Must point to a valid memory partition               */
+    if (p_mem == (OS_MEM *)0) {                                 /* Must point to a valid memory partition               */
         OS_TRACE_MEM_GET_FAILED(p_mem);
         OS_TRACE_MEM_GET_EXIT(OS_ERR_MEM_INVALID_P_MEM);
        *p_err  = OS_ERR_MEM_INVALID_P_MEM;
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
@@ -231,7 +231,7 @@ void  *OSMemGet (OS_MEM  *p_mem,
     if (p_mem->Type != OS_OBJ_TYPE_MEM) {                       /* Make sure the memory block was created               */
         OS_TRACE_MEM_GET_EXIT(OS_ERR_OBJ_TYPE);
        *p_err = OS_ERR_OBJ_TYPE;
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
@@ -242,7 +242,7 @@ void  *OSMemGet (OS_MEM  *p_mem,
         OS_TRACE_MEM_GET_FAILED(p_mem);
         OS_TRACE_MEM_GET_EXIT(OS_ERR_MEM_NO_FREE_BLKS);
        *p_err = OS_ERR_MEM_NO_FREE_BLKS;                        /* No,  Notify caller of empty memory partition         */
-        return (DEF_NULL);                                      /* Return NULL pointer to caller                        */
+        return ((void *)0);                                     /* Return NULL pointer to caller                        */
     }
     p_blk              = p_mem->FreeListPtr;                    /* Yes, point to next free memory block                 */
     p_mem->FreeListPtr = *(void **)p_blk;                       /* Adjust pointer to new free list                      */
@@ -289,7 +289,7 @@ void  OSMemPut (OS_MEM  *p_mem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -298,13 +298,13 @@ void  OSMemPut (OS_MEM  *p_mem,
     OS_TRACE_MEM_PUT_ENTER(p_mem, p_blk);
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_mem == DEF_NULL) {                                    /* Must point to a valid memory partition               */
+    if (p_mem == (OS_MEM *)0) {                                 /* Must point to a valid memory partition               */
         OS_TRACE_MEM_PUT_FAILED(p_mem);
         OS_TRACE_MEM_PUT_EXIT(OS_ERR_MEM_INVALID_P_MEM);
        *p_err  = OS_ERR_MEM_INVALID_P_MEM;
         return;
     }
-    if (p_blk == DEF_NULL) {                                    /* Must release a valid block                           */
+    if (p_blk == (void *)0) {                                   /* Must release a valid block                           */
         OS_TRACE_MEM_PUT_FAILED(p_mem);
         OS_TRACE_MEM_PUT_EXIT(OS_ERR_MEM_INVALID_P_BLK);
        *p_err  = OS_ERR_MEM_INVALID_P_BLK;
@@ -356,9 +356,9 @@ void  OSMemPut (OS_MEM  *p_mem,
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
 void  OS_MemDbgListAdd (OS_MEM  *p_mem)
 {
-    p_mem->DbgPrevPtr               = DEF_NULL;
-    if (OSMemDbgListPtr == DEF_NULL) {
-        p_mem->DbgNextPtr           = DEF_NULL;
+    p_mem->DbgPrevPtr               = (OS_MEM *)0;
+    if (OSMemDbgListPtr == (OS_MEM *)0) {
+        p_mem->DbgNextPtr           = (OS_MEM *)0;
     } else {
         p_mem->DbgNextPtr           =  OSMemDbgListPtr;
         OSMemDbgListPtr->DbgPrevPtr =  p_mem;
@@ -386,7 +386,7 @@ void  OS_MemDbgListAdd (OS_MEM  *p_mem)
 void  OS_MemInit (OS_ERR  *p_err)
 {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSMemDbgListPtr = DEF_NULL;
+    OSMemDbgListPtr = (OS_MEM *)0;
     OSMemQty        = 0u;
 #endif
    *p_err           = OS_ERR_NONE;

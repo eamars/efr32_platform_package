@@ -10,7 +10,7 @@
 *
 * File    : OS_CORE.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -64,7 +64,7 @@ void  OSInit (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -72,26 +72,26 @@ void  OSInit (OS_ERR  *p_err)
 
     OSInitHook();                                               /* Call port specific initialization code               */
 
-    OSIntNestingCtr       = 0u;                                 /* Clear the interrupt nesting counter                  */
+    OSIntNestingCtr       =           0u;                       /* Clear the interrupt nesting counter                  */
 
-    OSRunning             = OS_STATE_OS_STOPPED;                /* Indicate that multitasking has not started           */
+    OSRunning             =  OS_STATE_OS_STOPPED;               /* Indicate that multitasking has not started           */
 
-    OSSchedLockNestingCtr = 0u;                                 /* Clear the scheduling lock counter                    */
+    OSSchedLockNestingCtr =           0u;                       /* Clear the scheduling lock counter                    */
 
-    OSTCBCurPtr           = DEF_NULL;                           /* Initialize OS_TCB pointers to a known state          */
-    OSTCBHighRdyPtr       = DEF_NULL;
+    OSTCBCurPtr           = (OS_TCB *)0;                        /* Initialize OS_TCB pointers to a known state          */
+    OSTCBHighRdyPtr       = (OS_TCB *)0;
 
-    OSPrioCur             = 0u;                                 /* Initialize priority variables to a known state       */
-    OSPrioHighRdy         = 0u;
+    OSPrioCur             =           0u;                       /* Initialize priority variables to a known state       */
+    OSPrioHighRdy         =           0u;
 
 #if (OS_CFG_SCHED_LOCK_TIME_MEAS_EN == DEF_ENABLED)
-    OSSchedLockTimeBegin  = 0u;
-    OSSchedLockTimeMax    = 0u;
-    OSSchedLockTimeMaxCur = 0u;
+    OSSchedLockTimeBegin  =           0u;
+    OSSchedLockTimeMax    =           0u;
+    OSSchedLockTimeMaxCur =           0u;
 #endif
 
 #ifdef OS_SAFETY_CRITICAL_IEC61508
-    OSSafetyCriticalStartFlag       =  DEF_FALSE;
+    OSSafetyCriticalStartFlag = DEF_FALSE;
 #endif
 
 #if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
@@ -101,7 +101,7 @@ void  OSInit (OS_ERR  *p_err)
 
 #if (OS_CFG_ISR_STK_SIZE > 0u)
     p_stk = OSCfg_ISRStkBasePtr;                                /* Clear exception stack for stack checking.            */
-    if (p_stk != DEF_NULL) {
+    if (p_stk != (CPU_STK *)0) {
         size  = OSCfg_ISRStkSize;
         while (size > 0u) {
             size--;
@@ -116,20 +116,20 @@ void  OSInit (OS_ERR  *p_err)
 
 #if (OS_CFG_APP_HOOKS_EN == DEF_ENABLED)                        /* Clear application hook pointers                      */
 #if (OS_CFG_TASK_STK_REDZONE_EN == DEF_ENABLED)
-    OS_AppRedzoneHitHookPtr = DEF_NULL;
+    OS_AppRedzoneHitHookPtr = (OS_APP_HOOK_TCB )0;
 #endif
-    OS_AppTaskCreateHookPtr = DEF_NULL;
-    OS_AppTaskDelHookPtr    = DEF_NULL;
-    OS_AppTaskReturnHookPtr = DEF_NULL;
+    OS_AppTaskCreateHookPtr = (OS_APP_HOOK_TCB )0;
+    OS_AppTaskDelHookPtr    = (OS_APP_HOOK_TCB )0;
+    OS_AppTaskReturnHookPtr = (OS_APP_HOOK_TCB )0;
 
-    OS_AppIdleTaskHookPtr   = DEF_NULL;
-    OS_AppStatTaskHookPtr   = DEF_NULL;
-    OS_AppTaskSwHookPtr     = DEF_NULL;
-    OS_AppTimeTickHookPtr   = DEF_NULL;
+    OS_AppIdleTaskHookPtr   = (OS_APP_HOOK_VOID)0;
+    OS_AppStatTaskHookPtr   = (OS_APP_HOOK_VOID)0;
+    OS_AppTaskSwHookPtr     = (OS_APP_HOOK_VOID)0;
+    OS_AppTimeTickHookPtr   = (OS_APP_HOOK_VOID)0;
 #endif
 
 #if (OS_CFG_TASK_REG_TBL_SIZE > 0u)
-    OSTaskRegNextAvailID    = 0u;
+    OSTaskRegNextAvailID = 0u;
 #endif
 
     OS_PrioInit();                                              /* Initialize the priority bitmap table                 */
@@ -139,8 +139,8 @@ void  OSInit (OS_ERR  *p_err)
 
 #if (OS_CFG_FLAG_EN == DEF_ENABLED)                             /* Initialize the Event Flag module                     */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSFlagDbgListPtr = DEF_NULL;
-    OSFlagQty        = 0u;
+    OSFlagDbgListPtr = (OS_FLAG_GRP *)0;
+    OSFlagQty        =                0u;
 #endif
 #endif
 
@@ -162,24 +162,24 @@ void  OSInit (OS_ERR  *p_err)
 
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)                            /* Initialize the Mutex Manager module                  */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSMutexDbgListPtr = DEF_NULL;
-    OSMutexQty        = 0u;
+    OSMutexDbgListPtr = (OS_MUTEX *)0;
+    OSMutexQty        =             0u;
 #endif
 #endif
 
 
 #if (OS_CFG_Q_EN == DEF_ENABLED)                                /* Initialize the Message Queue Manager module          */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSQDbgListPtr = DEF_NULL;
-    OSQQty        = 0u;
+    OSQDbgListPtr = (OS_Q *)0;
+    OSQQty        =         0u;
 #endif
 #endif
 
 
 #if (OS_CFG_SEM_EN == DEF_ENABLED)                              /* Initialize the Semaphore Manager module              */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSSemDbgListPtr = DEF_NULL;
-    OSSemQty        = 0u;
+    OSSemDbgListPtr = (OS_SEM *)0;
+    OSSemQty        =           0u;
 #endif
 #endif
 
@@ -343,7 +343,7 @@ void  OSIntExit (void)
 #if (OS_CFG_TASK_STK_REDZONE_EN == DEF_ENABLED)
     stk_status = OS_TaskStkRedzoneChk(OSCfg_ISRStkBasePtr, OSCfg_ISRStkSize);
     if (stk_status != DEF_OK) {
-        OSRedzoneHitHook(DEF_NULL);
+        OSRedzoneHitHook((OS_TCB *)0);
     }
 #endif
 #endif
@@ -354,7 +354,7 @@ void  OSIntExit (void)
     if (OSTCBHighRdyPtr == OSTCBCurPtr) {                       /* Current task still the highest priority?             */
                                                                 /* Yes                                                  */
 #if (OS_CFG_TASK_STK_REDZONE_EN == DEF_ENABLED)
-        stk_status = OSTaskStkRedzoneChk(DEF_NULL);
+        stk_status = OSTaskStkRedzoneChk((OS_TCB *)0);
         if (stk_status != DEF_OK) {
             OSRedzoneHitHook(OSTCBCurPtr);
         }
@@ -550,7 +550,7 @@ void  OSSchedLock (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -611,7 +611,7 @@ void  OSSchedUnlock (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -682,7 +682,7 @@ void  OSSchedRoundRobinCfg (CPU_BOOLEAN   en,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -736,7 +736,7 @@ void  OSSchedRoundRobinYield (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -815,7 +815,7 @@ void  OSStart (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -880,7 +880,7 @@ void  OSStart (OS_ERR  *p_err)
 CPU_INT16U  OSVersion (OS_ERR  *p_err)
 {
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -962,17 +962,21 @@ void  OS_IdleTaskInit (OS_ERR  *p_err)
 #endif
                                                                 /* --------------- CREATE THE IDLE TASK --------------- */
     OSTaskCreate(&OSIdleTaskTCB,
+#if  (OS_CFG_DBG_EN == DEF_DISABLED)
+                 (CPU_CHAR   *)0,
+#else
                  (CPU_CHAR   *)"uC/OS-III Idle Task",
+#endif
                   OS_IdleTask,
-                  DEF_NULL,
-                 (OS_PRIO)(OS_CFG_PRIO_MAX - 1u),
+                 (void       *)0,
+                 (OS_PRIO     )(OS_CFG_PRIO_MAX - 1u),
                   OSCfg_IdleTaskStkBasePtr,
                   OSCfg_IdleTaskStkLimit,
                   OSCfg_IdleTaskStkSize,
                   0u,
                   0u,
-                  DEF_NULL,
-                 (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS),
+                 (void       *)0,
+                 (OS_OPT_TASK_STK_CHK | (OS_OPT)(OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS)),
                   p_err);
 }
 #endif
@@ -1017,14 +1021,14 @@ void  OS_Pend (OS_PEND_OBJ  *p_obj,
     OS_TaskBlock(OSTCBCurPtr,                                   /* Block the task and add it to the tick list if needed */
                  timeout);
 
-    if (p_obj != DEF_NULL) {                                    /* Add the current task to the pend list ...            */
+    if (p_obj != (OS_PEND_OBJ *)0) {                            /* Add the current task to the pend list ...            */
         p_pend_list             = &p_obj->PendList;             /* ... if there is an object to pend on                 */
         OSTCBCurPtr->PendObjPtr =  p_obj;                       /* Save the pointer to the object pending on            */
         OS_PendListInsertPrio(p_pend_list,                      /* Insert in the pend list in priority order            */
                               OSTCBCurPtr);
 
     } else {
-        OSTCBCurPtr->PendObjPtr =  DEF_NULL;                    /* If no object being pended on, clear the pend object  */
+        OSTCBCurPtr->PendObjPtr = (OS_PEND_OBJ *)0;             /* If no object being pended on, clear the pend object  */
     }
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     OS_PendDbgNameAdd(p_obj,
@@ -1067,8 +1071,8 @@ void  OS_PendAbort (OS_TCB     *p_tcb,
         case OS_TASK_STATE_PEND:
         case OS_TASK_STATE_PEND_TIMEOUT:
 #if (OS_MSG_EN == DEF_ENABLED)
-             p_tcb->MsgPtr     = DEF_NULL;
-             p_tcb->MsgSize    = 0u;
+             p_tcb->MsgPtr     = (void *)0;
+             p_tcb->MsgSize    =         0u;
 #endif
 #if (OS_CFG_TS_EN == DEF_ENABLED)
              p_tcb->TS         = ts;
@@ -1089,8 +1093,8 @@ void  OS_PendAbort (OS_TCB     *p_tcb,
         case OS_TASK_STATE_PEND_SUSPENDED:
         case OS_TASK_STATE_PEND_TIMEOUT_SUSPENDED:
 #if (OS_MSG_EN == DEF_ENABLED)
-             p_tcb->MsgPtr     = DEF_NULL;
-             p_tcb->MsgSize    = 0u;
+             p_tcb->MsgPtr     = (void *)0;
+             p_tcb->MsgSize    =         0u;
 #endif
 #if (OS_CFG_TS_EN == DEF_ENABLED)
              p_tcb->TS         = ts;
@@ -1112,6 +1116,7 @@ void  OS_PendAbort (OS_TCB     *p_tcb,
         case OS_TASK_STATE_SUSPENDED:
         case OS_TASK_STATE_DLY_SUSPENDED:
         default:
+                                                                /* Default case.                                        */
              break;
     }
 }
@@ -1142,7 +1147,7 @@ void  OS_PendDbgNameAdd (OS_PEND_OBJ  *p_obj,
     OS_TCB        *p_tcb1;
 
 
-    if (p_obj != DEF_NULL) {
+    if (p_obj != (OS_PEND_OBJ *)0) {
         p_tcb->DbgNamePtr =  p_obj->NamePtr;                    /* Task pending on this object ... save name in TCB     */
         p_pend_list       = &p_obj->PendList;                   /* Find name of HP task pending on this object ...      */
         p_tcb1            =  p_pend_list->HeadPtr;
@@ -1174,10 +1179,10 @@ void  OS_PendDbgNameRemove (OS_PEND_OBJ  *p_obj,
 
     p_tcb->DbgNamePtr = (CPU_CHAR *)((void *)" ");              /* Remove name of object pended on for readied task     */
 
-    if (p_obj != DEF_NULL) {
+    if (p_obj != (OS_PEND_OBJ *)0) {
         p_pend_list = &p_obj->PendList;
         p_tcb1      =  p_pend_list->HeadPtr;
-        if (p_tcb1 != DEF_NULL) {                               /* Find name of HP task pending on this object ...      */
+        if (p_tcb1 != (OS_TCB *)0) {                            /* Find name of HP task pending on this object ...      */
             p_obj->DbgNamePtr = p_tcb1->NamePtr;                /* ... Save in object                                   */
         } else {
             p_obj->DbgNamePtr = (CPU_CHAR *)((void *)" ");      /* Or no other task is pending on object                */
@@ -1213,7 +1218,7 @@ void  OS_PendListChangePrio (OS_TCB  *p_tcb)
     p_obj       =  p_tcb->PendObjPtr;                           /* Get pointer to pend list                             */
     p_pend_list = &p_obj->PendList;
 
-    if (p_pend_list->HeadPtr->PendNextPtr != DEF_NULL) {        /* Only move if multiple entries in the list            */
+    if (p_pend_list->HeadPtr->PendNextPtr != (OS_TCB *)0) {     /* Only move if multiple entries in the list            */
             OS_PendListRemove(p_tcb);                           /* Remove entry from current position                   */
             p_tcb->PendObjPtr = p_obj;
             OS_PendListInsertPrio(p_pend_list,                  /* INSERT it back in the list                           */
@@ -1239,10 +1244,10 @@ void  OS_PendListChangePrio (OS_TCB  *p_tcb)
 
 void  OS_PendListInit (OS_PEND_LIST  *p_pend_list)
 {
-    p_pend_list->HeadPtr    = DEF_NULL;
-    p_pend_list->TailPtr    = DEF_NULL;
+    p_pend_list->HeadPtr    = (OS_TCB *)0;
+    p_pend_list->TailPtr    = (OS_TCB *)0;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    p_pend_list->NbrEntries = 0u;
+    p_pend_list->NbrEntries =           0u;
 #endif
 }
 
@@ -1319,37 +1324,37 @@ void  OS_PendListInsertPrio (OS_PEND_LIST  *p_pend_list,
 
     prio  = p_tcb->Prio;                                        /* Obtain the priority of the task to insert            */
 
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* CASE 0: Insert when there are no entries             */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* CASE 0: Insert when there are no entries             */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_pend_list->NbrEntries = 1u;                           /* This is the first entry                              */
 #endif
-        p_tcb->PendNextPtr   = DEF_NULL;                        /* No other OS_TCBs in the list                         */
-        p_tcb->PendPrevPtr   = DEF_NULL;
-        p_pend_list->HeadPtr = p_tcb;
-        p_pend_list->TailPtr = p_tcb;
+        p_tcb->PendNextPtr   = (OS_TCB *)0;                     /* No other OS_TCBs in the list                         */
+        p_tcb->PendPrevPtr   = (OS_TCB *)0;
+        p_pend_list->HeadPtr =  p_tcb;
+        p_pend_list->TailPtr =  p_tcb;
     } else {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_pend_list->NbrEntries++;                              /* CASE 1: One more OS_TCBs in the list                 */
 #endif
         p_tcb_next = p_pend_list->HeadPtr;
-        while (p_tcb_next != DEF_NULL) {                        /* Find the position where to insert                    */
+        while (p_tcb_next != (OS_TCB *)0) {                     /* Find the position where to insert                    */
             if (prio < p_tcb_next->Prio) {
                 break;                                          /* Found! ... insert BEFORE current                     */
             } else {
                 p_tcb_next = p_tcb_next->PendNextPtr;           /* Not Found, follow the list                           */
             }
         }
-        if (p_tcb_next == DEF_NULL) {                           /* TCB to insert is lowest in priority                  */
-            p_tcb->PendNextPtr              = DEF_NULL;         /* ... insert at the tail.                              */
-            p_tcb->PendPrevPtr              = p_pend_list->TailPtr;
-            p_tcb->PendPrevPtr->PendNextPtr = p_tcb;
-            p_pend_list->TailPtr            = p_tcb;
+        if (p_tcb_next == (OS_TCB *)0) {                        /* TCB to insert is lowest in priority                  */
+            p_tcb->PendNextPtr              = (OS_TCB *)0;      /* ... insert at the tail.                              */
+            p_tcb->PendPrevPtr              =  p_pend_list->TailPtr;
+            p_tcb->PendPrevPtr->PendNextPtr =  p_tcb;
+            p_pend_list->TailPtr            =  p_tcb;
         } else {
-            if (p_tcb_next->PendPrevPtr == DEF_NULL) {          /* Is new TCB highest priority?                         */
-                p_tcb->PendNextPtr      = p_tcb_next;           /* Yes, insert as new Head of list                      */
-                p_tcb->PendPrevPtr      = DEF_NULL;
-                p_tcb_next->PendPrevPtr = p_tcb;
-                p_pend_list->HeadPtr    = p_tcb;
+            if (p_tcb_next->PendPrevPtr == (OS_TCB *)0) {       /* Is new TCB highest priority?                         */
+                p_tcb->PendNextPtr      =  p_tcb_next;          /* Yes, insert as new Head of list                      */
+                p_tcb->PendPrevPtr      = (OS_TCB *)0;
+                p_tcb_next->PendPrevPtr =  p_tcb;
+                p_pend_list->HeadPtr    =  p_tcb;
             } else {                                            /* No,  insert in between two entries                   */
                 p_tcb->PendNextPtr              = p_tcb_next;
                 p_tcb->PendPrevPtr              = p_tcb_next->PendPrevPtr;
@@ -1416,22 +1421,22 @@ void  OS_PendListRemove (OS_TCB  *p_tcb)
     OS_TCB        *p_prev;
 
 
-    if (p_tcb->PendObjPtr != DEF_NULL) {                        /* Only remove if object has a pend list.               */
+    if (p_tcb->PendObjPtr != (OS_PEND_OBJ *)0) {                /* Only remove if object has a pend list.               */
         p_pend_list = &p_tcb->PendObjPtr->PendList;             /* Get pointer to pend list                             */
 
                                                                 /* Remove TCB from the pend list.                       */
-        if (p_pend_list->HeadPtr->PendNextPtr == DEF_NULL) {
-            p_pend_list->HeadPtr = DEF_NULL;                    /* Only one entry in the pend list                      */
-            p_pend_list->TailPtr = DEF_NULL;
-        } else if (p_tcb->PendPrevPtr == DEF_NULL) {            /* See if entry is at the head of the list              */
-            p_next               = p_tcb->PendNextPtr;          /* Yes                                                  */
-            p_next->PendPrevPtr  = DEF_NULL;
-            p_pend_list->HeadPtr = p_next;
+        if (p_pend_list->HeadPtr->PendNextPtr == (OS_TCB *)0) {
+            p_pend_list->HeadPtr = (OS_TCB *)0;                 /* Only one entry in the pend list                      */
+            p_pend_list->TailPtr = (OS_TCB *)0;
+        } else if (p_tcb->PendPrevPtr == (OS_TCB *)0) {         /* See if entry is at the head of the list              */
+            p_next               =  p_tcb->PendNextPtr;         /* Yes                                                  */
+            p_next->PendPrevPtr  = (OS_TCB *)0;
+            p_pend_list->HeadPtr =  p_next;
 
-        } else if (p_tcb->PendNextPtr == DEF_NULL) {            /* See if entry is at the tail of the list              */
-            p_prev               = p_tcb->PendPrevPtr;          /* Yes                                                  */
-            p_prev->PendNextPtr  = DEF_NULL;
-            p_pend_list->TailPtr = p_prev;
+        } else if (p_tcb->PendNextPtr == (OS_TCB *)0) {         /* See if entry is at the tail of the list              */
+            p_prev               =  p_tcb->PendPrevPtr;         /* Yes                                                  */
+            p_prev->PendNextPtr  = (OS_TCB *)0;
+            p_pend_list->TailPtr =  p_prev;
 
         } else {
             p_prev               = p_tcb->PendPrevPtr;          /* Remove from inside the list                          */
@@ -1442,9 +1447,9 @@ void  OS_PendListRemove (OS_TCB  *p_tcb)
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_pend_list->NbrEntries--;                              /* One less entry in the list                           */
 #endif
-        p_tcb->PendNextPtr = DEF_NULL;
-        p_tcb->PendPrevPtr = DEF_NULL;
-        p_tcb->PendObjPtr  = DEF_NULL;
+        p_tcb->PendNextPtr = (OS_TCB      *)0;
+        p_tcb->PendPrevPtr = (OS_TCB      *)0;
+        p_tcb->PendObjPtr  = (OS_PEND_OBJ *)0;
     }
 }
 
@@ -1483,6 +1488,10 @@ void  OS_Post (OS_PEND_OBJ  *p_obj,
 #if (OS_CFG_TS_EN == DEF_DISABLED)
     (void)ts;                                                   /* Prevent compiler warning for not using 'ts'          */
 #endif
+#if (OS_MSG_EN == DEF_DISABLED)
+    (void)p_void;
+    (void)msg_size;
+#endif
 
     switch (p_tcb->TaskState) {
         case OS_TASK_STATE_RDY:                                 /* Cannot Post a task that is ready                     */
@@ -1500,7 +1509,7 @@ void  OS_Post (OS_PEND_OBJ  *p_obj,
 #if (OS_CFG_TS_EN == DEF_ENABLED)
                  p_tcb->TS      = ts;
 #endif
-             if (p_obj != DEF_NULL) {
+             if (p_obj != (OS_PEND_OBJ *)0) {
                  OS_PendListRemove(p_tcb);                      /* Remove task from pend list                           */
              }
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
@@ -1527,7 +1536,7 @@ void  OS_Post (OS_PEND_OBJ  *p_obj,
 #if (OS_CFG_TS_EN == DEF_ENABLED)
              p_tcb->TS      = ts;
 #endif
-             if (p_obj != DEF_NULL) {
+             if (p_obj != (OS_PEND_OBJ *)0) {
                  OS_PendListRemove(p_tcb);                      /* Remove from pend list                                */
              }
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
@@ -1545,6 +1554,7 @@ void  OS_Post (OS_PEND_OBJ  *p_obj,
              break;
 
         default:
+                                                                /* Default case.                                        */
              break;
     }
 }
@@ -1602,10 +1612,10 @@ void  OS_RdyListInit (void)
     for (i = 0u; i < OS_CFG_PRIO_MAX; i++) {                    /* Initialize the array of OS_RDY_LIST at each priority */
         p_rdy_list = &OSRdyList[i];
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-        p_rdy_list->NbrEntries = 0u;
+        p_rdy_list->NbrEntries =           0u;
 #endif
-        p_rdy_list->HeadPtr    = DEF_NULL;
-        p_rdy_list->TailPtr    = DEF_NULL;
+        p_rdy_list->HeadPtr    = (OS_TCB *)0;
+        p_rdy_list->TailPtr    = (OS_TCB *)0;
     }
 }
 
@@ -1705,23 +1715,23 @@ void  OS_RdyListInsertHead (OS_TCB  *p_tcb)
 
 
     p_rdy_list = &OSRdyList[p_tcb->Prio];
-    if (p_rdy_list->HeadPtr == DEF_NULL) {                      /* CASE 0: Insert when there are no entries             */
+    if (p_rdy_list->HeadPtr == (OS_TCB *)0) {                   /* CASE 0: Insert when there are no entries             */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-        p_rdy_list->NbrEntries =  1u;                           /* This is the first entry                              */
+        p_rdy_list->NbrEntries =           1u;                  /* This is the first entry                              */
 #endif
-        p_tcb->NextPtr         =  DEF_NULL;                     /* No other OS_TCBs in the list                         */
-        p_tcb->PrevPtr         =  DEF_NULL;
+        p_tcb->NextPtr         = (OS_TCB *)0;                   /* No other OS_TCBs in the list                         */
+        p_tcb->PrevPtr         = (OS_TCB *)0;
         p_rdy_list->HeadPtr    =  p_tcb;                        /* Both list pointers point to this OS_TCB              */
         p_rdy_list->TailPtr    =  p_tcb;
     } else {                                                    /* CASE 1: Insert BEFORE the current head of list       */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_rdy_list->NbrEntries++;                               /* One more OS_TCB in the list                          */
 #endif
-        p_tcb->NextPtr         = p_rdy_list->HeadPtr;           /* Adjust new OS_TCBs links                             */
-        p_tcb->PrevPtr         = DEF_NULL;
-        p_tcb2                 = p_rdy_list->HeadPtr;           /* Adjust old head of list's links                      */
-        p_tcb2->PrevPtr        = p_tcb;
-        p_rdy_list->HeadPtr    = p_tcb;
+        p_tcb->NextPtr         =  p_rdy_list->HeadPtr;          /* Adjust new OS_TCBs links                             */
+        p_tcb->PrevPtr         = (OS_TCB *)0;
+        p_tcb2                 =  p_rdy_list->HeadPtr;          /* Adjust old head of list's links                      */
+        p_tcb2->PrevPtr        =  p_tcb;
+        p_rdy_list->HeadPtr    =  p_tcb;
     }
 }
 
@@ -1790,23 +1800,23 @@ void  OS_RdyListInsertTail (OS_TCB  *p_tcb)
 
 
     p_rdy_list = &OSRdyList[p_tcb->Prio];
-    if (p_rdy_list->HeadPtr == DEF_NULL) {                      /* CASE 0: Insert when there are no entries             */
+    if (p_rdy_list->HeadPtr == (OS_TCB *)0) {                   /* CASE 0: Insert when there are no entries             */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-        p_rdy_list->NbrEntries  = 1u;                           /* This is the first entry                              */
+        p_rdy_list->NbrEntries  =           1u;                 /* This is the first entry                              */
 #endif
-        p_tcb->NextPtr          = DEF_NULL;                     /* No other OS_TCBs in the list                         */
-        p_tcb->PrevPtr          = DEF_NULL;
-        p_rdy_list->HeadPtr     = p_tcb;                        /* Both list pointers point to this OS_TCB              */
-        p_rdy_list->TailPtr     = p_tcb;
+        p_tcb->NextPtr          = (OS_TCB *)0;                  /* No other OS_TCBs in the list                         */
+        p_tcb->PrevPtr          = (OS_TCB *)0;
+        p_rdy_list->HeadPtr     =  p_tcb;                       /* Both list pointers point to this OS_TCB              */
+        p_rdy_list->TailPtr     =  p_tcb;
     } else {                                                    /* CASE 1: Insert AFTER the current tail of list        */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_rdy_list->NbrEntries++;                               /* One more OS_TCB in the list                          */
 #endif
-        p_tcb->NextPtr          = DEF_NULL;                     /* Adjust new OS_TCBs links                             */
-        p_tcb2                  = p_rdy_list->TailPtr;
-        p_tcb->PrevPtr          = p_tcb2;
-        p_tcb2->NextPtr         = p_tcb;                        /* Adjust old tail of list's links                      */
-        p_rdy_list->TailPtr     = p_tcb;
+        p_tcb->NextPtr          = (OS_TCB *)0;                  /* Adjust new OS_TCBs links                             */
+        p_tcb2                  =  p_rdy_list->TailPtr;
+        p_tcb->PrevPtr          =  p_tcb2;
+        p_tcb2->NextPtr         =  p_tcb;                       /* Adjust old tail of list's links                      */
+        p_rdy_list->TailPtr     =  p_tcb;
     }
 }
 
@@ -1872,24 +1882,24 @@ void  OS_RdyListMoveHeadToTail (OS_RDY_LIST  *p_rdy_list)
 
      if (p_rdy_list->HeadPtr != p_rdy_list->TailPtr) {
          if (p_rdy_list->HeadPtr->NextPtr == p_rdy_list->TailPtr) { /* SWAP the TCBs                                    */
-             p_tcb1              = p_rdy_list->HeadPtr;         /* Point to current head                                */
-             p_tcb2              = p_rdy_list->TailPtr;         /* Point to current tail                                */
-             p_tcb1->PrevPtr     = p_tcb2;
-             p_tcb1->NextPtr     = DEF_NULL;
-             p_tcb2->PrevPtr     = DEF_NULL;
-             p_tcb2->NextPtr     = p_tcb1;
-             p_rdy_list->HeadPtr = p_tcb2;
-             p_rdy_list->TailPtr = p_tcb1;
+             p_tcb1              =  p_rdy_list->HeadPtr;        /* Point to current head                                */
+             p_tcb2              =  p_rdy_list->TailPtr;        /* Point to current tail                                */
+             p_tcb1->PrevPtr     =  p_tcb2;
+             p_tcb1->NextPtr     = (OS_TCB *)0;
+             p_tcb2->PrevPtr     = (OS_TCB *)0;
+             p_tcb2->NextPtr     =  p_tcb1;
+             p_rdy_list->HeadPtr =  p_tcb2;
+             p_rdy_list->TailPtr =  p_tcb1;
          } else {
-             p_tcb1              = p_rdy_list->HeadPtr;         /* Point to current head                                */
-             p_tcb2              = p_rdy_list->TailPtr;         /* Point to current tail                                */
-             p_tcb3              = p_tcb1->NextPtr;             /* Point to new list head                               */
-             p_tcb3->PrevPtr     = DEF_NULL;                    /* Adjust back    link of new list head                 */
-             p_tcb1->NextPtr     = DEF_NULL;                    /* Adjust forward link of new list tail                 */
-             p_tcb1->PrevPtr     = p_tcb2;                      /* Adjust back    link of new list tail                 */
-             p_tcb2->NextPtr     = p_tcb1;                      /* Adjust forward link of old list tail                 */
-             p_rdy_list->HeadPtr = p_tcb3;                      /* Adjust new list head and tail pointers               */
-             p_rdy_list->TailPtr = p_tcb1;
+             p_tcb1              =  p_rdy_list->HeadPtr;        /* Point to current head                                */
+             p_tcb2              =  p_rdy_list->TailPtr;        /* Point to current tail                                */
+             p_tcb3              =  p_tcb1->NextPtr;            /* Point to new list head                               */
+             p_tcb3->PrevPtr     = (OS_TCB *)0;                 /* Adjust back    link of new list head                 */
+             p_tcb1->NextPtr     = (OS_TCB *)0;                 /* Adjust forward link of new list tail                 */
+             p_tcb1->PrevPtr     =  p_tcb2;                     /* Adjust back    link of new list tail                 */
+             p_tcb2->NextPtr     =  p_tcb1;                     /* Adjust forward link of old list tail                 */
+             p_rdy_list->HeadPtr =  p_tcb3;                     /* Adjust new list head and tail pointers               */
+             p_rdy_list->TailPtr =  p_tcb1;
          }
      }
 }
@@ -1954,34 +1964,34 @@ void  OS_RdyListRemove (OS_TCB  *p_tcb)
     p_rdy_list = &OSRdyList[p_tcb->Prio];
     p_tcb1     = p_tcb->PrevPtr;                                /* Point to next and previous OS_TCB in the list        */
     p_tcb2     = p_tcb->NextPtr;
-    if (p_tcb1 == DEF_NULL) {                                   /* Was the OS_TCB to remove at the head?                */
-        if (p_tcb2 == DEF_NULL) {                               /* Yes, was it the only OS_TCB?                         */
+    if (p_tcb1 == (OS_TCB *)0) {                                /* Was the OS_TCB to remove at the head?                */
+        if (p_tcb2 == (OS_TCB *)0) {                            /* Yes, was it the only OS_TCB?                         */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-            p_rdy_list->NbrEntries = 0u;                        /* Yes, no more entries                                 */
+            p_rdy_list->NbrEntries =           0u;              /* Yes, no more entries                                 */
 #endif
-            p_rdy_list->HeadPtr    = DEF_NULL;
-            p_rdy_list->TailPtr    = DEF_NULL;
+            p_rdy_list->HeadPtr    = (OS_TCB *)0;
+            p_rdy_list->TailPtr    = (OS_TCB *)0;
             OS_PrioRemove(p_tcb->Prio);
         } else {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
             p_rdy_list->NbrEntries--;                           /* No,  one less entry                                  */
 #endif
-            p_tcb2->PrevPtr     = DEF_NULL;                     /* adjust back link of new list head                    */
-            p_rdy_list->HeadPtr = p_tcb2;                       /* adjust OS_RDY_LIST's new head                        */
+            p_tcb2->PrevPtr     = (OS_TCB *)0;                  /* adjust back link of new list head                    */
+            p_rdy_list->HeadPtr =  p_tcb2;                      /* adjust OS_RDY_LIST's new head                        */
         }
     } else {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_rdy_list->NbrEntries--;                               /* No,  one less entry                                  */
 #endif
         p_tcb1->NextPtr = p_tcb2;
-        if (p_tcb2 == DEF_NULL) {
+        if (p_tcb2 == (OS_TCB *)0) {
             p_rdy_list->TailPtr = p_tcb1;                       /* Removing the TCB at the tail, adj the tail ptr       */
         } else {
             p_tcb2->PrevPtr     = p_tcb1;
         }
     }
-    p_tcb->PrevPtr = DEF_NULL;
-    p_tcb->NextPtr = DEF_NULL;
+    p_tcb->PrevPtr = (OS_TCB *)0;
+    p_tcb->NextPtr = (OS_TCB *)0;
 
     OS_TRACE_TASK_SUSPENDED(p_tcb);
 }
@@ -2068,7 +2078,7 @@ void  OS_SchedRoundRobin (OS_RDY_LIST  *p_rdy_list)
     CPU_CRITICAL_ENTER();
     p_tcb = p_rdy_list->HeadPtr;                                /* Decrement time quanta counter                        */
 
-    if (p_tcb == DEF_NULL) {
+    if (p_tcb == (OS_TCB *)0) {
         CPU_CRITICAL_EXIT();
         return;
     }
@@ -2132,6 +2142,10 @@ void  OS_SchedRoundRobin (OS_RDY_LIST  *p_rdy_list)
 void  OS_TaskBlock (OS_TCB   *p_tcb,
                     OS_TICK   timeout)
 {
+#if (OS_CFG_TASK_TICK_EN == DEF_DISABLED)
+    (void)timeout;
+#endif
+
 #if (OS_CFG_TASK_TICK_EN == DEF_ENABLED)
 #if (OS_CFG_DYN_TICK_EN == DEF_ENABLED)
         OS_TICK tick_ctr;

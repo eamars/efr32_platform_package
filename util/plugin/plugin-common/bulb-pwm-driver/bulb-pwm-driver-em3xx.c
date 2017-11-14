@@ -113,16 +113,17 @@ uint16_t halBulbPwmDriverTicksPerMicrosecond(void)
 void halBulbPwmDriverSetPwmLevel(uint16_t value, uint8_t pwm)
 {
   switch (pwm) {
-    case 1:
+    case HAL_BULBPWM_WHITE_ID:
       TIM2_CCR1 = value;
       break;
-    case 2:
+    case HAL_BULBPWM_LOWTEMP_ID:
+    case HAL_BULBPWM_RED_ID:
       TIM2_CCR2 = value;
       break;
-    case 3:
+    case HAL_BULBPWM_GREEN_ID:
       TIM2_CCR3 = value;
       break;
-    case 4:
+    case HAL_BULBPWM_BLUE_ID:
       TIM2_CCR4 = value;
       break;
     default:

@@ -105,13 +105,21 @@
                                                                 /* Texas Instruments.                                   */
 #define  RTOS_CPU_SEL_TI_RM41X                      300u
 #define  RTOS_CPU_SEL_TI_RM42X                      301u
-#define  RTOS_CPU_SEL_TI_RM48X                      302u
+#define  RTOS_CPU_SEL_TI_RM44LX                     302u
+#define  RTOS_CPU_SEL_TI_RM46X                      303u
+#define  RTOS_CPU_SEL_TI_RM48X                      304u
+#define  RTOS_CPU_SEL_TI_RM57LX                     305u
 
 #define  RTOS_CPU_SEL_TI_TMS570LS0232               350u
 #define  RTOS_CPU_SEL_TI_TMS570LS03x                351u
 #define  RTOS_CPU_SEL_TI_TMS570LS04x                352u
-#define  RTOS_CPU_SEL_TI_TMS570LS21x                353u
-#define  RTOS_CPU_SEL_TI_TMS570LS31x                354u
+#define  RTOS_CPU_SEL_TI_TMS570LS07x                353u
+#define  RTOS_CPU_SEL_TI_TMS570LS09x                354u
+#define  RTOS_CPU_SEL_TI_TMS570LS11x                355u
+#define  RTOS_CPU_SEL_TI_TMS570LS12x                356u
+#define  RTOS_CPU_SEL_TI_TMS570LS21x                357u
+#define  RTOS_CPU_SEL_TI_TMS570LS31x                358u
+#define  RTOS_CPU_SEL_TI_TMS570LC43x                359u
 
                                                                 /* Emulation                                            */
 #define  RTOS_CPU_SEL_EMUL_WIN32                    10000u
@@ -151,7 +159,7 @@
 #define  RTOS_INT_CONTROLLER_NONE               1u
 
 #define  RTOS_INT_CONTROLLER_ARMV7_AR_GIC       2u
-#define  RTOS_INT_CONTROLLER_ARMV7_AR_VIM95     3u
+#define  RTOS_INT_CONTROLLER_ARMV7_AR_VIMX      3u
 #define  RTOS_INT_CONTROLLER_ARMV7_M            4u
 
 #define  RTOS_INT_CONTROLLER_RX                 5u

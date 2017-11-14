@@ -27,7 +27,10 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#if defined(MBEDTLS_TRNG_C)
+#include "mbedtls/entropy.h"
+#include "em_device.h"
+
+#if defined(MBEDTLS_TRNG_C) && defined(TRNG_PRESENT)
 
 /***************************************************************************//**
  * \addtogroup rng_module
@@ -70,11 +73,14 @@
  ******************************************************************************/
 
 #include "em_device.h"
-#include "mbedtls_ecode.h"
 #include <stddef.h>
 
-/* TRNG specific error codes: */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
+/* TRNG specific error codes: */
+#define MBEDTLS_ERR_TRNG_BASE                                 (0xF100E000UL)
 /** Conditioning test failed. */
 #define MBEDTLS_ERR_TRNG_CONDITIONING_TEST_FAILED             ((int)MBEDTLS_ERR_TRNG_BASE | 0x00000001)
 
@@ -268,9 +274,13 @@ int mbedtls_trng_poll( mbedtls_trng_context *ctx,
  */
 void mbedtls_trng_soft_reset( mbedtls_trng_context *ctx );
 
-#endif /* MBEDTLS_TRNG_C */
+#ifdef __cplusplus
+}
+#endif
 
-/** \} (end addtogroup sl_crypto) */
+#endif /* MBEDTLS_TRNG_C && TRNG_PRESENT */
+
 /** \} (end addtogroup sl_crypto_trng) */
+/** \} (end addtogroup sl_crypto) */
 
 #endif /* MBEDTLS_TRNG_H */

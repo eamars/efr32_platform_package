@@ -31,7 +31,7 @@
 @
 @                                           ARM Cortex-M Port
 @
-@ File : cpu_a.s
+@ File : cpu_a.S
 @********************************************************************************************************
 @ Note(s) : (1) This port targets the following:
 @                 Core      : ARMv7M Cortex-M

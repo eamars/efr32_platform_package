@@ -10,7 +10,7 @@
 *
 * File    : OS_DBG.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -487,6 +487,7 @@ void  OS_Dbg_Init (void)
     p_temp08 = (CPU_INT08U const *)&OSDbg_TimeDlyHMSMEn;
     p_temp08 = (CPU_INT08U const *)&OSDbg_TimeDlyResumeEn;
 
+    p_temp16 = (CPU_INT16U const *)&OSDbg_TLS_TblSize;
 
     p_temp16 = (CPU_INT16U const *)&OSDbg_Tmr;
     p_temp08 = (CPU_INT08U const *)&OSDbg_TmrEn;

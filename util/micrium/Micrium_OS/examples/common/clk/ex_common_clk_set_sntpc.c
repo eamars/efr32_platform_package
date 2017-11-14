@@ -50,6 +50,7 @@
 #include  <rtos/common/include/lib_def.h>
 #include  <rtos/common/include/rtos_utils.h>
 #include  <rtos/net/include/sntp_client.h>
+#include  <rtos/kernel/include/os.h>
 
 
 /*
@@ -69,8 +70,10 @@
 *********************************************************************************************************
 */
 
+#ifndef  EX_TRACE
 #include  <stdio.h>
-#define  EX_TRACE(...)                                      printf(__VA_ARGS__)
+#define  EX_TRACE(...)                                  printf(__VA_ARGS__)
+#endif
 
 
 /*
@@ -106,10 +109,22 @@ void  Ex_CommonClkSetSNTPc (void)
     CLK_TS_SEC     ts_sec_ntp_from_clk;
     CPU_BOOLEAN    ok;
     CPU_CHAR       clk_str_buf[CLK_STR_FMT_DAY_MONTH_DD_HH_MM_SS_YYYY_LEN];
+    CPU_INT08U     retry_ctr = 0;
     RTOS_ERR       err;
 
 
-    SNTPc_ReqRemoteTime("0.pool.ntp.org", &pkt, &err);          /* Send SNTP request.                                   */
+    for (retry_ctr = 0; retry_ctr < 3; retry_ctr++) {
+        RTOS_ERR  err_local;
+
+
+        SNTPc_ReqRemoteTime("0.pool.ntp.org", &pkt, &err);      /* Send SNTP request.                                   */
+        if (err.Code == RTOS_ERR_NONE) {
+            break;
+        } else {
+            OSTimeDlyHMSM(0, 0, 0, 200, OS_OPT_TIME_HMSM_NON_STRICT, &err_local);
+        }
+    }
+
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
 
     ts = SNTPc_GetRemoteTime(&pkt, &err);                       /* Retrieve current time.                               */

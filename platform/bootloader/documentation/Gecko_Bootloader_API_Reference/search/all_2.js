@@ -10,6 +10,7 @@ var searchData=
   ['communication_5fshutdown',['communication_shutdown',['../group__Communication.html#gaf9955ceda56ebd3c65d4eb3a57ec295a',1,'btl_communication.h']]],
   ['communication_5fstart',['communication_start',['../group__Communication.html#ga6de289010301e4f27488b5521ab86407',1,'btl_communication.h']]],
   ['communication_20plugin_20error_20codes',['Communication plugin error codes',['../group__CommunicationError.html',1,'']]],
+  ['compression_20error_20codes',['Compression error codes',['../group__CompressionError.html',1,'']]],
   ['context',['context',['../structBootloaderParserCallbacks__t.html#ab2c6304272b1ea76edc4b0a4edf11495',1,'BootloaderParserCallbacks_t']]],
   ['core_5finitparser',['core_initParser',['../btl__parse_8h.html#a3f731199df69ddfb4e6651f603999010',1,'btl_parse.h']]],
   ['core_5fparsebuffer',['core_parseBuffer',['../btl__parse_8h.html#acff953503c1e458be5f24065a90c192e',1,'btl_parse.h']]],
@@ -18,5 +19,7 @@ var searchData=
   ['crc32',['crc32',['../structBootloadInfo__t.html#a6736834494c7467c911aa434185384b1',1,'BootloadInfo_t::crc32()'],['../group__CRC32.html',1,'(Global Namespace)']]],
   ['crch',['crcH',['../structXmodemPacket__t.html#a2b01b3d4029628f11c340d75f57a97da',1,'XmodemPacket_t']]],
   ['crcl',['crcL',['../structXmodemPacket__t.html#a37c63fbab80bce520f87271199e09e10',1,'XmodemPacket_t']]],
-  ['custom',['CUSTOM',['../group__StorageInterface.html#ggac5a52f72db78d655840177f0e034d37ca945d6010d321d9fe75cbba7b6f37f3b5',1,'btl_interface_storage.h']]]
+  ['custom_5fstorage',['CUSTOM_STORAGE',['../group__StorageInterface.html#ggac5a52f72db78d655840177f0e034d37caf9a807703d9b9e307e6cde5ac7a63164',1,'btl_interface_storage.h']]],
+  ['customtagid',['customTagId',['../structParserContext__t.html#af8e8212eb62c294ce8f5ab86d9eaeabe',1,'ParserContext_t']]],
+  ['custom_20gbl_20tags',['Custom GBL Tags',['../group__CustomTags.html',1,'']]]
 ];

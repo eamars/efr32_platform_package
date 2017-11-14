@@ -30,8 +30,6 @@
 *********************************************************************************************************
 */
 
-#include  <rtos/cpu/include/cpu.h>
-
 
 /*
 *********************************************************************************************************
@@ -53,9 +51,17 @@
 *********************************************************************************************************
 */
 
-void  Ex_TELNET_Server_Init          (void);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void  Ex_TELNET_Server_InstanceCreate(void);
+void  Ex_TELNET_Server_Init           (void);
+
+void  Ex_TELNET_Server_InstanceCreate (void);
+
+#ifdef __cplusplus
+}
+#endif
 
 
 /*

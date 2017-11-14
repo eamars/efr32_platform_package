@@ -13,16 +13,6 @@
 #ifndef __PTA_H__
 #define __PTA_H__
 
-// Include AppBuilder generated header
-#if   defined(ZA_GENERATED_HEADER)
-  #include ZA_GENERATED_HEADER  // AFV2
-#endif
-
-// Let AppBuilder contribute coexistence configurations.
-#ifdef EMBER_AF_API_COEXISTENCE
-  #include EMBER_AF_API_COEXISTENCE
-#endif
-
 /** @name Radio HoldOff Configuration Definitions
  *
  * The following are used to aid in the abstraction with Radio
@@ -147,6 +137,8 @@
 
 #define DEFAULT_PTA_OPT_FORCE_HOLDOFF PTA_OPT_DISABLED
 #define DEFAULT_PTA_OPT_MAC_HOLDOFF   PTA_OPT_DISABLED
+
+#define DEFAULT_PTA_OPT_FORCE_HOLDOFF PTA_OPT_DISABLED
 
 #ifdef PTA_REQ_GPIO
   #define PUBLIC_PTA_OPT_RX_RETRY_TIMEOUT_MS \

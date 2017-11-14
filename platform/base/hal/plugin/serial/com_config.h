@@ -20,10 +20,10 @@
   #include "retargetserialconfig.h"
 #endif
 
-/* Map VCOM route settings*/
-#if HAL_SERIAL_VCOM_ENABLE
+/* Map serial app port settings*/
+#ifdef BSP_SERIAL_APP_PORT
   #include "com_vcom.h"
-#endif //HAL_SERIAL_VCOM_ENABLE
+#endif //BSP_SERIAL_APP_PORT
 
 #define HAL_FC_NONE = 1
 #define HAL_FC_HW = 2
@@ -476,32 +476,32 @@
 #endif //COM_LEUART1_ENABLE
 
 #ifndef UART_RX_INT_PORT
-  #if ((HAL_SERIAL_APP_PORT == 1) || (HAL_SERIAL_APP_PORT == 0x20))
+  #if ((BSP_SERIAL_APP_PORT == 1) || (BSP_SERIAL_APP_PORT == 0x20))
     #define UART_RX_INT_PORT BSP_USART0_RX_PORT
-  #elif ((HAL_SERIAL_APP_PORT == 2) || (HAL_SERIAL_APP_PORT == 0x21))
+  #elif ((BSP_SERIAL_APP_PORT == 2) || (BSP_SERIAL_APP_PORT == 0x21))
     #define UART_RX_INT_PORT BSP_USART1_RX_PORT
-  #elif ((HAL_SERIAL_APP_PORT == 3) || (HAL_SERIAL_APP_PORT == 0x22))
+  #elif ((BSP_SERIAL_APP_PORT == 3) || (BSP_SERIAL_APP_PORT == 0x22))
     #define UART_RX_INT_PORT BSP_USART2_RX_PORT
-  #elif (HAL_SERIAL_APP_PORT == 0x23)
+  #elif (BSP_SERIAL_APP_PORT == 0x23)
     #define UART_RX_INT_PORT BSP_USART3_RX_PORT
-  #elif ((HAL_SERIAL_APP_PORT == 5) || (HAL_SERIAL_APP_PORT == 0x40))
+  #elif ((BSP_SERIAL_APP_PORT == 5) || (BSP_SERIAL_APP_PORT == 0x40))
     #define UART_RX_INT_PORT BSP_LEUART0_RX_PORT
-  #elif ((HAL_SERIAL_APP_PORT == 6) || (HAL_SERIAL_APP_PORT == 0x41))
+  #elif ((BSP_SERIAL_APP_PORT == 6) || (BSP_SERIAL_APP_PORT == 0x41))
     #define UART_RX_INT_PORT BSP_LEUART1_RX_PORT
 #endif
 #endif
 #ifndef UART_RX_INT_PIN
-  #if ((HAL_SERIAL_APP_PORT == 1) || (HAL_SERIAL_APP_PORT == 0x20))
+  #if ((BSP_SERIAL_APP_PORT == 1) || (BSP_SERIAL_APP_PORT == 0x20))
     #define UART_RX_INT_PIN BSP_USART0_RX_PIN
-  #elif ((HAL_SERIAL_APP_PORT == 2) || (HAL_SERIAL_APP_PORT == 0x21))
+  #elif ((BSP_SERIAL_APP_PORT == 2) || (BSP_SERIAL_APP_PORT == 0x21))
     #define UART_RX_INT_PIN BSP_USART1_RX_PIN
-  #elif ((HAL_SERIAL_APP_PORT == 3) || (HAL_SERIAL_APP_PORT == 0x22))
+  #elif ((BSP_SERIAL_APP_PORT == 3) || (BSP_SERIAL_APP_PORT == 0x22))
     #define UART_RX_INT_PIN BSP_USART2_RX_PIN
-  #elif (HAL_SERIAL_APP_PORT == 0x23)
+  #elif (BSP_SERIAL_APP_PORT == 0x23)
     #define UART_RX_INT_PIN BSP_USART3_RX_PIN
-  #elif ((HAL_SERIAL_APP_PORT == 5) || (HAL_SERIAL_APP_PORT == 0x40))
+  #elif ((BSP_SERIAL_APP_PORT == 5) || (BSP_SERIAL_APP_PORT == 0x40))
     #define UART_RX_INT_PIN BSP_LEUART0_RX_PIN
-  #elif ((HAL_SERIAL_APP_PORT == 6) || (HAL_SERIAL_APP_PORT == 0x41))
+  #elif ((BSP_SERIAL_APP_PORT == 6) || (BSP_SERIAL_APP_PORT == 0x41))
     #define UART_RX_INT_PIN BSP_LEUART1_RX_PIN
 #endif
 #endif

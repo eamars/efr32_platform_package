@@ -11,7 +11,7 @@
   #include "hal/micro/micro.h"
   #include BOARD_HEADER
   #ifdef HAL_CONFIG
-    #include HAL_CONFIG
+    #include "hal-config.h"
   #endif
 #endif
 #include "hal/micro/led.h"

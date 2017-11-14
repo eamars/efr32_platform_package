@@ -10,7 +10,7 @@
 *
 * File    : OS_PRIO.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -69,7 +69,7 @@ void  OS_PrioInit (void)
     }
 
 #if (OS_CFG_TASK_IDLE_EN == DEF_DISABLED)
-    OS_PrioInsert ((OS_CFG_PRIO_MAX - 1u));                     /* Insert what would be the idle task                   */
+    OS_PrioInsert ((OS_PRIO)(OS_CFG_PRIO_MAX - 1u));            /* Insert what would be the idle task                   */
 #endif
 }
 

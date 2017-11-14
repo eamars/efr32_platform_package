@@ -10,7 +10,7 @@
 *                                           ARM Cortex-M4 Port
 *
 * File      : OS_CPU_C.C
-* Version   : V3.06.00
+* Version   : V3.06.01
 * By        : JJL
 *             BAN
 *             JBL
@@ -30,7 +30,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 *
 * For       : ARMv7M Cortex-M4

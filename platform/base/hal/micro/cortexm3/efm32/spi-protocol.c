@@ -154,6 +154,11 @@ bool halHostSerialTick(bool responseReady)
   return validCommand;
 }
 
+void halNcpClearWakeFlag(void)
+{
+  spipFlagWakeFallingEdge = false;
+}
+
 //One layer of indirection is used so calling the public function will actually
 //result in the real Tick function (this internal one) being wrapped in an
 //ATOMIC() block to prevent potential corruption from the nSSEL interrupt.

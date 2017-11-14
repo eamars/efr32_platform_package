@@ -14,8 +14,9 @@ var btl__interface_8h =
     [ "firstBootloaderTable", "group__CommonInterface.html#gad388d4d1c5656d47cd70dde2d3bce6f2", null ],
     [ "mainBootloaderTable", "group__CommonInterface.html#ga7729c13bf7a5f98b29280a836b3d1a84", null ],
     [ "BootloaderType_t", "group__CommonInterface.html#ga8c6b9a36c4c310e50b0b3511cccbe078", [
-      [ "NONE", "group__CommonInterface.html#gga8c6b9a36c4c310e50b0b3511cccbe078ac157bdf0b85a40d2619cbc8bc1ae5fe2", null ],
-      [ "SL_BOOTLOADER", "group__CommonInterface.html#gga8c6b9a36c4c310e50b0b3511cccbe078ad8935a7f43596d88d93a7a5a15ed6a20", null ]
+      [ "NO_BOOTLOADER", "group__CommonInterface.html#gga8c6b9a36c4c310e50b0b3511cccbe078a345ca4adb7227d8a9ff98c0919bb5492", null ],
+      [ "SL_BOOTLOADER", "group__CommonInterface.html#gga8c6b9a36c4c310e50b0b3511cccbe078ad8935a7f43596d88d93a7a5a15ed6a20", null ],
+      [ "NONE", "group__CommonInterface.html#gga8c6b9a36c4c310e50b0b3511cccbe078ac157bdf0b85a40d2619cbc8bc1ae5fe2", null ]
     ] ],
     [ "bootloader_getInfo", "group__CommonInterface.html#ga36c02adad76bd72c8564cae1418cdbad", null ],
     [ "bootloader_init", "group__CommonInterface.html#ga3c66502510a5302eb25149df070d898b", null ],

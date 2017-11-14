@@ -134,6 +134,7 @@
 #define  CLK_STR_FMT_DAY_MONTH_DD_HH_MM_SS_YYYY_LEN       25u   /*     Str len of fmt "Day Mon DD HH:MM:SS YYYY".       */
 #define  CLK_STR_FMT_HH_MM_SS_LEN                          9u   /*     Str len of fmt "HH:MM:SS".                       */
 #define  CLK_STR_FMT_HH_MM_SS_AM_PM_LEN                   15u   /*     Str len of fmt "HH:MM:SS AM|PM".                 */
+#define  CLK_STR_FMT_HH_MM_AM_PM_LEN                       9u   /*     Str len of fmt "HH:MM    AM|PM".                 */
 
 #define  CLK_STR_FMT_MAX_LEN                              30u   /* Max str len of all clk str fmts.                     */
 
@@ -286,7 +287,8 @@ typedef  enum  clk_str_fmt {
     CLK_STR_FMT_DAY_MONTH_DD_YYYY          = 6u,
     CLK_STR_FMT_DAY_MONTH_DD_HH_MM_SS_YYYY = 7u,
     CLK_STR_FMT_HH_MM_SS                   = 8u,
-    CLK_STR_FMT_HH_MM_SS_AM_PM             = 9u
+    CLK_STR_FMT_HH_MM_SS_AM_PM             = 9u,
+    CLK_STR_FMT_HH_MM_AM_PM
 } CLK_STR_FMT;
 #endif
 

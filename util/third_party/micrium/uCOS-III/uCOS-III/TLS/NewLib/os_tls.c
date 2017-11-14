@@ -37,7 +37,6 @@
 #include "../../Source/os.h"
 #include <reent.h>
 #include <string.h> 
-#include <stdlib.h>
 
 #ifdef VSC_INCLUDE_SOURCE_FILE_NAMES
 const  CPU_CHAR  *os_tls__c = "$Id: $";
@@ -407,15 +406,15 @@ void  OS_TLS_TaskCreate (OS_TCB  *p_tcb)
 
 void  OS_TLS_TaskDel (OS_TCB  *p_tcb)
 {
-    OS_TLS         p_tls;
-    __FILE        *fp;
-    CPU_INT08U     i;
+    OS_TLS      p_tls;
+    FILE       *fp;
+    CPU_INT08U  i;
 
 
     p_tls = p_tcb->TLS_Tbl[OS_TLS_NewLibID];
     if ((p_tcb->Opt & OS_OPT_TASK_NO_TLS) == OS_OPT_NONE) {    /* See if TLS is available for this task               */
         if (p_tls != (OS_TLS)0) {
-            fp = &((struct _reent *)p_tls)->__sf[0];
+            fp = &p_tls->__sf[0];
             for (i = 0; i < 3; i++) {                          /* Avoid closing stdin, stdout, stderr so ...          */
                 fp->_close = NULL;                             /* ... other threads can still use them.               */
                 fp++;
@@ -481,8 +480,8 @@ static  void  OS_TLS_NewLib_MallocLock (void)
     OSMutexPend((OS_MUTEX *)&OS_TLS_NewLib_MallocMutex,
                 (OS_TICK   )0, 
                 (OS_OPT    )OS_OPT_PEND_BLOCKING,
-                &ts,
-                &err);
+                (CPU_TS    )&ts,
+                (OS_ERR   *)&err);
 }
 
 
@@ -498,7 +497,7 @@ static  void  OS_TLS_NewLib_MallocUnlock (void)
 
     OSMutexPost((OS_MUTEX *)&OS_TLS_NewLib_MallocMutex,
                 (OS_OPT    )OS_OPT_POST_NONE,
-                &err);
+                (OS_ERR   *)&err);
 }
 
 
@@ -526,8 +525,8 @@ static  void  OS_TLS_NewLib_EnvLock (void)
     OSMutexPend((OS_MUTEX *)&OS_TLS_NewLib_EnvMutex,
                 (OS_TICK   )0, 
                 (OS_OPT    )OS_OPT_PEND_BLOCKING,
-                &ts,
-                &err);
+                (CPU_TS    )&ts,
+                (OS_ERR   *)&err);
 }
 
 
@@ -574,7 +573,6 @@ static  void  OS_TLS_NewLib_EnvUnlock (void)
 
 void  __malloc_lock (struct _reent * reent)
 {
-    CPU_VAL_UNUSED(reent);
     OS_TLS_NewLib_MallocLock();
 }
 
@@ -582,7 +580,6 @@ void  __malloc_lock (struct _reent * reent)
 
 void  __malloc_unlock (struct _reent * reent)
 {
-    CPU_VAL_UNUSED(reent);
     OS_TLS_NewLib_MallocUnlock();
 }
 
@@ -614,7 +611,6 @@ void  __malloc_unlock (struct _reent * reent)
 
 void  __env_lock (struct _reent * reent)
 {
-    CPU_VAL_UNUSED(reent);
     OS_TLS_NewLib_EnvLock();
 }
 
@@ -622,6 +618,5 @@ void  __env_lock (struct _reent * reent)
 
 void  __env_unlock (struct _reent * reent)
 {
-    CPU_VAL_UNUSED(reent);
     OS_TLS_NewLib_EnvUnlock();
 }

@@ -2,7 +2,7 @@
  * @file btl_gpio_activation.c
  * @brief GPIO Activation plugin for Silicon Labs bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -35,8 +35,8 @@ bool gpio_enterBootloader(void)
   // after a power-on and could give a false positive result. To avoid
   // this issue, drive the output as an output for a short time to charge
   // them up as quickly as possible.
-  GPIO_PinModeSet(BTL_GPIO_ACTIVATION_PORT,
-                  BTL_GPIO_ACTIVATION_PIN,
+  GPIO_PinModeSet(BSP_BTL_BUTTON_PORT,
+                  BSP_BTL_BUTTON_PIN,
                   gpioModePushPull,
                   BTL_GPIO_ACTIVATION_POLARITY);
   for (volatile int i = 0; i < 100; i++) {
@@ -44,8 +44,8 @@ bool gpio_enterBootloader(void)
   }
 
   // Reconfigure as an input with pull(up|down) to read the button state
-  GPIO_PinModeSet(BTL_GPIO_ACTIVATION_PORT,
-                  BTL_GPIO_ACTIVATION_PIN,
+  GPIO_PinModeSet(BSP_BTL_BUTTON_PORT,
+                  BSP_BTL_BUTTON_PIN,
                   gpioModeInputPull,
                   BTL_GPIO_ACTIVATION_POLARITY);
 
@@ -55,12 +55,12 @@ bool gpio_enterBootloader(void)
     // Do nothing
   }
 
-  pressed = GPIO_PinInGet(BTL_GPIO_ACTIVATION_PORT, BTL_GPIO_ACTIVATION_PIN)
+  pressed = GPIO_PinInGet(BSP_BTL_BUTTON_PORT, BSP_BTL_BUTTON_PIN)
             != BTL_GPIO_ACTIVATION_POLARITY;
 
   // Disable GPIO pin
-  GPIO_PinModeSet(BTL_GPIO_ACTIVATION_PORT,
-                  BTL_GPIO_ACTIVATION_PIN,
+  GPIO_PinModeSet(BSP_BTL_BUTTON_PORT,
+                  BSP_BTL_BUTTON_PIN,
                   gpioModeDisabled,
                   BTL_GPIO_ACTIVATION_POLARITY);
 

@@ -19,8 +19,10 @@
 #include "em_gpio.h"
 #include "uartdrv.h"
 #include "hal/micro/cortexm3/usb/em_usb.h"
-#include "com-serial.h"
 #include "stack/include/ember-debug.h"
+#ifndef HAL_CONFIG
+#include "com-serial.h"
+#endif
 
 #ifdef CORTEXM3_EFM32_MICRO
   #include "com_device.h"

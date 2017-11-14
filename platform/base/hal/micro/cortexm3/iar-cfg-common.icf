@@ -138,6 +138,8 @@ define symbol APPRO_TOP             = MFB_TOP;
 define region APPRO_region          = mem:[from APPRO_BOTTOM to APPRO_TOP];
 define block APPRO_block with fixed order { ro section .intvec, 
                                             ro section .textrw_init, 
+                                            ro section .gatt_header,
+                                            ro section .gatt_data,
                                             ro section .text,
                                             ro section CODE, 
                                             ro section .rodata,
@@ -246,14 +248,18 @@ define region APPRW_region      = mem:[from APPRW_BOTTOM to APPRW_TOP];
 // 8-byte align the CSTACK so that we're compliant with the ARM AAPCS
 define block ALIGN_CSTACK with alignment = 8 { rw section CSTACK };
 
-define block APPRW_block with fixed order { block ALIGN_CSTACK, 
+// Bluetooth needs a heap it can use for malloc
+define block HEAP with alignment = 8, size = 4 * 1024 { };
+
+define block APPRW_block with fixed order { block ALIGN_CSTACK,
                                             rw section .textrw,
                                             rw section .data,
                                             block DLIB_PERTHREAD_INITIALIZED_DATA,
                                             block DLIB_PERTHREAD_ZERO_DATA,
                                             rw section .bss,
                                             rw section APP_RAM,
-                                            rw section .noinit };
+                                            rw section .noinit,
+                                            block HEAP };
 
 "APP rw": place at end of APPRW_region { block APPRW_block };
 "Heap": place at start of APPRW_region { overlay EMHEAP_overlay };

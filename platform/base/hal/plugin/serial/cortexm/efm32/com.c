@@ -425,7 +425,7 @@ static void pumpRx(COM_Port_t port)
   }
 #endif
 #ifdef COM_VCP_ENABLE
-  if (port == COM_VCP) {
+  if (port == COM_VCP || port == comPortVcp) {
     emDebugReceiveData();
     return;
   }
@@ -1130,7 +1130,9 @@ bool COM_InternalTxIsIdle(COM_Port_t port)
 #if defined(COM_UART_ENABLE)
   if (checkValidUartPort(port)) {
     COM_Handle_t comhandle = getComHandleFromPort(port);
-    return (UARTDRV_GetPeripheralStatus(comhandle->uarthandle) & UARTDRV_STATUS_TXIDLE) ? true : false;
+    return ((UARTDRV_GetPeripheralStatus(comhandle->uarthandle) & UARTDRV_STATUS_TXIDLE)
+            && (comhandle->txQueue->used == 0)
+            && (UARTDRV_GetTransmitDepth(comhandle->uarthandle) == 0));
   }
 #endif
   return false;

@@ -329,9 +329,9 @@ typedef  CPU_INT32U                 CPU_SR;                     /* Defines   CPU
 *********************************************************************************************************
 */
 
-#define  CPU_MB()       __asm__ __volatile__ ("dsb" : : : "memory")
-#define  CPU_RMB()      __asm__ __volatile__ ("dsb" : : : "memory")
-#define  CPU_WMB()      __asm__ __volatile__ ("dsb" : : : "memory")
+#define  CPU_MB()       __asm__ __volatile__ ("    dsb")
+#define  CPU_RMB()      __asm__ __volatile__ ("    dsb")
+#define  CPU_WMB()      __asm__ __volatile__ ("    dsb")
 
 
 /*

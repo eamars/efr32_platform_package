@@ -56,7 +56,7 @@
 
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize( void *v, size_t n ) {
-    volatile unsigned char *p = v; while( n-- ) *p++ = 0;
+    volatile unsigned char *p = (unsigned char*)v; while( n-- ) *p++ = 0;
 }
 
 /*
@@ -710,9 +710,9 @@ exit:
  * AES-ECB block encryption
  */
 #if !defined(MBEDTLS_AES_ENCRYPT_ALT)
-void mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
-                          const unsigned char input[16],
-                          unsigned char output[16] )
+int mbedtls_internal_aes_encrypt( mbedtls_aes_context *ctx,
+                                  const unsigned char input[16],
+                                  unsigned char output[16] )
 {
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
@@ -760,6 +760,8 @@ void mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
     PUT_UINT32_LE( X1, output,  4 );
     PUT_UINT32_LE( X2, output,  8 );
     PUT_UINT32_LE( X3, output, 12 );
+
+    return( 0 );
 }
 #endif /* !MBEDTLS_AES_ENCRYPT_ALT */
 
@@ -767,9 +769,9 @@ void mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
  * AES-ECB block decryption
  */
 #if !defined(MBEDTLS_AES_DECRYPT_ALT)
-void mbedtls_aes_decrypt( mbedtls_aes_context *ctx,
-                          const unsigned char input[16],
-                          unsigned char output[16] )
+int mbedtls_internal_aes_decrypt( mbedtls_aes_context *ctx,
+                                  const unsigned char input[16],
+                                  unsigned char output[16] )
 {
     int i;
     uint32_t *RK, X0, X1, X2, X3, Y0, Y1, Y2, Y3;
@@ -817,6 +819,8 @@ void mbedtls_aes_decrypt( mbedtls_aes_context *ctx,
     PUT_UINT32_LE( X1, output,  4 );
     PUT_UINT32_LE( X2, output,  8 );
     PUT_UINT32_LE( X3, output, 12 );
+
+    return( 0 );
 }
 #endif /* !MBEDTLS_AES_DECRYPT_ALT */
 
@@ -846,11 +850,9 @@ int mbedtls_aes_crypt_ecb( mbedtls_aes_context *ctx,
 #endif
 
     if( mode == MBEDTLS_AES_ENCRYPT )
-        mbedtls_aes_encrypt( ctx, input, output );
+        return( mbedtls_internal_aes_encrypt( ctx, input, output ) );
     else
-        mbedtls_aes_decrypt( ctx, input, output );
-
-    return( 0 );
+        return( mbedtls_internal_aes_decrypt( ctx, input, output ) );
 }
 
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
@@ -1222,7 +1224,9 @@ int mbedtls_aes_self_test( int verbose )
     int ret = 0, i, j, u, v;
     unsigned char key[32];
     unsigned char buf[64];
+#if defined(MBEDTLS_CIPHER_MODE_CBC) || defined(MBEDTLS_CIPHER_MODE_CFB)
     unsigned char iv[16];
+#endif
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
     unsigned char prv[16];
 #endif
@@ -1247,6 +1251,9 @@ int mbedtls_aes_self_test( int verbose )
         u = i >> 1;
         v = i  & 1;
 
+        /* Skip AES-192 since we can't accelerate it in HW */
+        if ( u == 1 ) continue;
+
         if( verbose != 0 )
             mbedtls_printf( "  AES-ECB-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
@@ -1255,8 +1262,7 @@ int mbedtls_aes_self_test( int verbose )
 
         if( v == MBEDTLS_AES_DECRYPT )
         {
-            ret = mbedtls_aes_setkey_dec( &ctx, key, 128 + u * 64 );
-            if (0 != ret) continue;
+            mbedtls_aes_setkey_dec( &ctx, key, 128 + u * 64 );
 
             for( j = 0; j < 10000; j++ )
                 mbedtls_aes_crypt_ecb( &ctx, v, buf, buf );
@@ -1272,8 +1278,7 @@ int mbedtls_aes_self_test( int verbose )
         }
         else
         {
-            ret = mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
-            if (0 != ret) continue;
+            mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
 
             for( j = 0; j < 10000; j++ )
                 mbedtls_aes_crypt_ecb( &ctx, v, buf, buf );
@@ -1304,6 +1309,9 @@ int mbedtls_aes_self_test( int verbose )
         u = i >> 1;
         v = i  & 1;
 
+        /* Skip AES-192 since we can't accelerate it in HW */
+        if ( u == 1 ) continue;
+
         if( verbose != 0 )
             mbedtls_printf( "  AES-CBC-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
@@ -1314,8 +1322,7 @@ int mbedtls_aes_self_test( int verbose )
 
         if( v == MBEDTLS_AES_DECRYPT )
         {
-            ret = mbedtls_aes_setkey_dec( &ctx, key, 128 + u * 64 );
-            if (0 != ret) continue;
+            mbedtls_aes_setkey_dec( &ctx, key, 128 + u * 64 );
 
             for( j = 0; j < 10000; j++ )
                 mbedtls_aes_crypt_cbc( &ctx, v, 16, iv, buf, buf );
@@ -1331,8 +1338,7 @@ int mbedtls_aes_self_test( int verbose )
         }
         else
         {
-            ret = mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
-            if (0 != ret) continue;
+            mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
 
             for( j = 0; j < 10000; j++ )
             {
@@ -1372,6 +1378,9 @@ int mbedtls_aes_self_test( int verbose )
         u = i >> 1;
         v = i  & 1;
 
+        /* Skip AES-192 since we can't accelerate it in HW */
+        if ( u == 1 ) continue;
+
         if( verbose != 0 )
             mbedtls_printf( "  AES-CFB128-%3d (%s): ", 128 + u * 64,
                              ( v == MBEDTLS_AES_DECRYPT ) ? "dec" : "enc" );
@@ -1380,8 +1389,7 @@ int mbedtls_aes_self_test( int verbose )
         memcpy( key, aes_test_cfb128_key[u], 16 + u * 8 );
 
         offset = 0;
-        ret = mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
-        if (0 != ret) continue;
+        mbedtls_aes_setkey_enc( &ctx, key, 128 + u * 64 );
 
         if( v == MBEDTLS_AES_DECRYPT )
         {
@@ -1437,8 +1445,7 @@ int mbedtls_aes_self_test( int verbose )
         memcpy( key, aes_test_ctr_key[u], 16 );
 
         offset = 0;
-        ret = mbedtls_aes_setkey_enc( &ctx, key, 128 );
-        if (0 != ret) continue;
+        mbedtls_aes_setkey_enc( &ctx, key, 128 );
 
         if( v == MBEDTLS_AES_DECRYPT )
         {

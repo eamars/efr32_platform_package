@@ -10,21 +10,25 @@
 #endif
 #endif // EMBER_STACK_CONNECT && CONNECT_DUAL_PHY
 
-#ifdef  PHY_DUAL
+#if     (defined(PHY_DUAL) || defined(PHY_SIMULATION_DUAL))
   #include "dual/phy.h"
-#endif//PHY_DUAL
+#endif//(defined(PHY_DUAL) || defined(PHY_SIMULATION_DUAL))
 
 #ifndef DUAL_DCL
-  #define DUAL_DCL(var)      var
-  #define DUAL_CBG(var)      var
+  #define DUAL_DCL(var)       var
+  #define DUAL_CBG(var)       var
   #define DUAL_CBS(var, type) var
-  #define DUAL_GET(var)      var
-  #define DUAL_INC(var)      ((var)++)
+  #define DUAL_GET(var)       var
+  #define DUAL_GET_AND(var)   var
+  #define DUAL_INC(var)       ((var)++)
   #define DUAL_SET(var, type) var
 #endif//DUAL_DCL
 
 #include "phy/phy-appended-info.h"
 
+// IS_VALID_CHANNEL() is really meant to be used only within a channel page.
+// For a full-fledged macPgChan channel-page-plus-channel-encoded value, use
+// (emPhyGetPhyChannel(macPgChan) != INVALID_CHANNEL) instead to vet validity.
 #define IS_VALID_CHANNEL(newValue)                   \
   (((newValue) <= EMBER_MAX_802_15_4_CHANNEL_NUMBER) \
    && ((EMBER_MIN_802_15_4_CHANNEL_NUMBER == 0)      \
@@ -121,7 +125,8 @@ RadioPowerMode emRadioGetPowerStatus(void);
                                    || defined(PHY_DUAL)        \
                                    || defined(PHY_PRO2)        \
                                    || defined(PHY_RAIL)        \
-                                   || defined(PHY_EFR32))      \
+                                   || defined(PHY_EFR32)       \
+                                   || defined(EMBER_TEST))     \
                                )
 #endif//MAC_HAS_CHANNEL_PAGES
 
@@ -246,7 +251,7 @@ typedef struct EmPhyDutyCycleParams {
 #endif//LABTEST
 #define RADIO_BACKOFF_EXPONENT_MIN_DEFAULT 3
 #define RADIO_BACKOFF_EXPONENT_MAX_DEFAULT 5
-#ifdef PHY_TRANSCEIVER_SIM
+#if defined(PHY_TRANSCEIVER_SIM) || defined(PHY_SIMULATION_DUAL)
 //Need min of 1 backoff otherwise it breaks while cca response
 #define RADIO_MINIMUM_BACKOFF_DEFAULT      1
 #else //!PHY_TRANSCEIVER_SIM
@@ -302,8 +307,6 @@ extern void emRadioTransmitCompleteCallback(EmberStatus status,
                                             uint32_t sfdSentTime,
                                             uint8_t framePending);
 
-extern void emRadioReceiveCompleteCallback(EmberMessageBuffer header);
-
 // Returns true if radio needs calibrating; false otherwise.
 // This function must not be called while a transmit is in progress.
 bool emRadioCheckRadio(void);
@@ -329,7 +332,6 @@ void emPhyEnableChannelMaskEnforcement(bool enable);
 bool emPhyChannelMaskEnforcementEnabled(void);
 EmberStatus emPhySetChannelMask(uint32_t pageAndChannelMask);
 uint32_t emPhyGetChannelMask(uint8_t macPage);
-EmberStatus emPhySetChannelPageToUse(uint8_t macPage);
 uint8_t emPhyGetChannelPageInUse(void);
 uint8_t emPhyGetChannelPageForChannel(uint8_t macPgChan);
 
@@ -341,12 +343,10 @@ uint8_t emPhyGetChannelPageForChannel(uint8_t macPgChan);
   #define emMacPgChanPg(macPgChan)  0
   #define emMacPgChanCh(macPgChan)  (macPgChan)
   #define emMacPgChan(page, chan)   (chan)
-  #define emPhyEnableChannelMaskEnforcement(enable) /*no-op*/
+  #define emPhyEnableChannelMaskEnforcement(enable) ((void)(enable)) /*no-op*/
   #define emPhyChannelMaskEnforcementEnabled(void)  (false)
   #define emPhySetChannelMask(pageAndChannelMask)   (EMBER_ERR_FATAL)
   #define emPhyGetChannelMask(macPage)              (0ul)
-  #define emPhySetChannelPageToUse(macPage) ((macPage) ? EMBER_ERR_FATAL \
-                                             : EMBER_SUCCESS)
   #define emPhyGetChannelPageInUse()                (0)
   #define emPhyGetChannelPageForChannel(macPgChan)  (0)
 #endif//MAC_HAS_CHANNEL_PAGES
@@ -424,13 +424,6 @@ void emRadioPowerFem(bool powerUp);
 #else
   #define emRadioPowerFem(powerUp) /* no-op */
 #endif
-
-#ifndef MAP_MAC_PG0_CHANNELS
-#define MAP_MAC_PG0_CHANNELS (PHY_PRO2PLUS                \
-                              || (PHY_DUAL  && !PHY_THIS) \
-                              || (PHY_RAIL  && !PHY_DUAL) \
-                              || (PHY_EFR32 && !PHY_DUAL))
-#endif//MAP_MAC_PG0_CHANNELS
 
 #if defined(PHY_EM2420)
   #error The EM2420 is no longer supported.
@@ -548,6 +541,14 @@ void emRadioPowerFem(bool powerUp);
                                           * EMBER_PHY_BITS_TO_SYMBOLS(EMBER_PHY_BYTE_BITS))       \
                                        )
 #endif//EMBER_PHY_ACK_TIMEOUT_SYMBOLS
+
+#if     defined(PHY_DUAL) || defined(PHY_SIMULATION_DUAL)
+// This API is the safe one to use
+extern uint32_t emPhySymbolsToUs(uint32_t symbols);
+#else//!PHY_DUAL
+// Can safely map this to the macro in single-PHY case
+  #define emPhySymbolsToUs(symbols) EMBER_PHY_SYMBOLS_TO_US(symbols)
+#endif//PHY_DUAL
 
 #ifdef EMBER_TEST
 bool _radioReceive(uint8_t *packet, uint32_t rxSynctime, uint8_t linkQuality);

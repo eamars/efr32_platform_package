@@ -233,32 +233,30 @@ const  HTTPs_HOOK_CFG  Ex_HTTP_Server_Hooks_Basic =
 *********************************************************************************************************
 */
 
-static  RTOS_TASK_CFG       Ex_HTTP_ServerTaskCfg  = {  .Prio                         = 21u,
-                                                        .StkSizeElements              = 1024u,
-                                                        .StkPtr                       = DEF_NULL };
+static  RTOS_TASK_CFG       Ex_HTTP_ServerTaskCfg  = {  .Prio                         =  21u,
+                                                        .StkSizeElements              =  1024u,
+                                                        .StkPtr                       =  DEF_NULL };
 
 static  HTTPs_CFG_FS_DYN    Ex_HTTP_ServerFS_Dyn   = {  .FS_API_Ptr                   = &NetFS_API_Native,
-                                                        .WorkingFolderNamePtr         = EX_HTTP_SERVER_FILE_VOL_NAME };
+                                                        .WorkingFolderNamePtr         =  EX_HTTP_SERVER_FILE_VOL_NAME };
 
-static  HTTPs_HDR_RX_CFG    Ex_HTTP_ServerHdrRx    = {  .NbrPerConnMax                = 15u,
-                                                        .DataLenMax                   = 128u };
+static  HTTPs_HDR_RX_CFG    Ex_HTTP_ServerHdrRx    = {  .NbrPerConnMax                =  15u,
+                                                        .DataLenMax                   =  128u };
 
-static  HTTPs_HDR_TX_CFG    Ex_HTTP_ServerHdrTx    = {  .NbrPerConnMax                = 15u,
-                                                        .DataLenMax                   = 128u };
+static  HTTPs_HDR_TX_CFG    Ex_HTTP_ServerHdrTx    = {  .NbrPerConnMax                =  15u,
+                                                        .DataLenMax                   =  128u };
 
 static  HTTPs_QUERY_STR_CFG Ex_HTTP_ServerQueryStr = {  .NbrPerConnMax                =  5u,
                                                         .KeyLenMax                    =  15u,
                                                         .ValLenMax                    =  20u };
 
-static  HTTPs_FORM_CFG      Ex_HTTP_ServerForm     = {  .NbrPerConnMax                =  15u,
-                                                        .KeyLenMax                    =  10u,
-                                                        .ValLenMax                    =  48u,
+static  HTTPs_FORM_CFG      Ex_HTTP_ServerForm     = {  .KeyLenMax                    =  10u,
+                                                        .NbrPerConnMax                =  5u,
+                                                        .ValLenMax                    =  12u,
                                                         .MultipartEn                  =  DEF_ENABLED,
                                                         .MultipartFileUploadEn        =  DEF_ENABLED,
                                                         .MultipartFileUploadOverWrEn  =  DEF_ENABLED,
-                                                        .MultipartFileUploadFolderPtr = "/",
-                                                        .NbrPerConnMax                =  5u,
-                                                        .ValLenMax                    =  12u };
+                                                        .MultipartFileUploadFolderPtr = "/" };
 
 static  HTTPs_TOKEN_CFG     Ex_HTTP_ServerToken    = {  .NbrPerConnMax                =  5u,
                                                         .ValLenMax                    =  12u };

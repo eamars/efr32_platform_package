@@ -362,7 +362,7 @@ int mbedtls_gcm_update( mbedtls_gcm_context *ctx,
     /* Total length is restricted to 2^39 - 256 bits, ie 2^36 - 2^5 bytes
      * Also check for possible overflow */
     if( ctx->len + length < ctx->len ||
-        (uint64_t) ctx->len + length > 0x03FFFFE0ull )
+        (uint64_t) ctx->len + length > 0xFFFFFFFE0ull )
     {
         return( MBEDTLS_ERR_GCM_BAD_INPUT );
     }
@@ -415,8 +415,7 @@ int mbedtls_gcm_finish( mbedtls_gcm_context *ctx,
     if( tag_len > 16 || tag_len < 4 )
         return( MBEDTLS_ERR_GCM_BAD_INPUT );
 
-    if( tag_len != 0 )
-        memcpy( tag, ctx->base_ectr, tag_len );
+    memcpy( tag, ctx->base_ectr, tag_len );
 
     if( orig_len || orig_add_len )
     {
@@ -747,6 +746,9 @@ int mbedtls_gcm_self_test( int verbose )
 
     for( j = 0; j < 3; j++ )
     {
+        /* Skip AES-192 since we can't accelerate it */
+        if ( j == 1 ) continue;
+
         int key_len = 128 + 64 * j;
 
         for( i = 0; i < MAX_TESTS; i++ )
@@ -755,10 +757,7 @@ int mbedtls_gcm_self_test( int verbose )
                 mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
                                  key_len, i, "enc" );
 
-            ret = mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
-            if (MBEDTLS_ERR_AES_INVALID_KEY_LENGTH == ret)
-                /* Key size not supported. */
-                continue;
+            mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
 
             ret = mbedtls_gcm_crypt_and_tag( &ctx, MBEDTLS_GCM_ENCRYPT,
                                      pt_len[i],
@@ -785,10 +784,7 @@ int mbedtls_gcm_self_test( int verbose )
                 mbedtls_printf( "  AES-GCM-%3d #%d (%s): ",
                                  key_len, i, "dec" );
 
-            ret = mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
-            if (MBEDTLS_ERR_AES_INVALID_KEY_LENGTH == ret)
-                /* Key size not supported. */
-                continue;
+            mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
 
             ret = mbedtls_gcm_crypt_and_tag( &ctx, MBEDTLS_GCM_DECRYPT,
                                      pt_len[i],
@@ -815,10 +811,7 @@ int mbedtls_gcm_self_test( int verbose )
                 mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
                                  key_len, i, "enc" );
 
-            ret = mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
-            if (MBEDTLS_ERR_AES_INVALID_KEY_LENGTH == ret)
-                /* Key size not supported. */
-                continue;
+            mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
 
             ret = mbedtls_gcm_starts( &ctx, MBEDTLS_GCM_ENCRYPT,
                               iv[iv_index[i]], iv_len[i],
@@ -885,10 +878,7 @@ int mbedtls_gcm_self_test( int verbose )
                 mbedtls_printf( "  AES-GCM-%3d #%d split (%s): ",
                                  key_len, i, "dec" );
 
-            ret = mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
-            if (MBEDTLS_ERR_AES_INVALID_KEY_LENGTH == ret)
-                /* Key size not supported. */
-                continue;
+            mbedtls_gcm_setkey( &ctx, cipher, key[key_index[i]], key_len );
 
             ret = mbedtls_gcm_starts( &ctx, MBEDTLS_GCM_DECRYPT,
                               iv[iv_index[i]], iv_len[i],

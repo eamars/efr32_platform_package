@@ -412,6 +412,7 @@ typedef  enum  rtos_err_code {
     RTOS_ERR_DECLARE(RTOS_ERR_VOL_CORRUPTED,           "Volume metadata is corrupted.")
     RTOS_ERR_DECLARE(RTOS_ERR_VOL_OPENED,              "Operation not allowed on opened volume.")
     RTOS_ERR_DECLARE(RTOS_ERR_VOL_CLOSED,              "Operation not allowed on closed volume.")
+    RTOS_ERR_DECLARE(RTOS_ERR_VOL_RD_ONLY,             "Volume is read-only.")
     RTOS_ERR_DECLARE(RTOS_ERR_VOL_FULL,                "Volume is full.")
 
     RTOS_ERR_DECLARE(RTOS_ERR_PARTITION_INVALID,      "Partition is invalid.")
@@ -483,6 +484,7 @@ typedef  enum  rtos_err_code {
     RTOS_ERR_DECLARE(RTOS_ERR_NET_SOCK_CLOSED,              "The operation cannot be done because the socket is closed.")
     RTOS_ERR_DECLARE(RTOS_ERR_NET_STR_ADDR_INVALID,         "The string address is in an invalid format.")
     RTOS_ERR_DECLARE(RTOS_ERR_NET_PHY_TIMEOUT_AUTO_NEG,     "The PHY auto-negotiation timed out.")
+	RTOS_ERR_DECLARE(RTOS_ERR_NET_SSL,                      "TLS/SSL Error.")
                                                                 /* MQTT-Specific.                                       */
     RTOS_ERR_DECLARE(RTOS_ERR_MQTT_MSG_FAIL,               "Message failed to complete correctly.")
     RTOS_ERR_DECLARE(RTOS_ERR_MQTTc_QoS_LEVEL_NOT_GRANTED, "Broker failed to grant QoS level requested.")

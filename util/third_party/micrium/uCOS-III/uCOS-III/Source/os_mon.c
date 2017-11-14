@@ -10,7 +10,7 @@
 *
 * File    : OS_MON.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -80,7 +80,7 @@ void  OSMonCreate (OS_MON   *p_mon,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -101,7 +101,7 @@ void  OSMonCreate (OS_MON   *p_mon,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_mon == DEF_NULL) {                                    /* Validate 'p_mon'                                     */
+    if (p_mon == (OS_MON *)0) {                                 /* Validate 'p_mon'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -125,7 +125,7 @@ void  OSMonCreate (OS_MON   *p_mon,
     OSMonQty++;
 #endif
 
-    if (p_mon_data != DEF_NULL) {
+    if (p_mon_data != (void *)0) {
         p_mon->MonDataPtr = p_mon_data;
     }
 
@@ -184,7 +184,7 @@ OS_OBJ_QTY  OSMonDel (OS_MON  *p_mon,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -212,7 +212,7 @@ OS_OBJ_QTY  OSMonDel (OS_MON  *p_mon,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_mon == DEF_NULL) {                                    /* Validate 'p_mon'                                     */
+    if (p_mon == (OS_MON *)0) {                                 /* Validate 'p_mon'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return (0u);
     }
@@ -230,7 +230,7 @@ OS_OBJ_QTY  OSMonDel (OS_MON  *p_mon,
     nbr_tasks   = 0u;
     switch (opt) {
          case OS_OPT_DEL_NO_PEND:                                /* Delete monitor only if no task waiting               */
-              if (p_pend_list->HeadPtr == DEF_NULL) {
+              if (p_pend_list->HeadPtr == (OS_TCB *)0) {
  #if (OS_CFG_DBG_EN == DEF_ENABLED)
                   OS_MonDbgListRemove(p_mon);
                   OSMonQty--;
@@ -244,8 +244,8 @@ OS_OBJ_QTY  OSMonDel (OS_MON  *p_mon,
               }
               break;
 
-         case OS_OPT_DEL_ALWAYS:                                 /* Always delete the monitor                            */
-              while (p_pend_list->HeadPtr != DEF_NULL) {         /* Remove all tasks on the pend list                    */
+         case OS_OPT_DEL_ALWAYS:                                /* Always delete the monitor                            */
+              while (p_pend_list->HeadPtr != (OS_TCB *)0) {     /* Remove all tasks on the pend list                    */
                   p_tcb = p_pend_list->HeadPtr;
                   OS_PendAbort(p_tcb,
                                0,
@@ -288,8 +288,6 @@ OS_OBJ_QTY  OSMonDel (OS_MON  *p_mon,
 *
 *              p_on_eval  Callback to be registered as the monitor's evaluation function.
 *
-*              p_mon_ctx  Monitor context. Unused should be DEF_NULL.
-*
 *              opt        Possible options are :
 *                           OS_OPT_POST_NO_SCHED     Do not call the scheduler
 *
@@ -324,7 +322,7 @@ void  OSMonOp (OS_MON               *p_mon,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -338,7 +336,7 @@ void  OSMonOp (OS_MON               *p_mon,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_mon == DEF_NULL) {                                    /* Validate 'p_mon'                                     */
+    if (p_mon == (OS_MON *)0) {                                 /* Validate 'p_mon'                                     */
        *p_err  = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -348,14 +346,14 @@ void  OSMonOp (OS_MON               *p_mon,
 
     CPU_CRITICAL_ENTER();
 
-    if (p_on_enter != DEF_NULL) {
+    if (p_on_enter != (OS_MON_ON_ENTER_PTR)0) {
         op_res = (*p_on_enter)(p_mon, p_arg);
     } else {
         op_res = OS_MON_RES_BLOCK | OS_MON_RES_STOP_EVAL;
     }
 
     if (DEF_BIT_IS_SET(op_res, OS_MON_RES_BLOCK) == DEF_YES) {
-        OS_Pend((OS_PEND_OBJ *)(p_mon),                         /* Block task pending on Condition Variable             */
+        OS_Pend((OS_PEND_OBJ *)((void *)p_mon),                 /* Block task pending on Condition Variable             */
                 OS_TASK_PEND_ON_COND_VAR,
                 timeout);
 
@@ -367,22 +365,22 @@ void  OSMonOp (OS_MON               *p_mon,
 
     if (DEF_BIT_IS_CLR(op_res, OS_MON_RES_STOP_EVAL) == DEF_YES) {
         p_pend_list = &p_mon->PendList;
-        if (p_pend_list->HeadPtr != DEF_NULL) {
+        if (p_pend_list->HeadPtr != (OS_TCB *)0) {
             p_tcb = p_pend_list->HeadPtr;
-            while (p_tcb != DEF_NULL) {
+            while (p_tcb != (OS_TCB *)0) {
                 p_tcb_next = p_tcb->PendNextPtr;
 
                 p_on_eval   = p_tcb->MonData.p_on_eval;
                 p_eval_data = p_tcb->MonData.p_eval_data;
 
-                if (p_on_eval != DEF_NULL) {
+                if (p_on_eval != (OS_MON_ON_EVAL_PTR)0) {
                     mon_res = (*p_on_eval)(p_mon, p_eval_data, p_arg);
                 } else {
                     mon_res = OS_MON_RES_STOP_EVAL;
                 }
 
                 if (DEF_BIT_IS_CLR(mon_res, OS_MON_RES_BLOCK) == DEF_YES) {
-                    OS_Post((OS_PEND_OBJ *)(p_mon), p_tcb, DEF_NULL, 0u, 0u);
+                    OS_Post((OS_PEND_OBJ *)((void *)p_mon), p_tcb, (void *)0, 0u, 0u);
                     if (DEF_BIT_IS_CLR(opt, OS_OPT_POST_NO_SCHED) == DEF_YES) {
                         sched = DEF_YES;
                     }
@@ -424,6 +422,7 @@ void  OSMonOp (OS_MON               *p_mon,
 
             default:
                 *p_err = OS_ERR_STATUS_INVALID;
+                 break;
         }
         CPU_CRITICAL_EXIT();
     } else {
@@ -453,7 +452,7 @@ void  OS_MonClr (OS_MON  *p_mon)
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
     p_mon->Type       = OS_OBJ_TYPE_NONE;                       /* Mark the data structure as a NONE                    */
 #endif
-    p_mon->MonDataPtr = DEF_NULL;
+    p_mon->MonDataPtr = (void *)0;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     p_mon->NamePtr    = (CPU_CHAR *)((void *)"?MON");
 #endif
@@ -479,9 +478,9 @@ void  OS_MonClr (OS_MON  *p_mon)
 void  OS_MonDbgListAdd (OS_MON  *p_mon)
 {
     p_mon->DbgNamePtr               = (CPU_CHAR *)((void *)" ");
-    p_mon->DbgPrevPtr               = DEF_NULL;
-    if (OSMonDbgListPtr == DEF_NULL) {
-        p_mon->DbgNextPtr           = DEF_NULL;
+    p_mon->DbgPrevPtr               = (OS_MON *)0;
+    if (OSMonDbgListPtr == (OS_MON *)0) {
+        p_mon->DbgNextPtr           = (OS_MON *)0;
     } else {
         p_mon->DbgNextPtr           =  OSMonDbgListPtr;
         OSMonDbgListPtr->DbgPrevPtr =  p_mon;
@@ -499,22 +498,22 @@ void  OS_MonDbgListRemove (OS_MON  *p_mon)
     p_mon_prev = p_mon->DbgPrevPtr;
     p_mon_next = p_mon->DbgNextPtr;
 
-    if (p_mon_prev == DEF_NULL) {
-        OSMonDbgListPtr = p_mon_next;
-        if (p_mon_next != DEF_NULL) {
-            p_mon_next->DbgPrevPtr = DEF_NULL;
+    if (p_mon_prev == (OS_MON *)0) {
+        OSMonDbgListPtr   =  p_mon_next;
+        if (p_mon_next != (OS_MON *)0) {
+            p_mon_next->DbgPrevPtr = (OS_MON *)0;
         }
-        p_mon->DbgNextPtr = DEF_NULL;
+        p_mon->DbgNextPtr = (OS_MON *)0;
 
-    } else if (p_mon_next == DEF_NULL) {
-        p_mon_prev->DbgNextPtr = DEF_NULL;
-        p_mon->DbgPrevPtr      = DEF_NULL;
+    } else if (p_mon_next == (OS_MON *)0) {
+        p_mon_prev->DbgNextPtr = (OS_MON *)0;
+        p_mon->DbgPrevPtr      = (OS_MON *)0;
 
     } else {
         p_mon_prev->DbgNextPtr =  p_mon_next;
         p_mon_next->DbgPrevPtr =  p_mon_prev;
-        p_mon->DbgNextPtr      = DEF_NULL;
-        p_mon->DbgPrevPtr      = DEF_NULL;
+        p_mon->DbgNextPtr      = (OS_MON *)0;
+        p_mon->DbgPrevPtr      = (OS_MON *)0;
     }
 }
 #endif

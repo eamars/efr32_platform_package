@@ -2,7 +2,7 @@
  * @file btl_storage_internal_flash.c
  * @brief Internal flash storage plugin for Silicon Labs Bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>

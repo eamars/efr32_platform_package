@@ -10,7 +10,7 @@ bootloader-uart-bgapi {
   name=BGAPI UART DFU Bootloader
   dir=bootloader-uart-bgapi/
   isc=bootloader-uart-bgapi/bootloader-uart-bgapi.isc
-  architecture=efr32~series[1],efm32~series[1]
+  architecture=efr32~series[1]
   Standalone Bootloader for the BLE protocol stack,
   using the BGAPI protocol for UART DFU.
 }
@@ -18,7 +18,7 @@ bootloader-spi-ezsp {
   name=EZSP SPI Bootloader
   dir=bootloader-spi-ezsp/
   isc=bootloader-spi-ezsp/bootloader-spi-ezsp.isc
-  architecture=efr32~series[1],efm32~series[1]
+  architecture=efr32~series[1]
   Standalone Bootloader for EmberZNet, Thread and Flex protocol stacks,
   using EZSP over SPI.
 }
@@ -70,7 +70,7 @@ bootloader-storage-internal-single-512k {
   name=Internal Storage Bootloader (single image on 512kB device)
   dir=bootloader-storage-internal-single-512k/
   isc=bootloader-storage-internal-single-512k/bootloader-storage-internal-single-512k.isc
-  architecture=efr32~series[1],efm32~series[1]
+  architecture=efr32~series[1]
   Application Bootloader for all Wireless protocol stacks, using internal
   flash to store upgrade images received OTA by the application. This sample
   configuration supports storing a single firmware update image at a time, and

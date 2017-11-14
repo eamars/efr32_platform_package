@@ -10,6 +10,7 @@
 
 #include "rail.h"
 #include "app_common.h"
+#include "app_trx.h"
 
 // Helper routine to parse the RAIL timer mode from a command line string
 bool parseTimeModeFromString(char *str, RAIL_TimeMode_t *mode);
@@ -18,7 +19,6 @@ void tx(int argc, char **argv)
 {
   uint32_t newTxCount = ciGetUnsigned(argv[1]);
   radioTransmit(newTxCount, argv[0]);
-  // Do not use RAIL_TxStartWithOptions
   txOptionsPtr = NULL;
 }
 
@@ -26,71 +26,43 @@ void txWithOptions(int argc, char **argv)
 {
   uint32_t newTxCount = ciGetUnsigned(argv[1]);
   radioTransmit(newTxCount, argv[0]);
-  // Do not use RAIL_TxStartWithOptions
+
   txOptionsPtr = &txOptions;
 }
 
 void configTxOptions(int argc, char **argv)
 {
-  // Putting masks here for this because they should
-  // ONLY be used here. In RAIL, TX Options are
-  // maintained with RAIL_TxOptions_t, not bitmasks.
-  #define CONFIG_WAIT_FOR_ACK_MASK  1
-  #define CONFIG_REMOVE_CRC_MASK  2
-  #define CONFIG_SYNC_WORD_ID_MASK 4
-
-  uint32_t options = ciGetUnsigned(argv[1]);
-
-  txOptions.waitForAck = !!(options & CONFIG_WAIT_FOR_ACK_MASK);
-  txOptions.removeCrc = !!(options & CONFIG_REMOVE_CRC_MASK);
-  txOptions.syncWordId = !!(options & CONFIG_SYNC_WORD_ID_MASK);
+  txOptions = ciGetUnsigned(argv[1]);
 
   txOptionsPtr = &txOptions;
-  responsePrint(argv[0], "waitForAck:%s,removeCrc:%s,syncWordId:%d",
-                (txOptions.waitForAck ? "True" : "False"),
-                (txOptions.removeCrc ? "True" : "False"),
-                txOptions.syncWordId);
 
-  // Making sure these are not used outside this function
-  #undef CONFIG_WAIT_FOR_ACK_MASK
-  #undef CONFIG_REMOVE_CRC_MASK
-  #undef CONFIG_SYNC_WORD_ID_MASK
+  responsePrint(argv[0], "waitForAck:%s,removeCrc:%s,syncWordId:%d",
+                ((txOptions & RAIL_TX_OPTION_WAIT_FOR_ACK) ? "True" : "False"),
+                ((txOptions & RAIL_TX_OPTION_REMOVE_CRC) ? "True" : "False"),
+                (txOptions & RAIL_TX_OPTION_SYNC_WORD_ID) >> RAIL_TX_OPTION_SYNC_WORD_ID_SHIFT);
 }
 
 void txAtTime(int argc, char **argv)
 {
-  bool isAbs = true;
-  RAIL_TimeMode_t mode;
-  uint32_t txTime = ciGetUnsigned(argv[1]);
+  // DEFAULTS: 0 ms, absolute time, postponse tx during rx
+  RAIL_ScheduleTxConfig_t scheduledTxOptions = { 0 };
+  scheduledTxOptions.when = ciGetUnsigned(argv[1]);
 
   // Attempt to parse the time mode if specified
   if (argc >= 3) {
-    if (!parseTimeModeFromString(argv[2], &mode)) {
-      responsePrintError(argv[0], 28, "Invalid time mode");
-      return;
-    }
-    if (mode == RAIL_TIME_DELAY) {
-      isAbs = false;
-    } else if (mode == RAIL_TIME_ABSOLUTE) {
-      isAbs = true;
-    } else {
+    if (!parseTimeModeFromString(argv[2], &scheduledTxOptions.mode)) {
       responsePrintError(argv[0], 28, "Invalid time mode");
       return;
     }
   }
-  setNextPacketTime(txTime, isAbs);
+
+  scheduledTxOptions.txDuringRx =
+    (argc >= 4 && strcasecmp("abort", argv[3]) == 0)
+    ? RAIL_SCHEDULED_TX_DURING_RX_ABORT_TX
+    : RAIL_SCHEDULED_TX_DURING_RX_POSTPONE_TX;
+
+  setNextPacketTime(&scheduledTxOptions);
   setNextAppMode(TX_SCHEDULED, argv[0]);
-}
-
-void abortScheduledTxDuringRx(int argc, char **argv)
-{
-  bool abort = !!ciGetUnsigned(argv[1]);
-
-  RAIL_SetAbortScheduledTxDuringRx(abort);
-
-  responsePrint(argv[0],
-                "abortScheduledTxDuringRx:%s",
-                abort ? "True" : "False");
 }
 
 void txAfterRx(int argc, char **argv)
@@ -98,24 +70,6 @@ void txAfterRx(int argc, char **argv)
   uint32_t delay = ciGetUnsigned(argv[1]);
   txAfterRxDelay = delay;
   enableAppMode(SCHTX_AFTER_RX, (delay != 0), argv[0]);
-}
-
-void rxConfig(int argc, char ** argv)
-{
-  if ((!inAppMode(NONE, argv[0]))
-      || (!inRadioState(RAIL_RF_STATE_IDLE, argv[0]))) {
-    return;
-  }
-
-  bool appendedInfo = ciGetUnsigned(argv[1]);
-
-  RAIL_RxConfig((RAIL_RX_CONFIG_FRAME_ERROR
-                 | RAIL_RX_CONFIG_SYNC1_DETECT
-                 | RAIL_RX_CONFIG_ADDRESS_FILTERED
-                 | RAIL_RX_CONFIG_BUFFER_OVERFLOW
-                 | RAIL_RX_CONFIG_SCHEDULED_RX_END
-                 | RAIL_RX_CONFIG_PACKET_ABORTED),
-                appendedInfo);
 }
 
 void rx(int argc, char **argv)
@@ -137,14 +91,15 @@ void rx(int argc, char **argv)
   }
 
   // Make sure this transition is allowed
-  if ((enable && (RAIL_RfStateGet() == RAIL_RF_STATE_RX))
-      || (!enable && (RAIL_RfStateGet() == RAIL_RF_STATE_IDLE))) {
+  RAIL_RadioState_t currentState = RAIL_GetRadioState(railHandle);
+  if ((enable && (currentState & RAIL_RF_STATE_RX))
+      || (!enable && (currentState <= RAIL_RF_STATE_IDLE))) {
     // Do nothing since we're already in the right state
-  } else if (enable && inRadioState(RAIL_RF_STATE_IDLE, argv[0])) {
-    RAIL_RxStart(channel);
+  } else if (enable) {
+    RAIL_StartRx(railHandle, channel, NULL);
     receiveModeEnabled = enable;
-  } else if (!enable) {
-    RAIL_RfIdle();
+  } else {
+    RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
     receiveModeEnabled = enable;
 
     // Turn off ScheduledRx if we were in it
@@ -223,7 +178,7 @@ void rxAt(int argc, char **argv)
   }
 
   // Enable scheduled receive mode
-  uint8_t res = RAIL_ScheduleRx(channel, &rxCfg);
+  uint8_t res = RAIL_ScheduleRx(railHandle, channel, &rxCfg, NULL);
   if (res != RAIL_STATUS_NO_ERROR) {
     responsePrintError(argv[0], 27, "Could not start scheduled receive %d", res);
     if (!scheduledRxUpdate) {
@@ -235,14 +190,20 @@ void rxAt(int argc, char **argv)
 
 void setRxOptions(int argc, char **argv)
 {
-  uint32_t rxOptions = ciGetUnsigned(argv[1]);
-  RAIL_Status_t status = RAIL_SetRxOptions(rxOptions);
+  RAIL_RxOptions_t rxOptions = ciGetUnsigned(argv[1]);
+  RAIL_Status_t status = RAIL_ConfigRxOptions(railHandle,
+                                              RAIL_RX_OPTIONS_ALL,
+                                              rxOptions);
 
   if (status == RAIL_STATUS_NO_ERROR) {
-    responsePrint(argv[0], "storeCrc:%s,ignoreCrcErrors:%s,enableDualSync:%s",
+    responsePrint(argv[0],
+                  "storeCrc:%s,ignoreCrcErrors:%s,enableDualSync:%s,"
+                  "trackAborted:%s,removeAppendedInfo:%s",
                   (rxOptions & RAIL_RX_OPTION_STORE_CRC) ? "True" : "False",
                   (rxOptions & RAIL_RX_OPTION_IGNORE_CRC_ERRORS) ? "True" : "False",
-                  (rxOptions & RAIL_RX_OPTION_ENABLE_DUALSYNC) ? "True" : "False");
+                  (rxOptions & RAIL_RX_OPTION_ENABLE_DUALSYNC) ? "True" : "False",
+                  (rxOptions & RAIL_RX_OPTION_TRACK_ABORTED_FRAMES) ? "True" : "False",
+                  (rxOptions & RAIL_RX_OPTION_REMOVE_APPENDED_INFO) ? "True" : "False");
   } else {
     responsePrintError(argv[0], 31, "RxOptions:Failed");
   }
@@ -277,16 +238,16 @@ void setDirectTx(int argc, char **argv)
   }
 
   // Stop whatever we were doing so we can go into Tx
-  RAIL_RfIdle();
+  RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
 
   // Either enable or disable the transmitter
   if (enable) {
     // Turn on Tx
-    RAIL_TxStart(channel, NULL, NULL);
+    RAIL_StartTx(railHandle, channel, RAIL_TX_OPTIONS_DEFAULT, NULL);
   } else {
     // Wait for RxStart to succeed
-    while (receiveModeEnabled && RAIL_RxStart(channel)) {
-      RAIL_RfIdle();
+    while (receiveModeEnabled && RAIL_StartRx(railHandle, channel, NULL)) {
+      RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
     }
   }
   responsePrint(argv[0], "DirectTx:%s", (enable ? "Enabled" : "Disabled"));
@@ -306,6 +267,14 @@ extern volatile bool serEvent;
 static const char *rfBands[] = { "Off", "GHz", "MHz", "Any", };
 static RAIL_RfSenseBand_t rfBand = RAIL_RFSENSE_OFF;
 static uint32_t rfUs = 0;
+
+static void RAILCb_SensedRf(void)
+{
+  counters.rfSensedEvent++;
+  if (counters.rfSensedEvent == 0) { // Wrap it to 1 not 0
+    counters.rfSensedEvent = 1;
+  }
+}
 
 void sleep(int argc, char **argv)
 {
@@ -356,7 +325,7 @@ void sleep(int argc, char **argv)
 
     // Shut down radio packet reception and Peripherals for EM2+ sleep
     if (emMode >= 2) {
-      RAIL_RfIdle();
+      RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
       PeripheralDisable();
       GPIO_EM4SetPinRetention(true);
     }
@@ -369,12 +338,12 @@ void sleep(int argc, char **argv)
                   rfBands[rfBand & 0x3]);
     serialWaitForTxIdle();
 
-    // Disable interrupts heading into RAIL_RfSense() so we don't miss
+    // Disable interrupts heading into RAIL_StartRfSense() so we don't miss
     // the event occurring before we try to sleep.
     CORE_DECLARE_IRQ_STATE;
     CORE_ENTER_CRITICAL();
 
-    rfUs = RAIL_RfSense(rfBand, rfUs, enableCb);
+    rfUs = RAIL_StartRfSense(railHandle, rfBand, rfUs, enableCb ? (&RAILCb_SensedRf) : NULL);
 
     // Configure the USART Rx pin as a GPIO interrupt for sleep-wake purposes,
     // falling-edge only
@@ -416,7 +385,7 @@ void sleep(int argc, char **argv)
      #endif//DEBUG_SLEEP_LOOP
       CORE_EXIT_CRITICAL(); // Briefly enable IRQs to let them run
       CORE_ENTER_CRITICAL(); // but shut back off in case we loop
-      rfSensed = RAIL_RfSensed();
+      rfSensed = RAIL_IsRfSensed(railHandle);
     } while (!rfSensed && !serEvent);
     CORE_EXIT_CRITICAL(); // Back on permanently
 
@@ -472,8 +441,8 @@ void sleep(int argc, char **argv)
     }
 
     // Restart Rx if we're in Rx mode
-    while (receiveModeEnabled && RAIL_RxStart(channel)) {
-      RAIL_RfIdle();
+    while (receiveModeEnabled && RAIL_StartRx(railHandle, channel, NULL)) {
+      RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
     }
     // Restart peripherals if they were active before sleeping
     if ((emMode >= 2) && (logLevel & PERIPHERAL_ENABLE)) {
@@ -498,7 +467,7 @@ void rfSense(int argc, char **argv)
     return;
   }
 
-  rfUs = RAIL_RfSense(rfBand, rfUs, true); // Need the callback for counting
+  rfUs = RAIL_StartRfSense(railHandle, rfBand, rfUs, &RAILCb_SensedRf); // Need the callback for counting
   if (rfUs == 0) { // error
     rfBand = RAIL_RFSENSE_OFF;
   }
@@ -506,10 +475,18 @@ void rfSense(int argc, char **argv)
                 rfBands[rfBand & 0x3], rfUs);
 }
 
+void printTxAcks(int argc, char **argv)
+{
+  printTxAck = !!ciGetUnsigned(argv[1]);
+
+  responsePrint(argv[0], "printTxAcks:%s",
+                printTxAck ? "True" : "False");
+}
+
 void rfSensedCheck(void)
 {
   // If in RfSensing background mode, see if Rf got sensed
-  if ((currentAppMode() == RF_SENSE) && RAIL_RfSensed()) {
+  if ((currentAppMode() == RF_SENSE) && RAIL_IsRfSensed(railHandle)) {
     // Yes, it did!  Terminate RfSensing background mode
     enableAppMode(RF_SENSE, false, NULL);
     responsePrint("rfSensedCheck", "RfSensed:%s,RfUs:%u",

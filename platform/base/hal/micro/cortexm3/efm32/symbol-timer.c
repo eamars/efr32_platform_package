@@ -6,7 +6,6 @@
  */
 
 #include PLATFORM_HEADER
-#include BOARD_HEADER
 
 #include "em_device.h"
 

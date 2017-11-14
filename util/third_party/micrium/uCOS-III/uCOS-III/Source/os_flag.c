@@ -10,7 +10,7 @@
 *
 * File    : OS_FLAG.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -75,7 +75,7 @@ void  OSFlagCreate (OS_FLAG_GRP  *p_grp,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -96,7 +96,7 @@ void  OSFlagCreate (OS_FLAG_GRP  *p_grp,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_grp == DEF_NULL) {                                    /* Validate 'p_grp'                                     */
+    if (p_grp == (OS_FLAG_GRP *)0) {                            /* Validate 'p_grp'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -176,7 +176,7 @@ OS_OBJ_QTY  OSFlagDel (OS_FLAG_GRP  *p_grp,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -209,7 +209,7 @@ OS_OBJ_QTY  OSFlagDel (OS_FLAG_GRP  *p_grp,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_grp == DEF_NULL) {                                    /* Validate 'p_grp'                                     */
+    if (p_grp == (OS_FLAG_GRP *)0) {                            /* Validate 'p_grp'                                     */
         OS_TRACE_FLAG_DEL_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err  = OS_ERR_OBJ_PTR_NULL;
         return (0u);
@@ -228,7 +228,7 @@ OS_OBJ_QTY  OSFlagDel (OS_FLAG_GRP  *p_grp,
     nbr_tasks   = 0u;
     switch (opt) {
         case OS_OPT_DEL_NO_PEND:                                /* Delete group if no task waiting                      */
-             if (p_pend_list->HeadPtr == DEF_NULL) {
+             if (p_pend_list->HeadPtr == (OS_TCB *)0) {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                  OS_FlagDbgListRemove(p_grp);
                  OSFlagQty--;
@@ -251,7 +251,7 @@ OS_OBJ_QTY  OSFlagDel (OS_FLAG_GRP  *p_grp,
 #else
              ts = 0u;
 #endif
-             while (p_pend_list->HeadPtr != DEF_NULL) {         /* Remove all tasks from the pend list                  */
+             while (p_pend_list->HeadPtr != (OS_TCB *)0) {      /* Remove all tasks from the pend list                  */
                  p_tcb = p_pend_list->HeadPtr;
                  OS_PendAbort(p_tcb,
                               ts,
@@ -362,7 +362,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -388,7 +388,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_grp == DEF_NULL) {                                    /* Validate 'p_grp'                                     */
+    if (p_grp == (OS_FLAG_GRP *)0) {                            /* Validate 'p_grp'                                     */
         OS_TRACE_FLAG_PEND_FAILED(p_grp);
         OS_TRACE_FLAG_PEND_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err = OS_ERR_OBJ_PTR_NULL;
@@ -407,10 +407,10 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
         case OS_OPT_PEND_FLAG_CLR_ANY | OS_OPT_PEND_NON_BLOCKING:
         case OS_OPT_PEND_FLAG_SET_ALL | OS_OPT_PEND_NON_BLOCKING:
         case OS_OPT_PEND_FLAG_SET_ANY | OS_OPT_PEND_NON_BLOCKING:
-        case OS_OPT_PEND_FLAG_CLR_ALL | OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING:
-        case OS_OPT_PEND_FLAG_CLR_ANY | OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING:
-        case OS_OPT_PEND_FLAG_SET_ALL | OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING:
-        case OS_OPT_PEND_FLAG_SET_ANY | OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING:
+        case OS_OPT_PEND_FLAG_CLR_ALL | (OS_OPT)(OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING):
+        case OS_OPT_PEND_FLAG_CLR_ANY | (OS_OPT)(OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING):
+        case OS_OPT_PEND_FLAG_SET_ALL | (OS_OPT)(OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING):
+        case OS_OPT_PEND_FLAG_SET_ANY | (OS_OPT)(OS_OPT_PEND_FLAG_CONSUME | OS_OPT_PEND_NON_BLOCKING):
              break;
 
         default:
@@ -436,7 +436,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
         consume = DEF_FALSE;
     }
 
-    if (p_ts != DEF_NULL) {
+    if (p_ts != (CPU_TS *)0) {
        *p_ts = 0u;                                              /* Initialize the returned timestamp                    */
     }
 
@@ -451,7 +451,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  }
                  OSTCBCurPtr->FlagsRdy = flags_rdy;             /* Save flags that were ready                           */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-                 if (p_ts != DEF_NULL) {
+                 if (p_ts != (CPU_TS *)0) {
                     *p_ts = p_grp->TS;
                  }
 #endif
@@ -493,7 +493,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  }
                  OSTCBCurPtr->FlagsRdy = flags_rdy;             /* Save flags that were ready                           */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-                 if (p_ts != DEF_NULL) {
+                 if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
 #endif
@@ -534,7 +534,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  }
                  OSTCBCurPtr->FlagsRdy = flags_rdy;             /* Save flags that were ready                           */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-                 if (p_ts != DEF_NULL) {
+                 if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
 #endif
@@ -574,7 +574,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
                  }
                  OSTCBCurPtr->FlagsRdy = flags_rdy;             /* Save flags that were ready                           */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-                 if (p_ts != DEF_NULL) {
+                 if (p_ts != (CPU_TS *)0) {
                     *p_ts  = p_grp->TS;
                  }
 #endif
@@ -623,7 +623,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
     switch (OSTCBCurPtr->PendStatus) {
         case OS_STATUS_PEND_OK:                                 /* We got the event flags                               */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -633,7 +633,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
 
         case OS_STATUS_PEND_ABORT:                              /* Indicate that we aborted                             */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -643,7 +643,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
              break;
 
         case OS_STATUS_PEND_TIMEOUT:                            /* Indicate that we didn't get semaphore within timeout */
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = 0u;
              }
              CPU_CRITICAL_EXIT();
@@ -653,7 +653,7 @@ OS_FLAGS  OSFlagPend (OS_FLAG_GRP  *p_grp,
 
         case OS_STATUS_PEND_DEL:                                /* Indicate that object pended on has been deleted      */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -750,7 +750,7 @@ OS_OBJ_QTY  OSFlagPendAbort (OS_FLAG_GRP  *p_grp,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return ((OS_OBJ_QTY)0u);
     }
@@ -771,7 +771,7 @@ OS_OBJ_QTY  OSFlagPendAbort (OS_FLAG_GRP  *p_grp,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_grp == DEF_NULL) {                                    /* Validate 'p_grp'                                     */
+    if (p_grp == (OS_FLAG_GRP *)0) {                            /* Validate 'p_grp'                                     */
        *p_err  =  OS_ERR_OBJ_PTR_NULL;
         return (0u);
     }
@@ -797,7 +797,7 @@ OS_OBJ_QTY  OSFlagPendAbort (OS_FLAG_GRP  *p_grp,
 
     CPU_CRITICAL_ENTER();
     p_pend_list = &p_grp->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on flag group?                      */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on flag group?                      */
         CPU_CRITICAL_EXIT();                                    /* No                                                   */
        *p_err = OS_ERR_PEND_ABORT_NONE;
         return (0u);
@@ -810,7 +810,7 @@ OS_OBJ_QTY  OSFlagPendAbort (OS_FLAG_GRP  *p_grp,
     ts        = 0u;
 #endif
 
-    while (p_pend_list->HeadPtr != DEF_NULL) {
+    while (p_pend_list->HeadPtr != (OS_TCB *)0) {
         p_tcb = p_pend_list->HeadPtr;
         OS_PendAbort(p_tcb,
                      ts,
@@ -858,7 +858,7 @@ OS_FLAGS  OSFlagPendGetFlagsRdy (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return ((OS_FLAGS)0);
     }
@@ -945,7 +945,7 @@ OS_FLAGS  OSFlagPost (OS_FLAG_GRP  *p_grp,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -962,7 +962,7 @@ OS_FLAGS  OSFlagPost (OS_FLAG_GRP  *p_grp,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_grp == DEF_NULL) {                                    /* Validate 'p_grp'                                     */
+    if (p_grp == (OS_FLAG_GRP *)0) {                            /* Validate 'p_grp'                                     */
         OS_TRACE_FLAG_POST_FAILED(p_grp);
         OS_TRACE_FLAG_POST_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err  = OS_ERR_OBJ_PTR_NULL;
@@ -1009,7 +1009,7 @@ OS_FLAGS  OSFlagPost (OS_FLAG_GRP  *p_grp,
     p_grp->TS   = ts;
 #endif
     p_pend_list = &p_grp->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on event flag group?                */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on event flag group?                */
         CPU_CRITICAL_EXIT();                                    /* No                                                   */
        *p_err = OS_ERR_NONE;
         OS_TRACE_FLAG_POST_EXIT(*p_err);
@@ -1017,7 +1017,7 @@ OS_FLAGS  OSFlagPost (OS_FLAG_GRP  *p_grp,
     }
 
     p_tcb = p_pend_list->HeadPtr;
-    while (p_tcb != DEF_NULL) {                                 /* Go through all tasks waiting on event flag(s)        */
+    while (p_tcb != (OS_TCB *)0) {                              /* Go through all tasks waiting on event flag(s)        */
         p_tcb_next = p_tcb->PendNextPtr;
         mode       = p_tcb->FlagsOpt & OS_OPT_PEND_FLAG_MASK;
         switch (mode) {
@@ -1183,9 +1183,9 @@ void  OS_FlagClr (OS_FLAG_GRP  *p_grp)
 void  OS_FlagDbgListAdd (OS_FLAG_GRP  *p_grp)
 {
     p_grp->DbgNamePtr                = (CPU_CHAR *)((void *)" ");
-    p_grp->DbgPrevPtr                = DEF_NULL;
-    if (OSFlagDbgListPtr == DEF_NULL) {
-        p_grp->DbgNextPtr            = DEF_NULL;
+    p_grp->DbgPrevPtr                = (OS_FLAG_GRP *)0;
+    if (OSFlagDbgListPtr == (OS_FLAG_GRP *)0) {
+        p_grp->DbgNextPtr            = (OS_FLAG_GRP *)0;
     } else {
         p_grp->DbgNextPtr            = OSFlagDbgListPtr;
         OSFlagDbgListPtr->DbgPrevPtr = p_grp;
@@ -1203,22 +1203,22 @@ void  OS_FlagDbgListRemove (OS_FLAG_GRP  *p_grp)
     p_grp_prev = p_grp->DbgPrevPtr;
     p_grp_next = p_grp->DbgNextPtr;
 
-    if (p_grp_prev == DEF_NULL) {
+    if (p_grp_prev == (OS_FLAG_GRP *)0) {
         OSFlagDbgListPtr = p_grp_next;
-        if (p_grp_next != DEF_NULL) {
-            p_grp_next->DbgPrevPtr = DEF_NULL;
+        if (p_grp_next != (OS_FLAG_GRP *)0) {
+            p_grp_next->DbgPrevPtr = (OS_FLAG_GRP *)0;
         }
-        p_grp->DbgNextPtr = DEF_NULL;
+        p_grp->DbgNextPtr = (OS_FLAG_GRP *)0;
 
-    } else if (p_grp_next == DEF_NULL) {
-        p_grp_prev->DbgNextPtr = DEF_NULL;
-        p_grp->DbgPrevPtr      = DEF_NULL;
+    } else if (p_grp_next == (OS_FLAG_GRP *)0) {
+        p_grp_prev->DbgNextPtr = (OS_FLAG_GRP *)0;
+        p_grp->DbgPrevPtr      = (OS_FLAG_GRP *)0;
 
     } else {
         p_grp_prev->DbgNextPtr =  p_grp_next;
         p_grp_next->DbgPrevPtr =  p_grp_prev;
-        p_grp->DbgNextPtr      = DEF_NULL;
-        p_grp->DbgPrevPtr      = DEF_NULL;
+        p_grp->DbgNextPtr      = (OS_FLAG_GRP *)0;
+        p_grp->DbgPrevPtr      = (OS_FLAG_GRP *)0;
     }
 }
 #endif
@@ -1280,6 +1280,7 @@ void   OS_FlagTaskRdy (OS_TCB    *p_tcb,
         case OS_TASK_STATE_DLY_SUSPENDED:
         case OS_TASK_STATE_SUSPENDED:
         default:
+                                                                /* Default case.                                        */
              break;
     }
     OS_PendListRemove(p_tcb);

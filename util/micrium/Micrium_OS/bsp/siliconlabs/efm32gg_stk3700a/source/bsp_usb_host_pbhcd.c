@@ -166,7 +166,7 @@ const  USBH_PBHCI_HC_HW_INFO  BSP_USBH_EFM32GG_PBHCI_HW_Info = {
 *
 * Description : Initializes USB host BSP.
 *
-* Argument(s) : isr_fnct    Interrupt service rooutine to call when an interruption occurs.
+* Argument(s) : isr_fnct    Interrupt service routine to call when an interruption occurs.
 *
 *               p_hc_drv    Pointer to host controller driver information to pass to isr_fnct.
 *

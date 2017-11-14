@@ -39,13 +39,14 @@
 *********************************************************************************************************
 */
 
+#include "../include/bsp_cpu.h"
+
 #include  <rtos/cpu/include/cpu.h>
 #include  <rtos/common/include/lib_def.h>
 #include  <rtos/common/include/lib_utils.h>
 
                                                                 /* Third Party Library Includes                         */
-#include  <em_device.h>
-
+#include "em_device.h"
 
 /*
 *********************************************************************************************************
@@ -355,3 +356,35 @@ CPU_INT64U  CPU_TS64_to_uSec (CPU_TS64  ts_cnts)
     return (ts_us);
 }
 #endif
+
+
+/*
+*********************************************************************************************************
+*                                          BSP_CPUInit()
+*
+* Description : This function will initialize the Micrium CPU component and wrap all the interrupt
+*               handlers to be kernel aware. This function should be called in applications instead of
+*               calling CPU_Init().
+*
+* Argument(s) : none.
+*
+* Return(s)   : none.
+*
+* Caller(s)   : Application code at startup.
+*
+* Note(s)     : This function assumes that SCB->VTOR points to the vector table that the application
+*               wants to use. This is usually the case when using the EFM32 CMSIS startup files.
+*********************************************************************************************************
+*/
+void BSP_CPUInit(void)
+{
+  uint32_t vtorAddress = SCB->VTOR;
+  CPU_FNCT_VOID * vtor = (CPU_FNCT_VOID *)vtorAddress;
+
+  CPU_Init();
+
+  // Re-assign previous interrupt handlers as kernel-aware
+  for (uint32_t i = CPU_INT_EXT0; i < CPU_INT_EXT0 + EXT_IRQ_COUNT; i++) {
+    CPU_IntSrcHandlerSetKA(i, vtor[i]);
+  }
+}

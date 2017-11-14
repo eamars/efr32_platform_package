@@ -2,7 +2,7 @@
  * @file btl_reset_info.h
  * @brief Reset information for the Silicon Labs Gecko bootloader
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * # License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>

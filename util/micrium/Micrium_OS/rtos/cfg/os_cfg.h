@@ -1,6 +1,6 @@
 /*
 *********************************************************************************************************
-*                                            EXAMPLE CODE
+*                                             EXAMPLE CODE
 *********************************************************************************************************
 * Licensing:
 *   The licensor of this EXAMPLE CODE is Silicon Laboratories Inc.
@@ -28,7 +28,8 @@
 *
 *                                      CONFIGURATION TEMPLATE FILE
 *
-* File : os_cfg.h
+* Filename      : os_cfg.h
+* Programmer(s) : Micrium
 *********************************************************************************************************
 */
 
@@ -373,3 +374,4 @@
 */
 
 #endif                                                          /* End of os_cfg.h module include.                      */
+

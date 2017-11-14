@@ -15,6 +15,7 @@
 #include CONFIGURATION_HEADER
 #endif
 
+#include "bsp.h"
 #include "retargetserial.h"
 #include "gpiointerrupt.h"
 #ifdef EMBER_AF_PLUGIN_LCD_GRAPHICS
@@ -54,19 +55,10 @@ void appHalInit(void)
   // Initialize the system clocks and other HAL components
   halInit();
 
-  CMU_ClockEnable(cmuClock_GPIO, true);
-
-  // Initialize the BSP
-  BSP_Init(BSP_INIT_BCC);
-
-  // Initialize the LEDs on the board
-  initLeds();
-
   // Initialize the LCD display
   initGraphics();
 
   // Initialize the USART and map LF to CRLF
-  RETARGET_SerialInit();
   RETARGET_SerialCrLf(1);
 
   // For PER test
@@ -148,7 +140,7 @@ void updateDisplay(void)
              counters.receive % 100000);
     GRAPHICS_AppendString(textBuf);
     snprintf(textBuf, APP_DISPLAY_BUFFER_SIZE, "Tx Count: %05lu",
-             counters.transmit % 100000);
+             (counters.userTx + counters.ackTx) % 100000);
     GRAPHICS_AppendString(textBuf);
     snprintf(textBuf, APP_DISPLAY_BUFFER_SIZE, "Channel: %d", channel);
     GRAPHICS_AppendString(textBuf);
@@ -157,7 +149,7 @@ void updateDisplay(void)
 
     // Draw Tx/Rx triangles if the timeout hasn't occurred
     GRAPHICS_InsertTriangle(20, 80, 32, true,
-                            ((int8_t)(counters.transmit % 10)) * -10);
+                            ((int8_t)((counters.userTx + counters.ackTx) % 10)) * -10);
     GRAPHICS_InsertTriangle(76, 80, 32, false, (counters.receive % 10) * 10);
 
     // Force a redraw
@@ -190,11 +182,6 @@ void initGraphics(void)
 // LED's
 #ifdef BSP_GPIO_LEDS
 
-void initLeds(void)
-{
-  BSP_LedsInit();
-}
-
 void LedSet(int led)
 {
   if (logLevel & PERIPHERAL_ENABLE) {
@@ -217,9 +204,6 @@ void LedsDisable(void)
 
 #else
 
-void initLeds(void)
-{
-}
 void LedSet(int led)
 {
 }
@@ -271,23 +255,25 @@ void gpio1ShortPress(void)
   }
 
   if (inRadioState(RAIL_RF_STATE_RX, NULL)) {
-    RAIL_RfIdle();
+    RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
   }
 
   // Check if next channel exists
-  if (RAIL_ChannelExists(channel + 1) == RAIL_STATUS_NO_ERROR) {
+  if (RAIL_IsValidChannel(railHandle, channel + 1)
+      == RAIL_STATUS_NO_ERROR) {
     channel++;
   } else {
     // Find initial channel
     channel = 0;
-    while (RAIL_ChannelExists(channel) != RAIL_STATUS_NO_ERROR) {
+    while (RAIL_IsValidChannel(railHandle, channel)
+           != RAIL_STATUS_NO_ERROR) {
       channel++;
     }
   }
 
   // Wait for RxStart to succeed
-  while (receiveModeEnabled && RAIL_RxStart(channel)) {
-    RAIL_RfIdle();
+  while (receiveModeEnabled && RAIL_StartRx(railHandle, channel, NULL)) {
+    RAIL_Idle(railHandle, RAIL_IDLE_ABORT, false);
   }
 
   redrawDisplay = true;

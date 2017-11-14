@@ -1,7 +1,7 @@
 /**************************************************************************//**
  * @file second_stage_btl_startup.c
  * @brief CMSIS Compatible bootloader startup file in C for IAR EWARM
- * @version 1.1.0
+ * @version 1.4.0
  ******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>

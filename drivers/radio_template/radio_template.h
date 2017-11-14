@@ -8,6 +8,8 @@
 #ifndef RADIO_TEMPLATE_H_
 #define RADIO_TEMPLATE_H_
 
+#include <stdint.h>
+
 #include "drv_debug.h"
 
 typedef struct

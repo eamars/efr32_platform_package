@@ -23,10 +23,7 @@
 
 #define APP_CI_COMMANDS                                                                                                                                                                                        \
   COMMAND_SEPARATOR("Application Configuration"),                                                                                                                                                              \
-  COMMAND_ENTRY("listConfigs", "", listConfigs, "List all available configs and their indices"),                                                                                                               \
-  COMMAND_ENTRY("setConfig", "v", setConfig, "[index] Set the radio config to the one at index in the config list."),                                                                                          \
-  COMMAND_ENTRY("getConfig", "", getConfig, "Get the index of the current radio config"),                                                                                                                      \
-  COMMAND_ENTRY("setRxConfig", "bw", setRxConfig, "[[set|and|or] flags] Modify RAIL_RxConfig"),                                                                                                                \
+  COMMAND_ENTRY("setEventConfig", "ww", setEventConfig, "[mask events] Modify RAIL_ConfigEvents with the given mask and events"),                                                                              \
   COMMAND_ENTRY("printDataRates", "", printDataRates, "Print the data rates of the current PHY"),                                                                                                              \
   COMMAND_ENTRY("resetCounters", "", resetCounters, "Resets the Tx and Rx counters"),                                                                                                                          \
   COMMAND_ENTRY("setPeripheralEnable", "u", setPeripheralEnable, "[enable] Enable(1) or Disable(0) LEDs and LCD peripherals"),                                                                                 \
@@ -36,7 +33,6 @@
   COMMAND_ENTRY("getVersionVerbose", "", getVersionVerbose, "Get verbose version information."),                                                                                                               \
   COMMAND_ENTRY("setPtiProtocol", "u", setPtiProtocol, "Get version information."),                                                                                                                            \
   COMMAND_SEPARATOR("Receive and Transmit"),                                                                                                                                                                   \
-  COMMAND_ENTRY("rxConfig", "w", rxConfig, "[appendedInfo] Enable(1) or Disable(0) appended info"),                                                                                                            \
   COMMAND_ENTRY("rx", "w", rx, "[enable] Enable(1) or Disable(0) receive mode"),                                                                                                                               \
   COMMAND_ENTRY("rxAt", "wbwbu*", rxAt, "[start mode end mode rxTransEndSched hardEnd] Configure scheduled receive."),                                                                                         \
   COMMAND_ENTRY("setRxOptions", "w", setRxOptions, "[rxOptionsBitField] Configure receive options, based on RAIL_RX_OPTION defines"),                                                                          \
@@ -44,14 +40,14 @@
   COMMAND_ENTRY("txWithOptions", "w", txWithOptions, "[n] Transmit n packets with tx options. If n is 0 transmit infinitely"),                                                                                 \
   COMMAND_ENTRY("txAt", "wb*", txAtTime, "[time mode] Transmit a packet at the time and mode specified"),                                                                                                      \
   COMMAND_ENTRY("txAfterRx", "w", txAfterRx, "[time] Schedule a TX for a delay in us after each receive. 0 to disable"),                                                                                       \
-  COMMAND_ENTRY("configTxOptions", "u", configTxOptions, "[txOptionsBitfield] Configure RAIL_TxOptions_t (LSB = waitForAck)"),                                                                                 \
-  COMMAND_ENTRY("abortScheduledTxDuringRx", "u", abortScheduledTxDuringRx, "[bool] If a scheduled Tx occurs during Rx, postpone (0) or abort (1) it"),                                                         \
+  COMMAND_ENTRY("configTxOptions", "u", configTxOptions, "[txOptionsBitfield] Sets the bitmask to be used as the tx options. See #defines starting with \"RAIL_TX_OPTION_\" in rail_types.h"),                 \
   COMMAND_ENTRY("setFixedLength", "v", setFixedLength, "[fixedLength] Configure fixed length"),                                                                                                                \
   COMMAND_ENTRY("setchannel", "u", setChannel, "[channel] Set the current radio channel"),                                                                                                                     \
   COMMAND_ENTRY("getchannel", "", getChannel, "Get the current radio channel"),                                                                                                                                \
-  COMMAND_ENTRY("setPower", "s", setPower, "[power] Set the current transmit power in deci dBm"),                                                                                                              \
+  COMMAND_ENTRY("setPower", "sb*", setPower, "[power raw] Set the current transmit power in deci dBm, or raw units if 'raw' is specified"),                                                                    \
   COMMAND_ENTRY("getPower", "", getPower, "Get the current transmit power in deci dBm"),                                                                                                                       \
-  COMMAND_ENTRY("getRssi", "w*", getRssi, "[averageTimeUs] Get RSSI in dBm if the receiver is turned on. Optionally specify in microseconds how long to average RSSI."),                                       \
+  COMMAND_ENTRY("sweepTxPower", "", sweepTxPower, "Sweep power levels for the current PA and stream at each level."),                                                                                          \
+  COMMAND_ENTRY("getRssi", "w*", getRssi, "[wait] Get RSSI in dBm if the receiver is turned on. Optionally specify whether or not to wait for a valid value in case it is initially invalid."),                \
   COMMAND_ENTRY("sweepPower", "ssw", sweepPower, "[lowPower] [hiPower] [period] Sweep power in square wave fashion. Specify power in deci dBm, period in microseconds."),                                      \
   COMMAND_ENTRY("startAvgRssi", "wu*", startAvgRssi, "[averageTimeUs] [channel] Start AGC RSSI averaging"),                                                                                                    \
   COMMAND_ENTRY("getAvgRssi", "", getAvgRssi, "Get AGC RSSI averaging result."),                                                                                                                               \
@@ -75,12 +71,12 @@
   COMMAND_ENTRY("txFifoManualLoad", "", txFifoManualLoad, "Will attempt to load data into the fifo if there is space"),                                                                                        \
   COMMAND_ENTRY("fifoReset", "bb", fifoReset, "[tx rx] Reset the transmit or receive fifo"),                                                                                                                   \
   COMMAND_ENTRY("abortRxPacket", "w", abortRxPacket, "[abortOffset] Delay after sync word before idling radio."),                                                                                              \
+  COMMAND_ENTRY("printTxAcks", "w", printTxAcks, "[printTxAcks] Enable printing of tx ack packets as they happen."),                                                                                           \
   COMMAND_SEPARATOR("Energy Modes and RF Sense"),                                                                                                                                                              \
   COMMAND_ENTRY("sleep", "bw*", sleep, "[EM# [RfSenseUs RfBand]] Sleep in EM# with RFSenseUs on RfBand (0=none,1=2.4GHz,2=SubGHz,3=both) (and UART input)"),                                                   \
   COMMAND_ENTRY("rfsense", "ww", rfSense, "[RfSenseUs RfBand] Start RfSensing with RSenseUs on RfBand"),                                                                                                       \
   COMMAND_SEPARATOR("Address Filtering"),                                                                                                                                                                      \
   COMMAND_ENTRY("configAddressFilter", "wu*", setAddressFilterConfig, "[matchTable offset0 size0 offset1 size1] Configure the addresss filter."),                                                              \
-  COMMAND_ENTRY("addressFilterByFrame", "u", addressFilterByFrame, "[validFrames] Set interaction of address filtering and frame type length decoding. Must be called after 'configAddressFilter'"),           \
   COMMAND_ENTRY("setAddressFiltering", "u", setAddressFilter, "[enable] Enable(1) or Disable(0) address filtering."),                                                                                          \
   COMMAND_ENTRY("getAddressFiltering", "", getAddressFilter, "Print the current state of address filtering."),                                                                                                 \
   COMMAND_ENTRY("printAddresses", "", printAddresses, "Print the current address filtering addresses."),                                                                                                       \
@@ -102,9 +98,9 @@
   COMMAND_ENTRY("acceptFrames", "uuuu", ieee802154AcceptFrames, "[command ack data beacon] Enable(1) or Disable(0) 802.15.4 frame acceptance. Default settings for 802.15.4 are 1 0 1 1."),                    \
   COMMAND_ENTRY("setPromiscuousMode", "u", ieee802154SetPromiscuousMode, "[enable] Enable(1) or Disable(0) promiscuous mode"),                                                                                 \
   COMMAND_ENTRY("setPanCoordinator", "u", ieee802154SetPanCoordinator, "[enable] Enable(1) or Disable(0) the node acting as a PAN coordinator"),                                                               \
-  COMMAND_ENTRY("setPanId802154", "v", ieee802154SetPanId, "[panId] Set the PAN Id for the given index"),                                                                                                      \
-  COMMAND_ENTRY("setShortAddr802154", "v", ieee802154SetShortAddress, "[shortAddr] Set the short address for the given index"),                                                                                \
-  COMMAND_ENTRY("setLongAddr802154", "uuuuuuuu", ieee802154SetLongAddress, "[longAddr_0 ... longAddr_7] Set the long address for the given index"),                                                            \
+  COMMAND_ENTRY("setPanId802154", "vu*", ieee802154SetPanId, "[panId index] Set the PAN ID for the given index. Index defaults to 0 if not given"),                                                            \
+  COMMAND_ENTRY("setShortAddr802154", "vu*", ieee802154SetShortAddress, "[shortAddr index] Set the short address(es) for the given index. Index defaults to 0 if not given"),                                  \
+  COMMAND_ENTRY("setLongAddr802154", "uuuuuuuuu*", ieee802154SetLongAddress, "[longAddr_0 ... longAddr_7 index] Set the long address for the given index. Index defaults to 0 if not given"),                  \
   COMMAND_SEPARATOR("BLE Mode"),                                                                                                                                                                               \
   COMMAND_ENTRY("setBleMode", "u", bleEnable, "[enable] Set BLE mode to enabled or disabled"),                                                                                                                 \
   COMMAND_ENTRY("getBleMode", "", bleStatus, "Get the current BLE mode"),                                                                                                                                      \
@@ -144,10 +140,12 @@
   COMMAND_ENTRY("setRxOverflow", "w", setRxOverflow, "[enable] Enable(1) or Disable(0) RX overflows"),                                                                                                         \
   COMMAND_ENTRY("setCalibrations", "w", setCalibrations, "[enable] Enable(1) or Disable(0) RAIL calibrations"),                                                                                                \
   COMMAND_ENTRY("setTxTransitions", "bb", setTxTransitions, "[txSuccess txError] Set each RAIL TX state transition value to r(x) or i(dle)"),                                                                  \
-  COMMAND_ENTRY("setRxTransitions", "bbu", setRxTransitions, "[rxSuccess rxError ignoreErrors] Set each RAIL RX state transition value to t(x), r(x), or i(dle), and set error events bitfield"),              \
-  COMMAND_ENTRY("setTimings", "vvvv", setTimings, "[idleToRx txToRx idleToTx rxToTx] Set RAIL state transition timings in microseconds"),                                                                      \
+  COMMAND_ENTRY("setRxTransitions", "bb", setRxTransitions, "[rxSuccess rxError] Set each RAIL RX state transition value to t(x), r(x), or i(dle)."),                                                          \
+  COMMAND_ENTRY("setTimings", "vvvv*", setTimings, "[idleToRx txToRx idleToTx rxToTx rxSearch txToRxSearch] Set RAIL state transition timings in microseconds"),                                               \
   COMMAND_ENTRY("forceAssert", "w", forceAssert, "[errorCode] Force a RAIL assert with the given error code."),                                                                                                \
-  COMMAND_ENTRY("printCallbacks", "w", configPrintCallbacks, "[printCallbacks] Enable printing of callbacks in chronological order."),                                                                         \
+  COMMAND_ENTRY("printEvents", "w", configPrintEvents, "[printEvents] Enable printing of RAIL events in chronological order."),                                                                                \
+  COMMAND_ENTRY("getAppMode", "", getAppMode, "Print the current app mode of RAILTEST. Values printed are those to be found in AppMode_t."),                                                                   \
+  COMMAND_ENTRY("getRadioState", "", getRadioState, "Get the RAIL radio state. Values returned correspond to RAIL_RadioState_t."),                                                                             \
   COMMAND_ENTRY("reset", "", resetChip, "Perform a reboot of the chip"),                                                                                                                                       \
   INTERNAL_COMMANDS
 
@@ -156,14 +154,12 @@
  *****************************************************************************/
 // Command callback function prototypes
 // trx_ci
-void rxConfig(int argc, char **argv);
 void rx(int argc, char **argv);
 void rxAt(int argc, char **argv);
 void setRxOptions(int argc, char **argv);
 void tx(int argc, char **argv);
 void txWithOptions(int argc, char **argv);
 void configTxOptions(int argc, char **argv);
-void abortScheduledTxDuringRx(int argc, char **argv);
 void txAtTime(int argc, char **argv);
 void txAfterRx(int argc, char **argv);
 void setTxTone(int argc, char **argv);
@@ -172,6 +168,7 @@ void setDirectMode(int argc, char **argv);
 void setDirectTx(int argc, char **argv);
 void sleep(int argc, char **argv);
 void rfSense(int argc, char **argv);
+void printTxAcks(int argc, char **argv);
 
 //lbt_ci
 void setLbtMode(int argc, char **argv);
@@ -206,15 +203,12 @@ void setMemWord(int argc, char **argv);
 
 void getPower(int argc, char **argv);
 void setPower(int argc, char **argv);
+void sweepTxPower(int argc, char **argv);
 void getTxDelay(int argc, char **argv);
 void setTxDelay(int argc, char **argv);
 void setTxTransitions(int argc, char **argv);
 void setRxTransitions(int argc, char **argv);
 void setTimings(int argc, char **argv);
-
-void setConfig(int argc, char **argv);
-void getConfig(int argc, char **argv);
-void listConfigs(int argc, char **argv);
 
 void setCtune(int argc, char **argv);
 void getCtune(int argc, char **argv);
@@ -225,7 +219,7 @@ void enablePaCal(int argc, char **argv);
 void setTxFifoThreshold(int argc, char **argv);
 void setRxFifoThreshold(int argc, char **argv);
 
-void setRxConfig(int argc, char **argv);
+void setEventConfig(int argc, char **argv);
 
 //info_ci
 void getStatus(int argc, char **argv);
@@ -258,11 +252,12 @@ void txCancel(int argc, char **argv);
 void getRandom(int argc, char **argv);
 void setDebugSignal(int argc, char **argv);
 void forceAssert(int argc, char**argv);
-void configPrintCallbacks(int argc, char**argv);
+void configPrintEvents(int argc, char**argv);
+void getAppMode(int argc, char**argv);
+void getRadioState(int argc, char**argv);
 
 //address_filter_ci
 void setAddressFilterConfig(int argc, char **argv);
-void addressFilterByFrame(int argc, char **argv);
 void setAddressFilter(int argc, char **argv);
 void getAddressFilter(int argc, char **argv);
 void printAddresses(int argc, char **argv);

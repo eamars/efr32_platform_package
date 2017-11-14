@@ -2,7 +2,7 @@
  * @file btl_errorcode.h
  * @brief Error codes used and exposed by the bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * # License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -52,6 +52,8 @@
 #define BOOTLOADER_ERROR_SPISLAVE_BASE              0x1100L
 /// UART driver errors
 #define BOOTLOADER_ERROR_UART_BASE                  0x1200L
+/// Compression errors
+#define BOOTLOADER_ERROR_COMPRESSION_BASE           0x1300L
 
 /** @} addtogroup ErrorBases */
 
@@ -114,6 +116,9 @@
 /// An error occured during bootload from storage
 #define BOOTLOADER_ERROR_STORAGE_BOOTLOAD \
   (BOOTLOADER_ERROR_STORAGE_BASE | 0x05L)
+/// There is no image in this storage slot
+#define BOOTLOADER_ERROR_STORAGE_NO_IMAGE \
+  (BOOTLOADER_ERROR_STORAGE_BASE | 0x06L)
 
 /** @} addtogroup StorageError */
 
@@ -188,6 +193,9 @@
 /// Host closed communication, no valid image received
 #define BOOTLOADER_ERROR_COMMUNICATION_IMAGE_ERROR \
   (BOOTLOADER_ERROR_COMMUNICATION_BASE | 0x05L)
+/// Communication aborted, no response from host
+#define BOOTLOADER_ERROR_COMMUNICATION_TIMEOUT \
+  (BOOTLOADER_ERROR_COMMUNICATION_BASE | 0x06L)
 
 /** @} addtogroup CommunicationError */
 
@@ -318,6 +326,23 @@
 #define BOOTLOADER_ERROR_UART_BUSY          (BOOTLOADER_ERROR_UART_BASE | 0x06)
 
 /** @} addtogroup UartError */
+
+/**
+ * @addtogroup CompressionError Compression error codes
+ * @brief Bootloader error codes returned by the decompressor
+ * @details
+ *    Offset from @ref BOOTLOADER_ERROR_COMPRESSION_BASE
+ * @{
+ */
+/// Could not initialize decompressor
+#define BOOTLOADER_ERROR_COMPRESSION_INIT \
+  (BOOTLOADER_ERROR_COMPRESSION_BASE | 0x01)
+/// Invalid decompressor state -- possible invalid input
+#define BOOTLOADER_ERROR_COMPRESSION_STATE \
+  (BOOTLOADER_ERROR_COMPRESSION_BASE | 0x02)
+
+/** @} addtogroup CompressionError */
+
 /** @} addtogroup ErrorCodes */
 
 #endif // BTL_ERRORCODE_H

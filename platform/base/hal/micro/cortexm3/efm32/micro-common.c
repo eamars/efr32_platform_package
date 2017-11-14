@@ -29,9 +29,6 @@
 
 #if defined(WDOG0)
 #define WDOG WDOG0
-#if (WDOG_COUNT > 1)
-#warning "Multiple watchdogs not supported"
-#endif
 #endif
 
 #if defined(BOARD_HEADER) && !defined(MINIMAL_HAL)
@@ -43,7 +40,7 @@
 #if defined(WDOG_IF_WARN) && !defined(BOOTLOADER)
 void WDOG0_IRQHandler(void)
 {
-  assert(!(WDOG->IF & WDOG_IF_WARN));
+  halNmiIsr();
 }
 
 #endif

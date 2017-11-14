@@ -1,3 +1,5 @@
+#include PLATFORM_HEADER
+#include CONFIGURATION_HEADER
 #include EMBER_AF_API_OCCUPANCY
 
 /** @brief Occupancy State Changed

@@ -14,5 +14,5 @@ SET(EXT_SRC
 ADD_LIBRARY (${LIB_NAME} ${SRC} ${EXT_SRC})
 
 # add dependency and build order
-ADD_DEPENDENCIES(${LIB_NAME} emlib rail)
-TARGET_LINK_LIBRARIES(${LIB_NAME} emlib rail)
+#ADD_DEPENDENCIES(${LIB_NAME} emlib rail)
+#TARGET_LINK_LIBRARIES(${LIB_NAME} emlib rail)

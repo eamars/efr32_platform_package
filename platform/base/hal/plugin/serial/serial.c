@@ -62,21 +62,25 @@ EmberStatus emberSerialInit(uint8_t port,
   switch (port) {
 #ifdef COM_VCP_ENABLE
     case COM_VCP:
+    case comPortVcp:
       status = COM_Init((COM_Port_t) port, NULL);
       break;
 #endif
 #ifdef COM_USART0_ENABLE
     case COM_USART0:
+    case comPortUsart0:
       initdata = (COM_Init_t) COM_USART0_DEFAULT;
       break;
 #endif
 #ifdef COM_USART1_ENABLE
     case COM_USART1:
+    case comPortUsart1:
       initdata = (COM_Init_t) COM_USART1_DEFAULT;
       break;
 #endif
 #ifdef COM_USART2_ENABLE
     case COM_USART2:
+    case comPortUsart2:
       initdata = (COM_Init_t) COM_USART2_DEFAULT;
       break;
 #endif
@@ -87,11 +91,13 @@ EmberStatus emberSerialInit(uint8_t port,
 #endif
 #ifdef COM_LEUART0_ENABLE
     case COM_LEUART0:
+    case comPortLeuart0:
       initdata = (COM_Init_t) COM_LEUART0_DEFAULT;
       break;
 #endif
 #ifdef COM_LEUART1_ENABLE
     case COM_LEUART1:
+    case comPortLeuart1:
       initdata = (COM_Init_t) COM_LEUART1_DEFAULT;
       break;
 #endif
@@ -99,7 +105,10 @@ EmberStatus emberSerialInit(uint8_t port,
       return status;
   }
 #if defined(COM_USART0_ENABLE) || defined (COM_USART1_ENABLE) || defined (COM_USART2_ENABLE) || defined (COM_USART3_ENABLE)
-  if ((port == COM_USART0) || (port == COM_USART1) || (port == COM_USART2)) {
+  if ((port == COM_USART0) || (port == comPortUsart0)
+      || (port == COM_USART1) || (port == comPortUsart1)
+      || (port == COM_USART2) || (port == comPortUsart2)
+      || (port == comPortUsart3)) {
     initdata.uartdrvinit.uartinit.baudRate = rate;
     initdata.uartdrvinit.uartinit.parity = (USART_Parity_TypeDef)parity;
     if (stopBits == 1) {
@@ -111,7 +120,9 @@ EmberStatus emberSerialInit(uint8_t port,
   }
 #endif
 #if defined (COM_LEUART0_ENABLE) || defined (COM_LEUART1_ENABLE)
-  if ((port == COM_LEUART0) || (port == COM_LEUART1)) {
+  if ((port == COM_LEUART0) || (port == comPortLeuart0)
+      || (port == COM_LEUART1) || (port == comPortLeuart0)
+      ) {
     initdata.uartdrvinit.leuartinit.baudRate = rate;
     initdata.uartdrvinit.leuartinit.parity = (LEUART_Parity_TypeDef)parity;
     if (stopBits == 1) {
@@ -1247,6 +1258,8 @@ EmberStatus emberSerialWriteBuffer(uint8_t port,
       #else // AVR_ATMEGA
       //If we are using the xap2b/cortexm3, non power-of-2 queue sizes are
       //supported and therefore we use a mod with the queue size
+      // The queue size cannot be zero so ignore cstat here
+      //cstat !MISRAC2012-Rule-1.3_f !ATH-div-0-pos
       q->head = ((q->head + 1) % emSerialTxQueueSizes[port]);
       #endif // !AVR_ATMEGA
       ATOMIC_LITE(
@@ -1438,6 +1451,8 @@ void emberSerialBufferTick(void)
           #else // AVR_ATMEGA
           //If we are using the xap2b/cortexm3, non power-of-2 queue sizes are
           //supported and therefore we use a mod with the queue size
+          // The queue size cannot be zero so ignore cstat here.
+          //cstat !MISRAC2012-Rule-1.3_f !ATH-div-0-pos
           deadIndex = (deadIndex + 1) % emSerialTxQueueSizes[port];
           #endif // !AVR_ATMEGA
         }

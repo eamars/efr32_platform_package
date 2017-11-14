@@ -82,6 +82,10 @@
 
 #include  <http_client_cfg.h>
 
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+#include  <examples/net/ssl_tls/ex_ssl_certificates.h>
+#endif
+
 
 /*
 *********************************************************************************************************
@@ -214,21 +218,26 @@ static  FS_CACHE                 *Ex_HTTP_Client_CachePtr;
 #ifdef  RTOS_MODULE_FS_STORAGE_RAM_DISK_AVAIL
 static  void         Ex_HTTP_Client_FS_MediaPrepare        (void);
 
-static  void         Ex_HTTP_Client_FS_FileAdd             (FS_WRK_DIR_HANDLE       wrk_dir_handle,
-                                                            CPU_CHAR               *p_file_name,
-                                                            CPU_CHAR               *p_file_content,
-                                                            CPU_SIZE_T              file_len);
+static  void         Ex_HTTP_Client_FS_FileAdd             (FS_WRK_DIR_HANDLE                  wrk_dir_handle,
+                                                            CPU_CHAR                          *p_file_name,
+                                                            CPU_CHAR                          *p_file_content,
+                                                            CPU_SIZE_T                         file_len);
 #endif
 
-static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareQueryStr     (HTTPc_KEY_VAL         **p_tbl);
+static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareQueryStr     (HTTPc_KEY_VAL                    **p_tbl);
 
-static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareHdrs         (HTTPc_HDR             **p_hdr_tbl);
+static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareHdrs         (HTTPc_HDR                        **p_hdr_tbl);
 
 #if (HTTPc_CFG_FORM_EN == DEF_ENABLED)
-static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareFormApp      (HTTPc_FORM_TBL_FIELD  **p_form_tbl);
+static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareFormApp      (HTTPc_FORM_TBL_FIELD             **p_form_tbl);
 
-static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareFormMultipart(CPU_CHAR               *p_wrk_dir,
-                                                            HTTPc_FORM_TBL_FIELD  **p_form_tbl);
+static  CPU_INT08U   Ex_HTTP_Client_ReqPrepareFormMultipart(CPU_CHAR                          *p_wrk_dir,
+                                                            HTTPc_FORM_TBL_FIELD             **p_form_tbl);
+
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+static  CPU_BOOLEAN  Ex_HTTP_Client_Secure_TrustCallback   (void                              *p_cert_dn,
+                                                            NET_SOCK_SECURE_UNTRUSTED_REASON   reason);
+#endif
 #endif
 
 
@@ -363,17 +372,20 @@ void  Ex_HTTP_Client_ReqSendGet_NoTask (void)
 
 void  Ex_HTTP_Client_ReqSendGet (void)
 {
-    HTTPc_CONN_OBJ   *p_conn;
-    HTTPc_REQ_OBJ    *p_req;
-    HTTPc_RESP_OBJ   *p_resp;
-    CPU_CHAR         *p_buf;
-    HTTPc_KEY_VAL    *p_query_str_tbl;
-    HTTPc_HDR        *p_hdr_tbl;
-    HTTPc_PARAM_TBL   tbl_obj;
-    CPU_INT08U        query_nbr;
-    CPU_INT08U        ext_hdr_nbr;
-    CPU_SIZE_T        str_len;
-    RTOS_ERR          err;
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+    NET_APP_SOCK_SECURE_CFG   secure_cfg;
+#endif
+    HTTPc_CONN_OBJ           *p_conn;
+    HTTPc_REQ_OBJ            *p_req;
+    HTTPc_RESP_OBJ           *p_resp;
+    CPU_CHAR                 *p_buf;
+    HTTPc_KEY_VAL            *p_query_str_tbl;
+    HTTPc_HDR                *p_hdr_tbl;
+    HTTPc_PARAM_TBL           tbl_obj;
+    CPU_INT08U                query_nbr;
+    CPU_INT08U                ext_hdr_nbr;
+    CPU_SIZE_T                str_len;
+    RTOS_ERR                  err;
 
 
     p_conn = &Ex_HTTP_Client_ConnTbl[0u];
@@ -413,6 +425,33 @@ void  Ex_HTTP_Client_ReqSendGet (void)
                        (void *)Ex_HTTP_Client_ConnCloseCallback,
                               &err);
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
+#endif
+
+
+                                                                /* -------------- SET SSL TRUST CALLBACK -------------- */
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+                                                                /* TODO: Assign your own client certificate/private key */
+                                                                /*       if required by the server                      */
+#if  NET_SECURE_CFG_CLIENT_AUTH_EN == DEF_ENABLED
+    secure_cfg.CertPtr       = (CPU_CHAR *)SSL_CLIENT_CERT;
+    secure_cfg.CertSize      = SSL_ClientCertLen;
+    secure_cfg.KeyPtr        = (CPU_CHAR *)SSL_CLIENT_KEY;
+    secure_cfg.KeySize       = SSL_ClientKeyLen;
+#else
+    secure_cfg.CertPtr       = DEF_NULL;
+    secure_cfg.CertSize      = 0;
+    secure_cfg.KeyPtr        = DEF_NULL;
+    secure_cfg.KeySize       = 0;
+#endif
+    secure_cfg.CertFmt       = NET_SOCK_SECURE_CERT_KEY_FMT_PEM;
+    secure_cfg.TrustCallback = Ex_HTTP_Client_Secure_TrustCallback;
+    secure_cfg.CommonName    = EX_HTTP_CLIENT_CLIENT_HOSTNAME;
+    secure_cfg.CertChain     = DEF_YES;
+
+    HTTPc_ConnSetParam(        p_conn,
+                               HTTPc_PARAM_TYPE_SECURE_CFG_PTR,
+                       (void *)&secure_cfg,
+                               &err);
 #endif
 
                                                                 /* ------------ SET STRING QUERY PARAMETERS ----------- */
@@ -1707,6 +1746,7 @@ static  CPU_INT08U  Ex_HTTP_Client_ReqPrepareFormApp (HTTPc_FORM_TBL_FIELD  **p_
 * Note(s)     : None.
 *********************************************************************************************************
 */
+
 #if (HTTPc_CFG_FORM_EN == DEF_ENABLED)
 static  CPU_INT08U  Ex_HTTP_Client_ReqPrepareFormMultipart (CPU_CHAR               *p_wrk_dir,
                                                             HTTPc_FORM_TBL_FIELD  **p_form_tbl)
@@ -1821,6 +1861,34 @@ static  CPU_INT08U  Ex_HTTP_Client_ReqPrepareFormMultipart (CPU_CHAR            
 
     return (2u);
 #endif
+}
+#endif
+
+/*
+*********************************************************************************************************
+*                                   Ex_HTTP_Client_Secure_TrustCallback()
+*
+* Description : Hook function called by the TLS layer to let client decide to enforce or ignore server
+*               certificate validation errors.
+*
+* Argument(s) : p_cert_dn   Port-specific representation of the certificate distinguished name.
+*
+*               reason      Reason why the connection is not secure.
+*
+* Return(s)   : DEF_OK,   if non-secure connection should be allowed.
+*               DEF_FAIL, otherwise.
+*
+* Note(s)     : None.
+*********************************************************************************************************
+*/
+
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+CPU_BOOLEAN  Ex_HTTP_Client_Secure_TrustCallback (void                              *p_cert_dn,
+                                                  NET_SOCK_SECURE_UNTRUSTED_REASON   reason)
+{
+    PP_UNUSED_PARAM(p_cert_dn);
+    PP_UNUSED_PARAM(reason);
+    return (DEF_FAIL);
 }
 #endif
 

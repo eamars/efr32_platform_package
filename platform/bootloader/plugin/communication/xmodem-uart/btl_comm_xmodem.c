@@ -2,7 +2,7 @@
  * @file btl_comm_xmodem.c
  * @brief Communication plugin implementing XMODEM over UART
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -202,7 +202,10 @@ int32_t communication_main(void)
                         true);
 
         // Initialize EBL parser
-        parser_init(&parserContext, &decryptContext, &authContext);
+        parser_init(&parserContext,
+                    &decryptContext,
+                    &authContext,
+                    PARSER_FLAG_PARSE_CUSTOM_TAGS);
         memset(&imageProps, 0, sizeof(ImageProperties_t));
 
         // Wait 5ms and see if we got any premature input; discard it

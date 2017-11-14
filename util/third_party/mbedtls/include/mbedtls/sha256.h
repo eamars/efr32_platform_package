@@ -104,6 +104,18 @@ void mbedtls_sha256_finish( mbedtls_sha256_context *ctx, unsigned char output[32
 /* Internal use */
 void mbedtls_sha256_process( mbedtls_sha256_context *ctx, const unsigned char data[64] );
 
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* MBEDTLS_SHA256_ALT */
+#include "sha256_alt.h"
+#endif /* MBEDTLS_SHA256_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          Output = SHA-256( input buffer )
  *
@@ -125,9 +137,5 @@ int mbedtls_sha256_self_test( int verbose );
 #ifdef __cplusplus
 }
 #endif
-
-#else  /* MBEDTLS_SHA256_ALT */
-#include "sha256_alt.h"
-#endif /* MBEDTLS_SHA256_ALT */
 
 #endif /* mbedtls_sha256.h */

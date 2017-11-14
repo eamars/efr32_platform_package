@@ -2,7 +2,6 @@ var searchData=
 [
   ['eblapplication_5ft',['EblApplication_t',['../structEblApplication__t.html',1,'']]],
   ['eblbootloader_5ft',['EblBootloader_t',['../structEblBootloader__t.html',1,'']]],
-  ['eblbuffer_5ft',['EblBuffer_t',['../structEblBuffer__t.html',1,'']]],
   ['eblencryptionaesccmsignature_5ft',['EblEncryptionAesCcmSignature_t',['../structEblEncryptionAesCcmSignature__t.html',1,'']]],
   ['eblencryptiondata_5ft',['EblEncryptionData_t',['../structEblEncryptionData__t.html',1,'']]],
   ['eblencryptionheader_5ft',['EblEncryptionHeader_t',['../structEblEncryptionHeader__t.html',1,'']]],

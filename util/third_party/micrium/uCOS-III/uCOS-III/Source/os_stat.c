@@ -10,7 +10,7 @@
 *
 * File    : OS_STAT.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -74,7 +74,7 @@ void  OSStatReset (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -118,7 +118,7 @@ void  OSStatReset (OS_ERR  *p_err)
     CPU_CRITICAL_ENTER();
     p_tcb = OSTaskDbgListPtr;
     CPU_CRITICAL_EXIT();
-    while (p_tcb != DEF_NULL) {                                 /* Reset per-Task statistics                            */
+    while (p_tcb != (OS_TCB *)0) {                              /* Reset per-Task statistics                            */
         CPU_CRITICAL_ENTER();
 
 #ifdef CPU_CFG_INT_DIS_MEAS_EN
@@ -157,7 +157,7 @@ void  OSStatReset (OS_ERR  *p_err)
     CPU_CRITICAL_ENTER();
     p_q = OSQDbgListPtr;
     CPU_CRITICAL_EXIT();
-    while (p_q != DEF_NULL) {                                   /* Reset message queues statistics                      */
+    while (p_q != (OS_Q *)0) {                                  /* Reset message queues statistics                      */
         CPU_CRITICAL_ENTER();
         p_msg_q                = &p_q->MsgQ;
         p_msg_q->NbrEntriesMax = 0u;
@@ -202,9 +202,10 @@ void  OSStatTaskCPUUsageInit (OS_ERR  *p_err)
     CPU_SR_ALLOC();
 
 
+    err = OS_ERR_NONE;                                          /* Initialize err explicitly for static analysis.       */
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -339,9 +340,9 @@ void  OS_StatTask (void  *p_arg)
     for (;;) {
 #if (OS_CFG_TS_EN == DEF_ENABLED)
         ts_start        = OS_TS_GET();
-#endif
 #ifdef  CPU_CFG_INT_DIS_MEAS_EN
         OSIntDisTimeMax = CPU_IntDisMeasMaxGet();
+#endif
 #endif
 
         CPU_CRITICAL_ENTER();                                   /* ---------------- OVERALL CPU USAGE ----------------- */
@@ -367,7 +368,7 @@ void  OS_StatTask (void  *p_arg)
                 ctr_div  = 10000u;
             }
             ctr_max            = OSStatTaskCtrMax / ctr_div;
-            OSStatTaskCPUUsage = (OS_CPU_USAGE)((OS_TICK)10000u - ctr_mult * OSStatTaskCtrRun / ctr_max);
+            OSStatTaskCPUUsage = (OS_CPU_USAGE)((OS_TICK)10000u - ((ctr_mult * OSStatTaskCtrRun) / ctr_max));
             if (OSStatTaskCPUUsageMax < OSStatTaskCPUUsage) {
                 OSStatTaskCPUUsageMax = OSStatTaskCPUUsage;
             }
@@ -385,7 +386,7 @@ void  OS_StatTask (void  *p_arg)
         CPU_CRITICAL_ENTER();
         p_tcb = OSTaskDbgListPtr;
         CPU_CRITICAL_EXIT();
-        while (p_tcb != DEF_NULL) {                             /* ---------------- TOTAL CYCLES COUNT ---------------- */
+        while (p_tcb != (OS_TCB *)0) {                          /* ---------------- TOTAL CYCLES COUNT ---------------- */
             CPU_CRITICAL_ENTER();
             p_tcb->CyclesTotalPrev = p_tcb->CyclesTotal;        /* Save accumulated # cycles into a temp variable       */
             p_tcb->CyclesTotal     = 0u;                        /* Reset total cycles for task for next run             */
@@ -428,7 +429,7 @@ void  OS_StatTask (void  *p_arg)
         CPU_CRITICAL_ENTER();
         p_tcb = OSTaskDbgListPtr;
         CPU_CRITICAL_EXIT();
-        while (p_tcb != DEF_NULL) {
+        while (p_tcb != (OS_TCB *)0) {
 #if (OS_CFG_TASK_PROFILE_EN == DEF_ENABLED)                     /* Compute execution time of each task                  */
             usage = (OS_CPU_USAGE)(cycles_mult * p_tcb->CyclesTotalPrev / cycles_max);
             if (usage > 10000u) {
@@ -501,7 +502,7 @@ void  OS_StatTaskInit (OS_ERR  *p_err)
     OSStatResetFlag  = DEF_FALSE;
 
                                                                 /* --------------- CREATE THE STAT TASK --------------- */
-    if (OSCfg_StatTaskStkBasePtr == DEF_NULL) {
+    if (OSCfg_StatTaskStkBasePtr == (CPU_STK *)0) {
        *p_err = OS_ERR_STAT_STK_INVALID;
         return;
     }
@@ -517,18 +518,22 @@ void  OS_StatTaskInit (OS_ERR  *p_err)
     }
 
     OSTaskCreate(&OSStatTaskTCB,
-                 (CPU_CHAR   *)((void *)"uC/OS-III Stat Task"),
-                 OS_StatTask,
-                 DEF_NULL,
-                 OSCfg_StatTaskPrio,
-                 OSCfg_StatTaskStkBasePtr,
-                 OSCfg_StatTaskStkLimit,
-                 OSCfg_StatTaskStkSize,
-                 0u,
-                 0u,
-                 DEF_NULL,
+#if  (OS_CFG_DBG_EN == DEF_DISABLED)
+                 (CPU_CHAR   *)0,
+#else
+                 (CPU_CHAR   *)"uC/OS-III Stat Task",
+#endif
+                  OS_StatTask,
+                 (void       *)0,
+                  OSCfg_StatTaskPrio,
+                  OSCfg_StatTaskStkBasePtr,
+                  OSCfg_StatTaskStkLimit,
+                  OSCfg_StatTaskStkSize,
+                  0u,
+                  0u,
+                 (void       *)0,
                  (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
-                 p_err);
+                  p_err);
 }
 
 #endif

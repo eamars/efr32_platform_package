@@ -2,7 +2,7 @@
  * @file btl_second_stage.c
  * @brief Main file for Main Bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -63,7 +63,7 @@ void HardFault_Handler(void)
 
 int main(void)
 {
-  int32_t ret;
+  int32_t ret = BOOTLOADER_ERROR_STORAGE_BOOTLOAD;
 
   // Coming out of reset...
   SystemCoreClock = SystemHfrcoFreq;
@@ -92,10 +92,30 @@ int main(void)
   btl_init();
   reset_invalidateResetReason();
 
+#ifdef BOOTLOADER_SUPPORT_STORAGE
+  // If the bootloader supports storage, first attempt to apply an existing
+  // image from storage.
+  ret = storage_main();
+
+  if (ret == BOOTLOADER_OK) {
+    // Firmware ugprade from storage successful, return to application
+    reset_resetWithReason(BOOTLOADER_RESET_REASON_GO);
+  } else {
+    // Wait a short while (approx. 500 ms) before continuing.
+    // This prevents the reset loop from being so tight that a debugger is
+    // unable to reattach to flash a new app when neither the app nor the
+    // contents of storage are valid.
+    for (volatile int i = 800000; i > 0; i--) {
+      // Do nothing
+    }
+  }
+#endif
+
 #ifdef BOOTLOADER_SUPPORT_COMMUNICATION
   communication_init();
 
-  if ((ret = communication_start()) != BOOTLOADER_OK) {
+  ret = communication_start();
+  if (ret != BOOTLOADER_OK) {
     reset_resetWithReason(BOOTLOADER_RESET_REASON_FATAL);
   }
 
@@ -106,39 +126,27 @@ int main(void)
 
   communication_shutdown();
 
-  if (ret == BOOTLOADER_OK) {
+  if ((ret == BOOTLOADER_OK)
+      || (ret == BOOTLOADER_ERROR_COMMUNICATION_DONE)) {
     reset_resetWithReason(BOOTLOADER_RESET_REASON_GO);
-  } else if (ret == BOOTLOADER_ERROR_COMMUNICATION_IMAGE_ERROR) {
-    reset_resetWithReason(BOOTLOADER_RESET_REASON_BADIMAGE);
-  } else if (ret == BOOTLOADER_ERROR_COMMUNICATION_DONE) {
-    reset_resetWithReason(BOOTLOADER_RESET_REASON_GO);
-  } else {
-    reset_resetWithReason(BOOTLOADER_RESET_REASON_FATAL);
   }
 #endif // BOOTLOADER_SUPPORT_COMMUNICATION
 
+  // An error occurred in storage or communication, and a firmware upgrade
+  // was not performed
+  if (0
+#ifdef BOOTLOADER_SUPPORT_COMMUNICATION
+      || (ret == BOOTLOADER_ERROR_COMMUNICATION_IMAGE_ERROR)
+      || (ret == BOOTLOADER_ERROR_COMMUNICATION_TIMEOUT)
+#endif
 #ifdef BOOTLOADER_SUPPORT_STORAGE
-
-  ret = storage_main();
-
-  if (ret == BOOTLOADER_OK) {
-    reset_resetWithReason(BOOTLOADER_RESET_REASON_GO);
-  } else if (ret == BOOTLOADER_ERROR_STORAGE_BOOTLOAD) {
-    // Bootload attempt failed. Wait a short while before rebooting.
-    // This prevents the reset loop from being so tight that a debugger is
-    // unable to reattach to flash a new app when neither the app nor the
-    // contents of storage are valid.
-    for (volatile int i = 10000000; i > 0; i--) {
-      // Do nothing
-    }
+      || (ret == BOOTLOADER_ERROR_STORAGE_BOOTLOAD)
+#endif
+      ) {
     reset_resetWithReason(BOOTLOADER_RESET_REASON_BADIMAGE);
   } else {
-    for (volatile int i = 10000000; i > 0; i--) {
-      // Do nothing
-    }
     reset_resetWithReason(BOOTLOADER_RESET_REASON_FATAL);
   }
-#endif
 }
 
 #ifdef BOOTLOADER_SUPPORT_STORAGE

@@ -74,6 +74,9 @@
 #include  <rtos/net/include/http_server.h>
 #include  <rtos/net/include/http_server_fs_port_static.h>
 #include  <rtos/net/include/net_cfg_net.h>
+#ifdef RTOS_MODULE_NET_SSL_TLS_AVAIL
+#include  <examples/net/ssl_tls/ex_ssl_certificates.h>
+#endif
 
 #include  "ex_http_server.h"
 #include  "ex_http_server_hooks.h"
@@ -130,73 +133,12 @@ static  void  Ex_HTTP_Server_StaticFS_Prepare (void);
 *                   NET_SOCK_SECURE_CERT_KEY_FMT_PEM
 *                   NET_SOCK_SECURE_CERT_KEY_FMT_DER
 *
-*               Note that if the PEM format is used, do not include the  -----BEGIN CERTIFICATE----- ,  -----END
-*               CERTIFICATE----- ,  -----BEGIN RSA PRIVATE KEY-----  or  -----END RSA PRIVATE KEY-----
-*               sections.
-*
 *           (3) The HTTPs_SECURE_CFG structure referenced in argument must exist throughout the lifetime of the
 *               HTTPs server since the certificate and the key are not copied internally and are directly
 *               referenced throughout the HTTPs_SECURE_CFG pointer.
 *********************************************************************************************************
 *********************************************************************************************************
 */
-
-                                                                        /* See Note #1.                                 */
-#define HTTPs_CFG_SECURE_CERT                                    \
-"MIIEEjCCAvqgAwIBAgIBBzANBgkqhkiG9w0BAQUFADAaMRgwFgYDVQQDEw9WYWxp\
-Y29yZS1EQzEtQ0EwHhcNMTEwMzE4MTcwMTQyWhcNMjEwMzE1MTcwMTQyWjCBkDEL\
-MAkGA1UEBhMCVVMxCzAJBgNVBAgTAkNBMQ8wDQYDVQQHEwZJcnZpbmUxHjAcBgNV\
-BAoTFVZhbGljb3JlIFRlY2hub2xvZ2llczEhMB8GA1UEAxMYbGFuLWZ3LTAxLnZh\
-bGljb3JlLmxvY2FsMSAwHgYJKoZIhvcNAQkBFhFhZG1pbkBsb2NhbGRvbWFpbjCC\
-ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALwGOahytiwshzz1s/ngxy1+\
-+VrXZYjKSEzMYbJCUhK9xA5fz8pGtOZIXI+CasZPSbXv+ZDLGpSpeFnOL49plYRs\
-vmTxg2n3AlZbP6pD9OPU8rmufsTvXAmQGxxIkdmWiXYJk0pbj+U698me6DKMV/sy\
-3ekQaQC2I2nr8uQw8RhuNhhlkWyjBWdXnS2mLNLSan2Jnt8rumtAi3B+vF5Vf0Fa\
-kLJNt45R0f5jjuab+qw4PKMZEQbqe0XTNzkxdD0XNRBdKlajffoZPBJ7xkfuKUA3\
-cMjXKzetABoKvsv+ElfvqlrI9RXvTXy52EaQmVhiOyBHrScq4RbwtDQsd59Qmk0C\
-AwEAAaOB6zCB6DAJBgNVHRMEAjAAMBEGCWCGSAGG+EIBAQQEAwIGQDA0BglghkgB\
-hvhCAQ0EJxYlRWFzeS1SU0EgR2VuZXJhdGVkIFNlcnZlciBDZXJ0aWZpY2F0ZTAd\
-BgNVHQ4EFgQUrq5KF11M9rpKm75nAs+MaiK0niYwUQYDVR0jBEowSIAU2Q9eGjzS\
-LZhvlRRKO6c4Q5ATtuChHqQcMBoxGDAWBgNVBAMTD1ZhbGljb3JlLURDMS1DQYIQ\
-T9aBcT0uXoxJmC0ohp7oSTATBgNVHSUEDDAKBggrBgEFBQcDATALBgNVHQ8EBAMC\
-BaAwDQYJKoZIhvcNAQEFBQADggEBAAUMm/9G+mhxVIYK4anc34FMqu88NQy8lrh0\
-loNfHhIEKnerzMz+nQGidf+KBg5K5U2Jo8e9gVnrzz1gh2RtUFvDjgosGIrgYZMN\
-yreNUD2I7sWtuWFQyEuewbs8h2MECs2xVktkqp5KPmJGCYGhXbi+zuqi/19cIsly\
-yS01kmexwcFMXyX4YOVbG+JFHy1b4zFvWgSDULj14AuKfc8RiZNvMRMWR/Jqlpr5\
-xWQRSmkjuzQMFavs7soZ+kHp9vnFtY2D6gF2cailk0sdG0uuyPBVxEJ2meifG6eb\
-o3FQzdtIrB6oMFHEU00P38SJq+mrDItPDRXNLa2Nrtc1EJtmjws="
-
-                                                                        /* See Note #1.                                 */
-#define HTTPs_CFG_SECURE_KEY                                     \
-"MIIEogIBAAKCAQEAvAY5qHK2LCyHPPWz+eDHLX75WtdliMpITMxhskJSEr3EDl/P\
-yka05khcj4Jqxk9Jte/5kMsalKl4Wc4vj2mVhGy+ZPGDafcCVls/qkP049Tyua5+\
-xO9cCZAbHEiR2ZaJdgmTSluP5Tr3yZ7oMoxX+zLd6RBpALYjaevy5DDxGG42GGWR\
-bKMFZ1edLaYs0tJqfYme3yu6a0CLcH68XlV/QVqQsk23jlHR/mOO5pv6rDg8oxkR\
-Bup7RdM3OTF0PRc1EF0qVqN9+hk8EnvGR+4pQDdwyNcrN60AGgq+y/4SV++qWsj1\
-Fe9NfLnYRpCZWGI7IEetJyrhFvC0NCx3n1CaTQIDAQABAoIBAEbbqbr7j//RwB2P\
-EwZmWWmh4mMDrbYBVYHrvB2rtLZvYYVxQiOexenK92b15TtbAhJYn5qbkCbaPwrJ\
-E09eoQRI3u+3vKigd/cHaFTIS2/Y/qhPRGL/OZY5Ap6EEsMHYkJjlWh+XRosQNlw\
-01zJWxbFsq90ib3E5k+ypdStRQ7JQ9ntvDAP6MDp3DF2RYf22Tpr9t3Oi2mUirOl\
-piOEB55wydSyIhSHusbms3sp2uvQBYJjZP7eENEQz55PebTzl9UF2dgJ0wJFS073\
-rvp46fibcch1L7U6v8iUNaS47GTs3MMyO4zda73ufhYwZLU5gL8oEDY3tf/J8zuC\
-mNurr0ECgYEA8i1GgstYBFSCH4bhd2mLu39UVsIvHaD38mpJE6avCNOUq3Cyz9qr\
-NzewG7RyqR43HsrVqUSQKzlAGWqG7sf+jkiam3v6VW0y05yqDjs+SVW+ZN5CKyn3\
-sMZV0ei4MLrfxWneQaKy/EUTJMlz3rLSDM/hpJoA/gOo9BIFRf2HPkkCgYEAxsGq\
-LYU+ZEKXKehVesh8rIic4QXwzeDmpMF2wTq6GnFq2D4vWPyVGDWdORcIO2BojDWV\
-EZ8e7F2SghbmeTjXGADldYXQiQyt4Wtm+oJ6d+/juKSrQ1HIPzn1qgXDNLPfjd9o\
-9lX5lGlRn49Jrx/kKQAPTcnCa1IirIcsmcdiy+UCgYBEbOBwUi3zQ0Fk0QJhb/Po\
-LSjSPpl7YKDN4JP3NnBcKRPngLc1HU6lElny6gA/ombmj17hLZsia1GeHMg1LVLS\
-NtdgOR5ZBrqGqcwuqzSFGfHqpBXEBl6SludmoL9yHUreh3QhzWuO9aFcEoNnl9Tb\
-g9z4Wf8Pxk71byYISYLt6QKBgERActjo3ZD+UPyCHQBp4m45B246ZQO9zFYdXVNj\
-gE7eTatuR0IOkoBawN++6gPByoUDTWpcsvjF9S6ZAJH2E97ZR/KAfijh4r/66sTx\
-k26mQRPB8FHQvqv/kj3NdsgdUJJeeqPEyEzPkcjyIoJxuB7gN2El/I5wCRon3Qf9\
-sQ6FAoGAfVOaROSAtq/bq9JIL60kkhA9sr3KmX52PnOR2hW0caWi96j+2jlmPT93\
-4A2LIVUo6hCsHLSCFoWWiyX9pIqyYTn5L1EmeBO0+E8BH9F/te9+ZZ53U+quwc/X\
-AZ6Pseyhj7S9wkI5hZ9SO1gcK4rWrAK/UFOIzzlACr5INr723vw="
-
-
-#define  HTTPs_CFG_SECURE_CERT_LEN      (sizeof(HTTPs_CFG_SECURE_CERT) - 1)
-#define  HTTPs_CFG_SECURE_KEY_LEN       (sizeof(HTTPs_CFG_SECURE_KEY)  - 1)
 
 
 /*
@@ -434,10 +376,10 @@ void  Ex_HTTP_Server_InstanceCreateSecure (void)
    ((HTTPs_TOKEN_CFG     *)p_cfg_http->TokenCfgPtr)->NbrPerConnMax               =  5u;
    ((HTTPs_TOKEN_CFG     *)p_cfg_http->TokenCfgPtr)->ValLenMax                   =  12u;
    ((HTTPs_CFG_FS_STATIC *)p_cfg_http->FS_CfgPtr)->FS_API_Ptr                    = &HTTPs_FS_API_Static;
-   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->CertPtr                       =  HTTPs_CFG_SECURE_CERT;
-   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->CertLen                       =  HTTPs_CFG_SECURE_CERT_LEN;
-   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->KeyPtr                        =  HTTPs_CFG_SECURE_KEY;
-   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->KeyLen                        =  HTTPs_CFG_SECURE_KEY_LEN;
+   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->CertPtr                       =  (CPU_CHAR *)SSL_SERVER_CERT;
+   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->CertLen                       =  SSL_ServerCertLen;
+   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->KeyPtr                        =  (CPU_CHAR *)SSL_SERVER_KEY;
+   ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->KeyLen                        =  SSL_ServerKeyLen;
    ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->Fmt                           =  NET_SOCK_SECURE_CERT_KEY_FMT_PEM;
    ((HTTPs_SECURE_CFG    *)p_cfg_http->SecurePtr)->CertChain                     =  DEF_NO;
     p_cfg_http->OS_TaskDly_ms                                                    =  0u;

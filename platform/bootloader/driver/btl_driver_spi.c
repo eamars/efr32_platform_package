@@ -2,7 +2,7 @@
  * @file btl_driver_spi.c
  * @brief Hardware driver layer for simple SPI transactions.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -23,31 +23,31 @@
 #include "em_gpio.h"
 
 #define BTL_DRIVER_SPI_USART_TXLOC \
-  (BTL_DRIVER_SPI_USART_TXLOC_NUMBER << _USART_ROUTELOC0_TXLOC_SHIFT)
+  (BSP_EXTFLASH_MOSI_LOC << _USART_ROUTELOC0_TXLOC_SHIFT)
 #define BTL_DRIVER_SPI_USART_RXLOC \
-  (BTL_DRIVER_SPI_USART_RXLOC_NUMBER << _USART_ROUTELOC0_RXLOC_SHIFT)
+  (BSP_EXTFLASH_MISO_LOC << _USART_ROUTELOC0_RXLOC_SHIFT)
 #define BTL_DRIVER_SPI_USART_CLKLOC \
-  (BTL_DRIVER_SPI_USART_CLKLOC_NUMBER << _USART_ROUTELOC0_CLKLOC_SHIFT)
+  (BSP_EXTFLASH_CLK_LOC << _USART_ROUTELOC0_CLKLOC_SHIFT)
 
-#if BTL_DRIVER_SPI_USART_NUMBER == 0
+#if BSP_EXTFLASH_USART == HAL_SPI_PORT_USART0
 #define BTL_DRIVER_SPI_USART          USART0
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART0
-#elif BTL_DRIVER_SPI_USART_NUMBER == 1
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART1
 #define BTL_DRIVER_SPI_USART          USART1
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART1
-#elif BTL_DRIVER_SPI_USART_NUMBER == 2
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART2
 #define BTL_DRIVER_SPI_USART          USART2
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART2
-#elif BTL_DRIVER_SPI_USART_NUMBER == 3
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART3
 #define BTL_DRIVER_SPI_USART          USART3
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART3
-#elif BTL_DRIVER_SPI_USART_NUMBER == 4
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART4
 #define BTL_DRIVER_SPI_USART          USART4
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART4
-#elif BTL_DRIVER_SPI_USART_NUMBER == 5
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART5
 #define BTL_DRIVER_SPI_USART          USART5
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART5
-#elif BTL_DRIVER_SPI_USART_NUMBER == 6
+#elif BSP_EXTFLASH_USART == HAL_SPI_PORT_USART6
 #define BTL_DRIVER_SPI_USART          USART6
 #define BTL_DRIVER_SPI_USART_CLOCK    cmuClock_USART6
 #else
@@ -60,23 +60,23 @@ void spi_init(void)
   CMU_ClockEnable(BTL_DRIVER_SPI_USART_CLOCK, true);
 
   // MOSI
-  GPIO_PinModeSet(BTL_DRIVER_SPI_MOSI_PORT,
-                  BTL_DRIVER_SPI_MOSI_PIN,
+  GPIO_PinModeSet(BSP_EXTFLASH_MOSI_PORT,
+                  BSP_EXTFLASH_MOSI_PIN,
                   gpioModePushPull,
                   0);
   // MISO
-  GPIO_PinModeSet(BTL_DRIVER_SPI_MISO_PORT,
-                  BTL_DRIVER_SPI_MISO_PIN,
+  GPIO_PinModeSet(BSP_EXTFLASH_MISO_PORT,
+                  BSP_EXTFLASH_MISO_PIN,
                   gpioModeInputPull,
                   0);
   // CLK
-  GPIO_PinModeSet(BTL_DRIVER_SPI_CLK_PORT,
-                  BTL_DRIVER_SPI_CLK_PIN,
+  GPIO_PinModeSet(BSP_EXTFLASH_CLK_PORT,
+                  BSP_EXTFLASH_CLK_PIN,
                   gpioModePushPull,
                   0);
   // CS#
-  GPIO_PinModeSet(BTL_DRIVER_SPI_CS_PORT,
-                  BTL_DRIVER_SPI_CS_PIN,
+  GPIO_PinModeSet(BSP_EXTFLASH_CS_PORT,
+                  BSP_EXTFLASH_CS_PIN,
                   gpioModePushPull,
                   1);
 
@@ -108,11 +108,15 @@ void spi_init(void)
 
   // Configure baudrate
   uint64_t clkdiv;
-  if (CMU->HFCLKSTATUS == CMU_HFCLKSTATUS_SELECTED_HFRCO) {
-    clkdiv = (128ULL * 19000000) / BTL_DRIVER_SPI_BAUDRATE - 256;
+#if defined(HAL_CLK_HFCLK_SOURCE) && (HAL_CLK_HFCLK_SOURCE == HAL_CLK_HFCLK_HFXO)
+  if (CMU->HFCLKSTATUS == CMU_HFCLKSTATUS_SELECTED_HFXO) {
+    clkdiv = (128ULL * BSP_CLK_HFXO_FREQ) / HAL_EXTFLASH_FREQUENCY - 256;
   } else {
-    clkdiv = (128ULL * 38400000) / BTL_DRIVER_SPI_BAUDRATE - 256;
+    clkdiv = (128ULL * 19000000) / HAL_EXTFLASH_FREQUENCY - 256;
   }
+#else
+  clkdiv = (128ULL * 19000000) / HAL_EXTFLASH_FREQUENCY - 256;
+#endif
   clkdiv = ((clkdiv + 128) / 256) << 8;
   clkdiv &= _USART_CLKDIV_DIV_MASK;
   BTL_DRIVER_SPI_USART->CLKDIV = clkdiv;
@@ -172,10 +176,10 @@ uint16_t spi_readHalfword(void)
 
 void spi_setCsActive(void)
 {
-  GPIO_PinOutClear(BTL_DRIVER_SPI_CS_PORT, BTL_DRIVER_SPI_CS_PIN);
+  GPIO_PinOutClear(BSP_EXTFLASH_CS_PORT, BSP_EXTFLASH_CS_PIN);
 }
 
 void spi_setCsInactive(void)
 {
-  GPIO_PinOutSet(BTL_DRIVER_SPI_CS_PORT, BTL_DRIVER_SPI_CS_PIN);
+  GPIO_PinOutSet(BSP_EXTFLASH_CS_PORT, BSP_EXTFLASH_CS_PIN);
 }

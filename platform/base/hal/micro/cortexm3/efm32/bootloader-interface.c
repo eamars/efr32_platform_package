@@ -141,7 +141,7 @@ uint16_t halGetBootloaderVersion(void)
 
 void halGetExtendedBootloaderVersion(uint32_t* getEmberVersion, uint32_t* customerVersion)
 {
-  uint32_t ember, customer = 0xFFFFFFFF;
+  uint32_t ember = 0xFFFFFFFF, customer = 0xFFFFFFFF;
 
   if (bootloaderIsCommonBootloader()) {
     ember = mainBootloaderTable->header.version;

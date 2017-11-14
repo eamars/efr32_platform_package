@@ -61,8 +61,10 @@
 *********************************************************************************************************
 */
 
+#ifndef  EX_TRACE
 #include  <stdio.h>
-#define  EX_TRACE(...)                                      printf(__VA_ARGS__)
+#define  EX_TRACE(...)                                  printf(__VA_ARGS__)
+#endif
 
 
 /*

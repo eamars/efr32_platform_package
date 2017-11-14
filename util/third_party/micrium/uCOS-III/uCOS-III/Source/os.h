@@ -8,7 +8,7 @@
 *
 * File    : OS.H
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -25,7 +25,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 * Note(s) : (1) Assumes the following versions (or more recent) of software modules are included in the project build:
@@ -44,7 +44,7 @@
 ************************************************************************************************************************
 */
 
-#define  OS_VERSION  30600u                       /* Version of uC/OS-III (Vx.yy.zz mult. by 10000)                   */
+#define  OS_VERSION  30601u                       /* Version of uC/OS-III (Vx.yy.zz mult. by 10000)                   */
 
 /*
 ************************************************************************************************************************
@@ -1425,12 +1425,14 @@ extern  CPU_STK_SIZE  const OSCfg_TmrTaskStkLimit;
 extern  CPU_STK_SIZE  const OSCfg_TmrTaskStkSize;
 extern  CPU_INT32U    const OSCfg_TmrTaskStkSizeRAM;
 
+extern  CPU_INT32U    const OSCfg_DataSizeRAM;
+
 #if (OS_CFG_TASK_IDLE_EN == DEF_ENABLED)
 extern  CPU_STK        OSCfg_IdleTaskStk[OS_CFG_IDLE_TASK_STK_SIZE];
 #endif
 
 #if (OS_CFG_ISR_STK_SIZE > 0u)
-extern  CPU_STK        OSCfg_ISRStk[];
+extern  CPU_STK        OSCfg_ISRStk[OS_CFG_ISR_STK_SIZE];
 #endif
 
 #if (OS_MSG_EN == DEF_ENABLED)
@@ -1438,10 +1440,12 @@ extern  OS_MSG         OSCfg_MsgPool[OS_CFG_MSG_POOL_SIZE];
 #endif
 
 #if (OS_CFG_STAT_TASK_EN == DEF_ENABLED)
-extern  CPU_STK        OSCfg_StatTaskStk[];
+extern  CPU_STK        OSCfg_StatTaskStk[OS_CFG_STAT_TASK_STK_SIZE];
 #endif
 
+#if (OS_CFG_TASK_TICK_EN == DEF_ENABLED)
 extern  CPU_STK        OSCfg_TickTaskStk[OS_CFG_TICK_TASK_STK_SIZE];
+#endif
 
 #if (OS_CFG_TMR_EN == DEF_ENABLED)
 extern  CPU_STK        OSCfg_TmrTaskStk[OS_CFG_TMR_TASK_STK_SIZE];
@@ -2472,22 +2476,15 @@ OS_TICK       BSP_OS_TickNextSet        (OS_TICK                ticks);
 */
 
 #ifndef OS_CFG_TRACE_EN
-    #error  "OS_CFG.H, Missing OS_CFG_TRACE_EN: When (1) enables kernel events recording for Trace Analysis"
-#else
-    #ifndef OS_CFG_TRACE_API_ENTER_EN
-        #error  "OS_CFG.H, Missing OS_CFG_TRACE_API_ENTER_EN: Enables (1) or Disables (0) the recording of the kernel API entry events for Trace Analisys"
-    #else
-        #if ((OS_CFG_TRACE_API_ENTER_EN == DEF_ENABLED) && (OS_CFG_TRACE_EN == DEF_DISABLED))
-            #warning  "OS_CFG.H, Macro OS_CFG_TRACE_API_ENTER_EN is enabled but OS_CFG_TRACE_EN is disabled"
-        #endif
-    #endif
-    #ifndef OS_CFG_TRACE_API_EXIT_EN
-        #error  "OS_CFG.H, Missing OS_CFG_TRACE_API_EXIT_EN: Enables (1) or Disables (0) the recording of the kernel API exit events for Trace Analisys"
-    #else
-        #if ((OS_CFG_TRACE_API_EXIT_EN == DEF_ENABLED) && (OS_CFG_TRACE_EN == DEF_DISABLED))
-            #warning  "OS_CFG.H, Macro OS_CFG_TRACE_API_EXIT_EN is enabled but OS_CFG_TRACE_EN is disabled"
-        #endif
-    #endif
+#error  "OS_CFG.H, Missing OS_CFG_TRACE_EN: When (1) enables kernel events recording for Trace Analysis"
+#endif
+
+#ifndef OS_CFG_TRACE_API_ENTER_EN
+#error  "OS_CFG.H, Missing OS_CFG_TRACE_API_ENTER_EN: Enables (1) or Disables (0) the recording of the kernel API entry events for Trace Analysis"
+#endif
+
+#ifndef OS_CFG_TRACE_API_EXIT_EN
+#error  "OS_CFG.H, Missing OS_CFG_TRACE_API_EXIT_EN: Enables (1) or Disables (0) the recording of the kernel API exit events for Trace Analysis"
 #endif
 
 /*

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['mainbootloadertable_5ft',['MainBootloaderTable_t',['../structMainBootloaderTable__t.html',1,'']]]
+  ['imageproperties_5ft',['ImageProperties_t',['../structImageProperties__t.html',1,'']]]
 ];

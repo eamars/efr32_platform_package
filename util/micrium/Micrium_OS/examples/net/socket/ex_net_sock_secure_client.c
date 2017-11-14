@@ -44,7 +44,8 @@
 
 #include <rtos_description.h>
 
-#ifdef  RTOS_MODULE_NET_SSL_TLS_AVAIL
+#if  (defined(RTOS_MODULE_NET_SSL_TLS_AVAIL) && \
+      NET_SECURE_CFG_MAX_NBR_SOCK_CLIENT > 0)
 
 
 /*
@@ -55,7 +56,7 @@
 *********************************************************************************************************
 */
 
-#include  <rtos/net/include/net_secure_mocana.h>
+#include  <rtos/net/include/net_secure.h>
 #include  <rtos/net/include/net_sock.h>
 #include  <rtos/net/include/net_app.h>
 #include  <rtos/net/include/net_ascii.h>
@@ -162,7 +163,7 @@ CPU_INT16S  Ex_Net_SockSecureClientConnect (void)
 
                                                                 /* -------------- INSTALL CA CERTIFICATE -------------- */
     len = Str_Len(p_cert); 
-    NetSecure_CA_CertIntall(p_cert, len, NET_SOCK_SECURE_CERT_KEY_FMT_PEM, &err);
+    NetSecure_CA_CertInstall(p_cert, len, NET_SOCK_SECURE_CERT_KEY_FMT_PEM, &err);
 
 
                                                                 /* ------------------ OPEN THE SOCKET ----------------- */
@@ -273,6 +274,10 @@ CPU_INT16S  Ex_Net_SockSecureClientConnect (void)
 static  CPU_BOOLEAN  Ex_ClientCertTrustCallBackFnct (void                             *p_cert_dn,
                                                      NET_SOCK_SECURE_UNTRUSTED_REASON  reason)
 {
+    PP_UNUSED_PARAM(p_cert_dn);
+    PP_UNUSED_PARAM(reason);
+
+
     return (DEF_OK);
 }
 

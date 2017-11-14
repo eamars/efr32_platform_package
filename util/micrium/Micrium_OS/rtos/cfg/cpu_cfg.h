@@ -1,6 +1,6 @@
 /*
 *********************************************************************************************************
-*                                            EXAMPLE CODE
+*                                             EXAMPLE CODE
 *********************************************************************************************************
 * Licensing:
 *   The licensor of this EXAMPLE CODE is Silicon Laboratories Inc.
@@ -28,7 +28,8 @@
 *
 *                                      CONFIGURATION TEMPLATE FILE
 *
-* File : cpu_cfg.h
+* Filename      : cpu_cfg.h
+* Programmer(s) : Micrium
 *********************************************************************************************************
 */
 
@@ -187,3 +188,4 @@
 */
 
 #endif                                                          /* End of cpu_cfg.h module include.                     */
+

@@ -29,19 +29,19 @@ static uint16_t adcStaticConfig;
 void halAdcSetClock(bool slow)
 {
   if (slow) {
-    adcStaticConfig |= ADC_CFG_1MHZCLK;
+    adcStaticConfig |= _ADC_CFG_1MHZCLK_MASK;
   } else {
-    adcStaticConfig &= ~ADC_CFG_1MHZCLK;
+    adcStaticConfig &= ~_ADC_CFG_1MHZCLK_MASK;
   }
 }
 
 bool halAdcGetClock(void)
 {
-  return (bool)(adcStaticConfig & ADC_CFG_1MHZCLK);
+  return (bool)(adcStaticConfig & _ADC_CFG_1MHZCLK_MASK);
 }
 
-// Define a channel field that combines ADC_CFG_MUXP and ADC_CFG_MUXN
-#define ADC_CHAN        (ADC_CFG_MUXP | ADC_CFG_MUXN)
+// Define a channel field that combines _ADC_CFG_MUXP_MASK and _ADC_CFG_MUXN_MASK
+#define ADC_CHAN_MASK   (_ADC_CFG_MUXP_MASK | _ADC_CFG_MUXN_MASK)
 #define ADC_CHAN_BIT    _ADC_CFG_MUXN_SHIFT
 
 void halAdcIsr(void)
@@ -108,7 +108,7 @@ void halInternalInitAdc(void)
   adcPendingRequests = 0;
   adcPendingConversion = NUM_ADC_USERS;
   adcCalibrated = false;
-  adcStaticConfig = ADC_CFG_1MHZCLK | ADC_CFG_ENABLE; // init config: 1MHz, low voltage
+  adcStaticConfig = _ADC_CFG_1MHZCLK_MASK | _ADC_CFG_ENABLE_MASK; // init config: 1MHz, low voltage
 
   // set all adcReadings as invalid
   adcReadingValid = 0;
@@ -140,8 +140,8 @@ EmberStatus halStartAdcConversion(ADCUser id,
   }
 
   // save the chosen configuration for this user
-  adcConfig[id] = (((rate << _ADC_CFG_PERIOD_SHIFT) & ADC_CFG_PERIOD)
-                   | ((channel << ADC_CHAN_BIT) & ADC_CHAN)
+  adcConfig[id] = (((rate << _ADC_CFG_PERIOD_SHIFT) & _ADC_CFG_PERIOD_MASK)
+                   | ((channel << ADC_CHAN_BIT) & ADC_CHAN_MASK)
                    | adcStaticConfig);
 
   // if the user already has a pending request, overwrite params

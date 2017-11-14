@@ -32,6 +32,41 @@
   #define CONST_PTA_OPTIONS (~PTA_OPT_DISABLED)
 #endif
 
+// Define pointers to runtime configurable PTA variables
+#ifdef DEBUG_PTA
+extern uint32_t* debugRhoGpioPtr;
+extern bool* debugRhoGpioAssertedPtr;
+
+extern uint32_t* debugPtaPriGpioPtr;
+extern bool* debugPtaPriGpioAssertedPtr;
+
+extern uint32_t* debugPtaReqGpioPtr;
+extern bool* debugPtaReqGpioAssertedPtr;
+
+extern uint32_t* debugPtaGntGpioPtr;
+extern bool* debugPtaGntGpioAssertedPtr;
+
+#define RHO_GPIO         (*debugRhoGpioPtr)
+#define RHO_ASSERTED     (0)
+#define rhoAsserted      (*debugRhoGpioAssertedPtr)
+
+#define PTA_PRI_GPIO     (*debugPtaPriGpioPtr)
+#define PTA_PRI_ASSERTED (0)
+#define ptaPriAsserted   (*debugPtaPriGpioAssertedPtr)
+
+#define PTA_REQ_GPIO     (*debugPtaReqGpioPtr)
+#define PTA_REQ_ASSERTED (0)
+#define ptaReqAsserted   (*debugPtaReqGpioAssertedPtr)
+
+#define PTA_GNT_GPIO     (*debugPtaGntGpioPtr)
+#define PTA_GNT_ASSERTED (0)
+#define ptaGntAsserted   (*debugPtaGntGpioAssertedPtr)
+
+#define VALIDATE_PTA_OPTIONS (0)
+#else //!DEBUG_PTA
+#define VALIDATE_PTA_OPTIONS (1)
+#endif //DEBUG_PTA
+
 HalPtaOptions halPtaOptions = DEFAULT_PTA_OPTIONS;
 extern void emPhyCancelTransmit (void);
 void halStackRadioHoldOffPowerDown(void); // fwd ref
@@ -75,9 +110,9 @@ EmberStatus halPtaSetOptions(HalPtaOptions options)
   EmberStatus status = EMBER_SUCCESS;
 
   HalPtaOptions oldOptions = halPtaOptions;
-  if ((options & CONST_PTA_OPTIONS) != (DEFAULT_PTA_OPTIONS & CONST_PTA_OPTIONS)) {
+  if (VALIDATE_PTA_OPTIONS && (options & CONST_PTA_OPTIONS) != (DEFAULT_PTA_OPTIONS & CONST_PTA_OPTIONS)) {
     //Return error if any options argument is unsupported or constant
-    status = EMBER_BAD_ARGUMENT;
+    return EMBER_BAD_ARGUMENT;
   } else {
     //Only modify public options
     halPtaOptions = options;
@@ -143,7 +178,9 @@ void emCallCounterHandler(EmberCounterType type, uint8_t data);
   emCallCounterHandler(halPtaCounterType(type), data)
   #endif //EMBER_STACK_IP
 
+#ifndef DEBUG_PTA
 static bool ptaReqAsserted = PTA_REQ_ASSERTED;
+#endif //DEBUG_PTA
 
 static inline void ptaReqGpioSet(bool enable)
 {
@@ -178,13 +215,19 @@ static inline void ptaReqGpioCfg(void)
   #define ptaReqGpioOutAsserted() \
   (!!halGpioReadOutput(PTA_REQ_GPIO) == !!ptaReqAsserted)
 
+#ifdef DEBUG_PTA
+// Request and grant IRQ sharing is currently unsupported
+// with run time configurable PTA
+  #define ptaReqAndGntIrqShared()  (0)
+#else //!DEBUG_PTA
   #define ptaReqAndGntIrqShared()                                           \
   ((defined(PTA_GNT_GPIO))                                     /*Have GNT*/ \
    && (GPIO_PIN(PTA_REQ_GPIO) == GPIO_PIN(PTA_GNT_GPIO)))         /*Shared IRQ*/
 
- #if     (ptaReqAndGntIrqShared())
-  #define PTA_REQ_ISR PTA_GNT_ISR // REQUEST and GRANT share same IRQ & ISR
- #endif//(ptaReqAndGntIrqShared())
+  #if     (ptaReqAndGntIrqShared())
+    #define PTA_REQ_ISR PTA_GNT_ISR // REQUEST and GRANT share same IRQ & ISR
+  #endif//(ptaReqAndGntIrqShared())
+#endif //DEBUG_PTA
 
 static void PTA_REQ_ISR(uint8_t pin);
 
@@ -230,7 +273,10 @@ static inline void ptaReqGpioIntEnable(void)
 
 static void PTA_GNT_ISR(uint8_t pin);
 
+#ifndef DEBUG_PTA
 static bool ptaGntAsserted = PTA_GNT_ASSERTED;
+#endif //DEBUG_PTA
+
 static bool gntWasAsserted = false;
 
 static inline void ptaGntGpioCfg(void)
@@ -297,7 +343,9 @@ static inline void ptaGntGpioIntPend(void)
   #define ptaPriGpioOutAsserted() \
   (!!halGpioReadOutput(PTA_PRI_GPIO) == !!ptaPriAsserted)
 
+#ifndef DEBUG_PTA
 static bool ptaPriAsserted = PTA_PRI_ASSERTED;
+#endif //DEBUG_PTA
 
 static inline void ptaPriGpioSet(bool enable)
 {
@@ -597,7 +645,10 @@ bool halPtaIsEnabled(void)
 #define RHO_ENABLED_MASK  0x01u // RHO is enabled
 #define RHO_RADIO_ON_MASK 0x02u // Radio is on (not sleeping)
 static uint8_t rhoState;
+
+#ifndef DEBUG_PTA
 static bool rhoAsserted = !!RHO_ASSERTED;
+#endif //DEBUG_PTA
 
 bool halGetRadioHoldOff(void)
 {

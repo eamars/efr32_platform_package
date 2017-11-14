@@ -1141,9 +1141,12 @@ void  CPU_IntHandlerDispatcher (void)
 {
     CPU_FNCT_VOID  handler;
     CPU_INT_ID     id;
+    CPU_SR_ALLOC();
 
                                                                 /* This is a kernel aware ISR.                          */
+    CPU_CRITICAL_ENTER();
     OSIntEnter();
+    CPU_CRITICAL_EXIT();
 
                                                                 /* Get active interrupt ID.                             */
     id = CPU_REG_NVIC_ICSR & CPU_MSK_NVIC_ICSR_VECT_ACTIVE;

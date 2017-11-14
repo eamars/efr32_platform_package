@@ -3,6 +3,8 @@ var searchData=
   ['filecrc',['fileCrc',['../structParserContext__t.html#a0a1ad19b7d637d552def37a234e6dca8',1,'ParserContext_t']]],
   ['firstbootloadertable',['firstBootloaderTable',['../group__CommonInterface.html#gad388d4d1c5656d47cd70dde2d3bce6f2',1,'btl_interface.h']]],
   ['firstbootloadertable_5ft',['FirstBootloaderTable_t',['../structFirstBootloaderTable__t.html',1,'']]],
+  ['firstcall',['firstCall',['../structLz4ParserContext__t.html#a5205816021dedb1c3707b626097719bc',1,'Lz4ParserContext_t']]],
+  ['flags',['flags',['../structParserContext__t.html#a355dc402acd2d4521e0ddcc6a096648d',1,'ParserContext_t']]],
   ['flash',['Flash',['../group__Flash.html',1,'']]],
   ['flash_5fdeinit',['flash_deinit',['../group__Flash.html#gac74e7d0e8b61ccb32eba152a23aacce7',1,'btl_internal_flash.h']]],
   ['flash_5ferasepage',['flash_erasePage',['../group__Flash.html#gacfee0224881172fedb62c87b094be167',1,'btl_internal_flash.h']]],

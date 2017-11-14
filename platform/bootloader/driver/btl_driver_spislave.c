@@ -2,7 +2,7 @@
  * @file btl_driver_spislave.h
  * @brief Universal SPI slave driver for the Silicon Labs Bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -27,37 +27,37 @@
 
 #include "plugin/debug/btl_debug.h"
 
-#if BTL_SPISLAVE_NUMBER == 0
+#if BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART0
 #define BTL_SPISLAVE                     USART0
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART0
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART0_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART0_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 1
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART1
 #define BTL_SPISLAVE                     USART1
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART1
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART1_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART1_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 2
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART2
 #define BTL_SPISLAVE                     USART2
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART2
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART2_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART2_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 3
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART3
 #define BTL_SPISLAVE                     USART3
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART3
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART3_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART3_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 4
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART4
 #define BTL_SPISLAVE                     USART4
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART4
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART4_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART4_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 5
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART5
 #define BTL_SPISLAVE                     USART5
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART5
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART5_TXBL)
 #define BTL_SPISLAVE_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART5_RXDATAV)
-#elif BTL_SPISLAVE_NUMBER == 6
+#elif BSP_SPINCP_USART_PORT == HAL_SPI_PORT_USART6
 #define BTL_SPISLAVE                     USART6
 #define BTL_SPISLAVE_CLOCK               cmuClock_USART6
 #define BTL_SPISLAVE_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART6_TXBL)
@@ -155,29 +155,29 @@ void spislave_init(void)
   // Set up USART
   spislave_deinit();
 
-  GPIO_PinModeSet(BTL_SPISLAVE_MISO_PORT,
-                  BTL_SPISLAVE_MISO_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_MISO_PORT,
+                  BSP_SPINCP_MISO_PIN,
                   gpioModePushPull,
                   1);
-  GPIO_PinModeSet(BTL_SPISLAVE_MOSI_PORT,
-                  BTL_SPISLAVE_MOSI_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_MOSI_PORT,
+                  BSP_SPINCP_MOSI_PIN,
                   gpioModeInput,
                   1);
-  GPIO_PinModeSet(BTL_SPISLAVE_CLK_PORT,
-                  BTL_SPISLAVE_CLK_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_CLK_PORT,
+                  BSP_SPINCP_CLK_PIN,
                   gpioModeInput,
                   1);
-  GPIO_PinModeSet(BTL_SPISLAVE_CS_PORT,
-                  BTL_SPISLAVE_CS_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_CS_PORT,
+                  BSP_SPINCP_CS_PIN,
                   gpioModeInput,
                   1);
 
   // Configure route
   BTL_SPISLAVE->ROUTELOC0
-    = BTL_SPISLAVE_MOSI_LOCATION << _USART_ROUTELOC0_TXLOC_SHIFT
-      | BTL_SPISLAVE_MISO_LOCATION << _USART_ROUTELOC0_RXLOC_SHIFT
-      | BTL_SPISLAVE_CLK_LOCATION << _USART_ROUTELOC0_CLKLOC_SHIFT
-      | BTL_SPISLAVE_CS_LOCATION << _USART_ROUTELOC0_CSLOC_SHIFT;
+    = BSP_SPINCP_MOSI_LOC << _USART_ROUTELOC0_TXLOC_SHIFT
+      | BSP_SPINCP_MISO_LOC << _USART_ROUTELOC0_RXLOC_SHIFT
+      | BSP_SPINCP_CLK_LOC << _USART_ROUTELOC0_CLKLOC_SHIFT
+      | BSP_SPINCP_CS_LOC << _USART_ROUTELOC0_CSLOC_SHIFT;
 
   BTL_SPISLAVE->ROUTEPEN = USART_ROUTEPEN_TXPEN
                            | USART_ROUTEPEN_CSPEN
@@ -240,20 +240,20 @@ void spislave_init(void)
  */
 void spislave_deinit(void)
 {
-  GPIO_PinModeSet(BTL_SPISLAVE_MISO_PORT,
-                  BTL_SPISLAVE_MISO_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_MISO_PORT,
+                  BSP_SPINCP_MISO_PIN,
                   gpioModeDisabled,
                   0);
-  GPIO_PinModeSet(BTL_SPISLAVE_MOSI_PORT,
-                  BTL_SPISLAVE_MOSI_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_MOSI_PORT,
+                  BSP_SPINCP_MOSI_PIN,
                   gpioModeDisabled,
                   0);
-  GPIO_PinModeSet(BTL_SPISLAVE_CLK_PORT,
-                  BTL_SPISLAVE_CLK_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_CLK_PORT,
+                  BSP_SPINCP_CLK_PIN,
                   gpioModeDisabled,
                   0);
-  GPIO_PinModeSet(BTL_SPISLAVE_CS_PORT,
-                  BTL_SPISLAVE_CS_PIN,
+  GPIO_PinModeSet(BSP_SPINCP_CS_PORT,
+                  BSP_SPINCP_CS_PIN,
                   gpioModeDisabled,
                   0);
 

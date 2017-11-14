@@ -10,5 +10,5 @@ FILE (GLOB SRC *.c)
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency and build order
-ADD_DEPENDENCIES(${LIB_NAME} i2cdrv gpiointerrupt)
-TARGET_LINK_LIBRARIES(${LIB_NAME} i2cdrv gpiointerrupt)
+#ADD_DEPENDENCIES(${LIB_NAME} i2cdrv gpiointerrupt)
+#TARGET_LINK_LIBRARIES(${LIB_NAME} i2cdrv gpiointerrupt)

@@ -28,14 +28,6 @@
 #define MBEDTLS_ERR_CCM_BAD_INPUT      -0x000D /**< Bad input parameters to function. */
 #define MBEDTLS_ERR_CCM_AUTH_FAILED    -0x000F /**< Authenticated decryption failed. */
 
-#if defined( MBEDTLS_CCM_ALT )
-
-#include "ccm_alt.h"
-
-#else  /* #if defined( MBEDTLS_CCM_ALT ) */
-
-// Regular implementation
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -145,7 +137,5 @@ int mbedtls_ccm_self_test( int verbose );
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* #else of #if defined( MBEDTLS_CCM_ALT ) */
 
 #endif /* MBEDTLS_CCM_H */

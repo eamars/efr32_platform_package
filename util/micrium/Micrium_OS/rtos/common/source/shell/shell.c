@@ -76,7 +76,7 @@
                                                 {                               \
                                                     .CmdTblItemNbrInit = 10u,   \
                                                     .CmdTblItemNbrMax  = 10u,   \
-                                                    .CmdArgNbrMax      = 10u,   \
+                                                    .CmdArgNbrMax      = 13u,   \
                                                     .CmdNameLenMax     = 10u    \
                                                 },                              \
                                                 .MemSegPtr = DEF_NULL           \

@@ -63,8 +63,8 @@
 #include  "../source/ports/interrupt/emul/cpu_int_none_priv.h"
 #elif (RTOS_INT_CONTROLLER_NAME == RTOS_INT_CONTROLLER_ARMV7_AR_GIC)
 #include  "../source/ports/interrupt/armv7-ar/gic/cpu_int_gic_priv.h"
-#elif (RTOS_INT_CONTROLLER_NAME == RTOS_INT_CONTROLLER_ARMV7_AR_VIM95)
-#include  "../source/ports/interrupt/armv7-ar/ti/vim95/cpu_int_vim95_priv.h"
+#elif (RTOS_INT_CONTROLLER_NAME == RTOS_INT_CONTROLLER_ARMV7_AR_VIMX)
+#include  "../source/ports/interrupt/armv7-ar/ti/vimx/cpu_int_vimx_priv.h"
 #elif (RTOS_INT_CONTROLLER_NAME == RTOS_INT_CONTROLLER_ARMV7_M)
 #include  "../source/ports/interrupt/armv7-m/cpu_int_armv7-m_priv.h"
 #elif (RTOS_INT_CONTROLLER_NAME == RTOS_INT_CONTROLLER_RX)

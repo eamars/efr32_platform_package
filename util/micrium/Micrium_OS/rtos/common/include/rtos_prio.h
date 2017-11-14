@@ -134,12 +134,16 @@
 #define  TELNET_SERVER_SRV_TASK_PRIO_DFLT                     22u
 #endif
 
+#ifndef  TFTP_SERVER_TASK_PRIO_DFLT
+#define  TFTP_SERVER_TASK_PRIO_DFLT                           23u
+#endif
+
 #ifndef  CLK_TASK_CFG_PRIO_DFLT
-#define  CLK_TASK_CFG_PRIO_DFLT                               23u
+#define  CLK_TASK_CFG_PRIO_DFLT                               24u
 #endif
 
 #ifndef  USBH_ASYNC_TASK_PRIO_DFLT
-#define  USBH_ASYNC_TASK_PRIO_DFLT                            24u
+#define  USBH_ASYNC_TASK_PRIO_DFLT                            25u
 #endif
 
 

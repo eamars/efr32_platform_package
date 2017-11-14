@@ -77,7 +77,7 @@
 *********************************************************************************************************
 *                                       Ex_DNSc_GetHostname()
 *
-* Description : This function resolve the hostname "micrium.com" and return the IP address of the host.
+* Description : This function resolve the provided hostname and returns the IP address of the host.
 *
 * Argument(s) : p_hostname  Pointer to a string that contains the hostname to be resolved.
 *

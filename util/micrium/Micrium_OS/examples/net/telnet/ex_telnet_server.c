@@ -64,6 +64,8 @@
 #include  <rtos/common/include/auth.h>
 #include  <rtos/net/include/telnet_server.h>
 
+#include  <rtos/common/include/rtos_prio.h>
+
 #include  <ex_description.h>
 
 
@@ -100,14 +102,14 @@
 #define  EX_TELNET_SERVER_SRV_TASK_STK_SIZE         TELNET_SERVER_TASK_CFG_STK_SIZE_ELEMENTS_DFLT
 #endif
 
-#ifdef EX_TELNET_SERVER_SRV_TASK_PRIO
+#ifndef EX_TELNET_SERVER_SRV_TASK_PRIO
 #define  EX_TELNET_SERVER_SRV_TASK_PRIO             TELNET_SERVER_SRV_TASK_PRIO_DFLT
 #endif
 
 RTOS_TASK_CFG  Ex_TELNET_Server_SrvTaskCfg = {
-        .Prio            = TELNET_SERVER_SRV_TASK_PRIO_DFLT;
-        .StkSizeElements = TELNET_SERVER_TASK_CFG_STK_SIZE_ELEMENTS_DFLT;
-        .StkPtr          = DEF_NULL;
+    .Prio            = EX_TELNET_SERVER_SRV_TASK_PRIO,
+    .StkSizeElements = EX_TELNET_SERVER_SRV_TASK_STK_SIZE,
+    .StkPtr          = DEF_NULL
 };
 
 RTOS_TASK_CFG   *Ex_TELNET_Server_SrvTaskCfgPtr = &Ex_TELNET_Server_SrvTaskCfg;
@@ -125,14 +127,14 @@ RTOS_TASK_CFG   *Ex_TELNET_Server_SrvTaskCfgPtr = DEF_NULL;
 #define  EX_TELNET_SERVER_SESSION_TASK_STK_SIZE         TELNET_SERVER_SESSION_TASK_CFG_STK_SIZE_ELEMENTS_DFLT
 #endif
 
-#ifdef EX_TELNET_SERVER_SESSION_TASK_PRIO
+#ifndef EX_TELNET_SERVER_SESSION_TASK_PRIO
 #define  EX_TELNET_SERVER_SESSION_TASK_PRIO             TELNET_SERVER_SESSION_TASK_PRIO_DFLT
 #endif
 
 RTOS_TASK_CFG  Ex_TELNET_Server_SessionTaskCfg = {
-        .Prio            = EX_TELNET_SERVER_SESSION_TASK_PRIO;
-        .StkSizeElements = EX_TELNET_SERVER_SESSION_TASK_STK_SIZE;
-        .StkPtr          = DEF_NULL;
+    .Prio            = EX_TELNET_SERVER_SESSION_TASK_PRIO,
+    .StkSizeElements = EX_TELNET_SERVER_SESSION_TASK_STK_SIZE,
+    .StkPtr          = DEF_NULL
 };
 
 RTOS_TASK_CFG   *Ex_TELNET_Server_SessionTaskCfgPtr = &Ex_TELNET_Server_SessionTaskCfg;

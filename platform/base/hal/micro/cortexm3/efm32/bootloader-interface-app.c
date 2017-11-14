@@ -103,6 +103,10 @@ const HalEepromInformationType *halAppBootloaderInfo(void)
     BootloaderStorageInformation_t info;
     mainBootloaderTable->storage->getInfo(&info);
 
+    if (info.info == NULL) {
+      return NULL;
+    }
+
     // if partEraseMs fits into 16 bits don't change it
     if (info.info->partEraseMs <= 65535) {
       fixedEepromInfo.partEraseTime    = info.info->partEraseMs;

@@ -2,7 +2,7 @@
  * @file btl_interface.c
  * @brief Application interface to the bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -19,14 +19,14 @@
 void bootloader_getInfo(BootloaderInformation_t *info)
 {
   if (!BTL_TABLE_PTR_VALID(mainBootloaderTable)) {
-    info->type = NONE;
+    info->type = NO_BOOTLOADER;
     info->capabilities = 0;
   } else if (mainBootloaderTable->header.type == BOOTLOADER_MAGIC_MAIN) {
     info->type = SL_BOOTLOADER;
     info->version = mainBootloaderTable->header.version;
     info->capabilities = mainBootloaderTable->capabilities;
   } else {
-    info->type = NONE;
+    info->type = NO_BOOTLOADER;
     info->capabilities = 0;
   }
 }

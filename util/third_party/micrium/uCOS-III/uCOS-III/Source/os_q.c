@@ -10,7 +10,7 @@
 *
 * File    : OS_Q.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -80,7 +80,7 @@ void  OSQCreate (OS_Q        *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -101,7 +101,7 @@ void  OSQCreate (OS_Q        *p_q,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate arguments                                   */
+    if (p_q == (OS_Q *)0) {                                     /* Validate arguments                                   */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -184,7 +184,7 @@ OS_OBJ_QTY  OSQDel (OS_Q    *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -217,7 +217,7 @@ OS_OBJ_QTY  OSQDel (OS_Q    *p_q,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate 'p_q'                                       */
+    if (p_q == (OS_Q *)0) {                                     /* Validate 'p_q'                                       */
         OS_TRACE_Q_DEL_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err =  OS_ERR_OBJ_PTR_NULL;
         return (0u);
@@ -237,7 +237,7 @@ OS_OBJ_QTY  OSQDel (OS_Q    *p_q,
     nbr_tasks   = 0u;
     switch (opt) {
         case OS_OPT_DEL_NO_PEND:                                /* Delete message queue only if no task waiting         */
-             if (p_pend_list->HeadPtr == DEF_NULL) {
+             if (p_pend_list->HeadPtr == (OS_TCB *)0) {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                  OS_QDbgListRemove(p_q);
                  OSQQty--;
@@ -258,7 +258,7 @@ OS_OBJ_QTY  OSQDel (OS_Q    *p_q,
 #else
              ts = 0u;
 #endif
-             while (p_pend_list->HeadPtr != DEF_NULL) {         /* Remove all tasks from the pend list                  */
+             while (p_pend_list->HeadPtr != (OS_TCB *)0) {      /* Remove all tasks from the pend list                  */
                  p_tcb = p_pend_list->HeadPtr;
                  OS_PendAbort(p_tcb,
                               ts,
@@ -323,7 +323,7 @@ OS_MSG_QTY  OSQFlush (OS_Q    *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -344,7 +344,7 @@ OS_MSG_QTY  OSQFlush (OS_Q    *p_q,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate arguments                                   */
+    if (p_q == (OS_Q *)0) {                                     /* Validate arguments                                   */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return (0u);
     }
@@ -430,9 +430,9 @@ void  *OSQPend (OS_Q         *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
@@ -443,7 +443,7 @@ void  *OSQPend (OS_Q         *p_q,
         OS_TRACE_Q_PEND_FAILED(p_q);
         OS_TRACE_Q_PEND_EXIT(OS_ERR_PEND_ISR);
        *p_err = OS_ERR_PEND_ISR;
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
@@ -451,22 +451,22 @@ void  *OSQPend (OS_Q         *p_q,
     if (OSRunning != OS_STATE_OS_RUNNING) {
         OS_TRACE_Q_PEND_EXIT(OS_ERR_OS_NOT_RUNNING);
        *p_err = OS_ERR_OS_NOT_RUNNING;
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate arguments                                   */
+    if (p_q == (OS_Q *)0) {                                     /* Validate arguments                                   */
         OS_TRACE_Q_PEND_FAILED(p_q);
         OS_TRACE_Q_PEND_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err = OS_ERR_OBJ_PTR_NULL;
-        return (DEF_NULL);
+        return ((void *)0);
     }
-    if (p_msg_size == DEF_NULL) {
+    if (p_msg_size == (OS_MSG_SIZE *)0) {
         OS_TRACE_Q_PEND_FAILED(p_q);
         OS_TRACE_Q_PEND_EXIT(OS_ERR_PTR_INVALID);
        *p_err = OS_ERR_PTR_INVALID;
-        return (DEF_NULL);
+        return ((void *)0);
     }
     switch (opt) {
         case OS_OPT_PEND_BLOCKING:
@@ -477,7 +477,7 @@ void  *OSQPend (OS_Q         *p_q,
              OS_TRACE_Q_PEND_FAILED(p_q);
              OS_TRACE_Q_PEND_EXIT(OS_ERR_OPT_INVALID);
             *p_err = OS_ERR_OPT_INVALID;
-             return (DEF_NULL);
+             return ((void *)0);
     }
 #endif
 
@@ -486,11 +486,11 @@ void  *OSQPend (OS_Q         *p_q,
         OS_TRACE_Q_PEND_FAILED(p_q);
         OS_TRACE_Q_PEND_EXIT(OS_ERR_OBJ_TYPE);
        *p_err = OS_ERR_OBJ_TYPE;
-        return (DEF_NULL);
+        return ((void *)0);
     }
 #endif
 
-    if (p_ts != DEF_NULL) {
+    if (p_ts != (CPU_TS *)0) {
        *p_ts = 0u;                                              /* Initialize the returned timestamp                    */
     }
 
@@ -511,14 +511,14 @@ void  *OSQPend (OS_Q         *p_q,
         OS_TRACE_Q_PEND_FAILED(p_q);
         OS_TRACE_Q_PEND_EXIT(OS_ERR_PEND_WOULD_BLOCK);
        *p_err = OS_ERR_PEND_WOULD_BLOCK;                        /* No                                                   */
-        return (DEF_NULL);
+        return ((void *)0);
     } else {
         if (OSSchedLockNestingCtr > 0u) {                       /* Can't pend when the scheduler is locked              */
             CPU_CRITICAL_EXIT();
             OS_TRACE_Q_PEND_FAILED(p_q);
             OS_TRACE_Q_PEND_EXIT(OS_ERR_SCHED_LOCKED);
            *p_err = OS_ERR_SCHED_LOCKED;
-            return (DEF_NULL);
+            return ((void *)0);
         }
     }
 
@@ -535,7 +535,7 @@ void  *OSQPend (OS_Q         *p_q,
              p_void     = OSTCBCurPtr->MsgPtr;
             *p_msg_size = OSTCBCurPtr->MsgSize;
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts  != DEF_NULL) {
+             if (p_ts  != (CPU_TS *)0) {
                 *p_ts  =  OSTCBCurPtr->TS;
              }
 #endif
@@ -544,10 +544,10 @@ void  *OSQPend (OS_Q         *p_q,
              break;
 
         case OS_STATUS_PEND_ABORT:                              /* Indicate that we aborted                             */
-             p_void     = DEF_NULL;
-            *p_msg_size = 0u;
+             p_void     = (void *)0;
+            *p_msg_size =         0u;
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts  != DEF_NULL) {
+             if (p_ts  != (CPU_TS *)0) {
                 *p_ts  =  OSTCBCurPtr->TS;
              }
 #endif
@@ -556,17 +556,17 @@ void  *OSQPend (OS_Q         *p_q,
              break;
 
         case OS_STATUS_PEND_TIMEOUT:                            /* Indicate that we didn't get event within TO          */
-             p_void     = DEF_NULL;
-            *p_msg_size = 0u;
+             p_void     = (void *)0;
+            *p_msg_size =         0u;
              OS_TRACE_Q_PEND_FAILED(p_q);
             *p_err      = OS_ERR_TIMEOUT;
              break;
 
         case OS_STATUS_PEND_DEL:                                /* Indicate that object pended on has been deleted      */
-             p_void     = DEF_NULL;
-            *p_msg_size = 0u;
+             p_void     = (void *)0;
+            *p_msg_size =         0u;
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts  != DEF_NULL) {
+             if (p_ts  != (CPU_TS *)0) {
                 *p_ts  =  OSTCBCurPtr->TS;
              }
 #endif
@@ -575,8 +575,8 @@ void  *OSQPend (OS_Q         *p_q,
              break;
 
         default:
-             p_void     = DEF_NULL;
-            *p_msg_size = 0u;
+             p_void     = (void *)0;
+            *p_msg_size =         0u;
              OS_TRACE_Q_PEND_FAILED(p_q);
             *p_err      = OS_ERR_STATUS_INVALID;
              break;
@@ -634,7 +634,7 @@ OS_OBJ_QTY  OSQPendAbort (OS_Q    *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -655,7 +655,7 @@ OS_OBJ_QTY  OSQPendAbort (OS_Q    *p_q,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate 'p_q'                                       */
+    if (p_q == (OS_Q *)0) {                                     /* Validate 'p_q'                                       */
        *p_err =  OS_ERR_OBJ_PTR_NULL;
         return (0u);
     }
@@ -681,7 +681,7 @@ OS_OBJ_QTY  OSQPendAbort (OS_Q    *p_q,
 
     CPU_CRITICAL_ENTER();
     p_pend_list = &p_q->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on queue?                           */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on queue?                           */
         CPU_CRITICAL_EXIT();                                    /* No                                                   */
        *p_err =  OS_ERR_PEND_ABORT_NONE;
         return (0u);
@@ -693,7 +693,7 @@ OS_OBJ_QTY  OSQPendAbort (OS_Q    *p_q,
 #else
     ts        = 0u;
 #endif
-    while (p_pend_list->HeadPtr != DEF_NULL) {
+    while (p_pend_list->HeadPtr != (OS_TCB *)0) {
         p_tcb = p_pend_list->HeadPtr;
         OS_PendAbort(p_tcb,
                      ts,
@@ -783,7 +783,7 @@ void  OSQPost (OS_Q         *p_q,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -800,7 +800,7 @@ void  OSQPost (OS_Q         *p_q,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_q == DEF_NULL) {                                      /* Validate 'p_q'                                       */
+    if (p_q == (OS_Q *)0) {                                     /* Validate 'p_q'                                       */
         OS_TRACE_Q_POST_FAILED(p_q);
         OS_TRACE_Q_POST_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err = OS_ERR_OBJ_PTR_NULL;
@@ -813,8 +813,8 @@ void  OSQPost (OS_Q         *p_q,
         case OS_OPT_POST_LIFO | OS_OPT_POST_ALL:
         case OS_OPT_POST_FIFO | OS_OPT_POST_NO_SCHED:
         case OS_OPT_POST_LIFO | OS_OPT_POST_NO_SCHED:
-        case OS_OPT_POST_FIFO | OS_OPT_POST_ALL | OS_OPT_POST_NO_SCHED:
-        case OS_OPT_POST_LIFO | OS_OPT_POST_ALL | OS_OPT_POST_NO_SCHED:
+        case OS_OPT_POST_FIFO | (OS_OPT)(OS_OPT_POST_ALL | OS_OPT_POST_NO_SCHED):
+        case OS_OPT_POST_LIFO | (OS_OPT)(OS_OPT_POST_ALL | OS_OPT_POST_NO_SCHED):
              break;
 
         default:
@@ -843,7 +843,7 @@ void  OSQPost (OS_Q         *p_q,
 
     CPU_CRITICAL_ENTER();
     p_pend_list = &p_q->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on message queue?                   */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on message queue?                   */
         if ((opt & OS_OPT_POST_LIFO) == 0u) {                   /* Determine whether we post FIFO or LIFO               */
             post_type = OS_OPT_POST_FIFO;
         } else {
@@ -861,7 +861,7 @@ void  OSQPost (OS_Q         *p_q,
     }
 
     p_tcb = p_pend_list->HeadPtr;
-    while (p_tcb != DEF_NULL) {
+    while (p_tcb != (OS_TCB *)0) {
         p_tcb_next = p_tcb->PendNextPtr;
         OS_Post((OS_PEND_OBJ *)((void *)p_q),
                 p_tcb,
@@ -935,9 +935,9 @@ void  OS_QClr (OS_Q  *p_q)
 void  OS_QDbgListAdd (OS_Q  *p_q)
 {
     p_q->DbgNamePtr               = (CPU_CHAR *)((void *)" ");
-    p_q->DbgPrevPtr               = DEF_NULL;
-    if (OSQDbgListPtr == DEF_NULL) {
-        p_q->DbgNextPtr           = DEF_NULL;
+    p_q->DbgPrevPtr               = (OS_Q *)0;
+    if (OSQDbgListPtr == (OS_Q *)0) {
+        p_q->DbgNextPtr           = (OS_Q *)0;
     } else {
         p_q->DbgNextPtr           =  OSQDbgListPtr;
         OSQDbgListPtr->DbgPrevPtr =  p_q;
@@ -955,22 +955,22 @@ void  OS_QDbgListRemove (OS_Q  *p_q)
     p_q_prev = p_q->DbgPrevPtr;
     p_q_next = p_q->DbgNextPtr;
 
-    if (p_q_prev == DEF_NULL) {
+    if (p_q_prev == (OS_Q *)0) {
         OSQDbgListPtr = p_q_next;
-        if (p_q_next != DEF_NULL) {
-            p_q_next->DbgPrevPtr = DEF_NULL;
+        if (p_q_next != (OS_Q *)0) {
+            p_q_next->DbgPrevPtr = (OS_Q *)0;
         }
-        p_q->DbgNextPtr = DEF_NULL;
+        p_q->DbgNextPtr = (OS_Q *)0;
 
-    } else if (p_q_next == DEF_NULL) {
-        p_q_prev->DbgNextPtr = DEF_NULL;
-        p_q->DbgPrevPtr      = DEF_NULL;
+    } else if (p_q_next == (OS_Q *)0) {
+        p_q_prev->DbgNextPtr = (OS_Q *)0;
+        p_q->DbgPrevPtr      = (OS_Q *)0;
 
     } else {
         p_q_prev->DbgNextPtr =  p_q_next;
         p_q_next->DbgPrevPtr =  p_q_prev;
-        p_q->DbgNextPtr      = DEF_NULL;
-        p_q->DbgPrevPtr      = DEF_NULL;
+        p_q->DbgNextPtr      = (OS_Q *)0;
+        p_q->DbgPrevPtr      = (OS_Q *)0;
     }
 }
 #endif

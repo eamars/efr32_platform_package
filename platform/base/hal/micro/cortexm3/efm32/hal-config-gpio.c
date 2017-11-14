@@ -30,10 +30,10 @@ uint32_t halConfigGpioActive;
 void halConfigInitGpio()
 {
 }
-void halConfigPowerDownGpio()
+void halConfigPowerDownGpio(void)
 {
 }
-void halConfigPowerUpGpio()
+void halConfigPowerUpGpio(void)
 {
 }
 bool halConfigRegisterGpio(GPIO_Port_TypeDef port,

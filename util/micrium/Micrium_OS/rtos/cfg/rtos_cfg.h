@@ -2,22 +2,21 @@
 *********************************************************************************************************
 *                                            EXAMPLE CODE
 *********************************************************************************************************
-* Licensing:
-*   The licensor of this EXAMPLE CODE is Silicon Laboratories Inc.
+* Licensing terms:
+*   This file is provided as an example on how to use Micrium products. It has not necessarily been
+*   tested under every possible condition and is only offered as a reference, without any guarantee.
 *
-*   Silicon Laboratories Inc. grants you a personal, worldwide, royalty-free, fully paid-up license to
-*   use, copy, modify and distribute the EXAMPLE CODE software, or portions thereof, in any of your
-*   products.
-*
-*   Your use of this EXAMPLE CODE is at your own risk. This EXAMPLE CODE does not come with any
-*   warranties, and the licensor disclaims all implied warranties concerning performance, accuracy,
-*   non-infringement, merchantability and fitness for your application.
-*
-*   The EXAMPLE CODE is provided "AS IS" and does not come with any support.
+*   Please feel free to use any application code labeled as 'EXAMPLE CODE' in your application products.
+*   Example code may be used as is, in whole or in part, or may be used as a reference only. This file
+*   can be modified as required.
 *
 *   You can find user manuals, API references, release notes and more at: https://doc.micrium.com
 *
-*   You can contact us at: https://www.micrium.com
+*   You can contact us at: http://www.micrium.com
+*
+*   Please help us continue to provide the Embedded community with the finest software available.
+*
+*   Your honesty is greatly appreciated.
 *********************************************************************************************************
 */
 
@@ -28,7 +27,8 @@
 *
 *                                      CONFIGURATION TEMPLATE FILE
 *
-* File : rtos_cfg.h
+* Filename      : rtos_cfg.h
+* Programmer(s) : Micrium
 *********************************************************************************************************
 */
 
@@ -40,8 +40,8 @@
 *********************************************************************************************************
 */
 
-#ifndef  _RTOS_CFG_H_
-#define  _RTOS_CFG_H_
+#ifndef  RTOS_CFG_H
+#define  RTOS_CFG_H
 
 
 /*
@@ -67,11 +67,11 @@
 
 /*
 *********************************************************************************************************
-*                                        ASSERTS CONFIGURATION
+*                                         ASSERTS CONFIGURATION
 *
 * Note(s) : (1) RTOS_CFG_ASSERT_DBG_ARG_CHK_EXT_MASK is used to configure whether asserts used in
-*               argument checking are enabled or not. These asserts are used to check the validity of
-*               the arguments passed to any stack function. This can include checking if a pointer is
+*               argument checking are enabled or not. These asserts are used to check the validity of the
+*               arguments passed to any stack function. This can include checking if a pointer is
 *               non-NULL, if a given value is within a certain range, if a configuration is valid, etc.
 *
 *               (a) This configuration define can be set as a bitmap of several module defines, to allow
@@ -84,12 +84,12 @@
 *               (b) It is recommended to disable this feature as much as possible in 'release' code, to
 *                   improve performance and reduce the amount of code space required.
 *
-*           (2) RTOS_CFG_RTOS_ASSERT_DBG_FAILED_END_CALL is used to configure what operations will
-*               happen in cases where a debug assert is failed. Debug asserts failing typically reflects
-*               an invalid argument passed by the programmer to a stack function or an operation that
-*               cannot be done in a particular context (such as an ISR). The program SHOULD NOT continue
-*               running after a debug assert failed, although it is possible to configure it to return
-*               (by defining it to: return ret_val (without parentheses or ';'), if the code is being
+*           (2) RTOS_CFG_RTOS_ASSERT_DBG_FAILED_END_CALL is used to configure what operations will happen
+*               in cases where a debug assert is failed. Debug asserts failing typically reflects an
+*               invalid argument passed by the programmer to a stack function or an operation that cannot
+*               be done in a particular context (such as an ISR). The program SHOULD NOT continue running
+*               after a debug assert failed, although it is possible to configure it to return (by
+*               defining it to: return ret_val (without parentheses or ';'), if the code is being
 *               executed in a test context. Typical operations could include breaking the CPU, looping
 *               indefinitely, calling a function or macro, etc. The default behavior is to loop
 *               indefinitely.
@@ -97,17 +97,16 @@
 *           (3) RTOS_CFG_RTOS_ASSERT_CRITICAL_FAILED_END_CALL is used to configure what operations will
 *               happen in cases where a critical assert is failed. Critical asserts failing reflects an
 *               unrecoverable situations in the system such as corruption or other cases that are
-*               unexpected. The program MUST NOT continue to execute in those cases. The program MUST
-*               NOT return from this call, since the software is in an unknown and/or invalid state.
-*               Typical operations could include outputting logs or traces, dumping memory, halting
-*               and/or restarting the system. The default behavior is to call the CPU_SW_EXCEPTION
-*               macro.
+*               unexpected. The program MUST NOT continue to execute in those cases. The program MUST NOT
+*               return from this call, since the software is in an unknown and/or invalid state. Typical
+*               operations could include outputting logs or traces, dumping memory, halting and/or
+*               restarting the system. The default behavior is to call the CPU_SW_EXCEPTION macro.
 *********************************************************************************************************
 */
 
-#define  RTOS_CFG_ASSERT_DBG_ARG_CHK_EXT_MASK               (RTOS_CFG_MODULE_ALL)
+#define  RTOS_CFG_ASSERT_DBG_ARG_CHK_EXT_MASK                    (RTOS_CFG_MODULE_ALL)
 
-#define  RTOS_CFG_RTOS_ASSERT_DBG_FAILED_END_CALL(ret_val)  while (1) {;}
+#define  RTOS_CFG_RTOS_ASSERT_DBG_FAILED_END_CALL(ret_val)       while (1) {;}
 
 #define  RTOS_CFG_RTOS_ASSERT_CRITICAL_FAILED_END_CALL(ret_val)  CPU_SW_EXCEPTION(ret_val)
 
@@ -136,7 +135,7 @@
 
 /*
 *********************************************************************************************************
-*                                        LOGGING CONFIGURATION
+*                                         LOGGING CONFIGURATION
 *
 * Note(s) : (1) RTOS_CFG_LOG_EN is used to enable or disable the logging module as a whole.
 *
@@ -145,28 +144,28 @@
 *
 *               (a) Values that can be used to configure logging channels are the following:
 *
-*                   (1) Lowest level to log:                                                          
-*                       VRB         Log error-, debug- and verbose-level messages.                    
-*                       DBG         Log error- and debug-level messages.                              
-*                       ERR         Log error-level messages only.                                    
-*                       OFF         Do not log any level.                                             
+*                   (1) Lowest level to log:
+*                       VRB         Log error-, debug- and verbose-level messages.
+*                       DBG         Log error- and debug-level messages.
+*                       ERR         Log error-level messages only.
+*                       OFF         Do not log any level.
 *                       DFLT        Use the inherited setting.
 *
-*                   (2) Synchronicity of output:                                                      
-*                       SYNC        Output logs synchronously, during execution. May disrupt timing. 
-*                       ASYNC       Save logs in buffer, always keeping the most recent ones.           
-*                       .           Output will only be done when Log_Output() is called (see           
-*                       .           rtos/common/include/logging.h for more details).                    
+*                   (2) Synchronicity of output:
+*                       SYNC        Output logs synchronously, during execution. May disrupt timing.
+*                       ASYNC       Save logs in buffer, always keeping the most recent ones.
+*                       .           Output will only be done when Log_Output() is called (see
+*                       .           rtos/common/include/logging.h for more details).
 *                       DFLT        Use the inherited setting.
 *
-*                   (3) Include function name in log entry:                                           
-*                       FUNC_EN     Function name where entry was made will be included in entry.   
+*                   (3) Include function name in log entry:
+*                       FUNC_EN     Function name where entry was made will be included in entry.
 *                       FUNC_DIS    Function name where entry was made will NOT be included in entry.
 *                       DFLT        Use the inherited setting.
 *
-*                   (4) Include time-stamp in log entry:                                              
-*                       TS_EN       Time-stamp of when entry was made will be included in entry.      
-*                       TS_DIS      Time-stamp of when entry was made will NOT be included in entry.  
+*                   (4) Include time-stamp in log entry:
+*                       TS_EN       Time-stamp of when entry was made will be included in entry.
+*                       TS_DIS      Time-stamp of when entry was made will NOT be included in entry.
 *                       DFLT        Use the inherited setting.
 *
 *                   (5) Log output function. Function must be of type 'int foo(int character)', as
@@ -191,9 +190,11 @@
 
 #if (RTOS_CFG_LOG_EN == DEF_ENABLED)
 #include  <stdio.h>
-#define  RTOS_CFG_LOG_ALL                                   VRB, SYNC, FUNC_DIS, TS_DIS, putchar
+/* The output function parameter is not currently used because it is not possible to know
+ * where to output at the preprocessor time in the case of the asynchronous mode. We could
+ * add the output function pointer in the ring buffer each time but it's a significant overhead. */
+#define  RTOS_CFG_LOG_ALL                                   VRB, ASYNC, FUNC_DIS, TS_DIS, putchar
 #endif
-
 
 
 /*

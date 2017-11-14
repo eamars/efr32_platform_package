@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file board_pic_regs.h
  * @brief Power and Interrupt Controller Register Definitions
- * @version 5.1.3
+ * @version 5.3.3
  *******************************************************************************
- * @section License
- * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * # License
+ * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silicon Labs License Agreement. See the file
@@ -13,18 +13,23 @@
  *
  ******************************************************************************/
 
-#ifndef __BOARD_PIC_REGS_H_
-#define __BOARD_PIC_REGS_H_
+#ifndef BOARD_PIC_REGS_H
+#define BOARD_PIC_REGS_H
+/**************************************************************************//**
+* @addtogroup TBSense_BSP
+* @{
+******************************************************************************/
 
 /***************************************************************************//**
- * @addtogroup BOARD
+ * @addtogroup BOARD_4160
  * @{
  ******************************************************************************/
 
 /***************************************************************************//**
  * @defgroup PIC_defs Power and Interrupt Controller Definitions
  * @{
- * @brief Power and Interrupt Controller register and bitfield definitions
+ * @brief Thunderboard Sense 1 Power and Interrupt Controller register and
+ *        bitfield definitions
  ******************************************************************************/
 
 /* Application registers */
@@ -60,7 +65,6 @@
 
 #define BOARD_PIC_SYS_REG_START             0xF0   /**< Start address of system register  */
 #define BOARD_PIC_NUM_SYS_REGS              13     /**< Number of system registers        */
-
 
 /* Bit fields for PIC_REG_IMU_CTRL */
 #define BOARD_PIC_REG_IMU_CTRL_EN           0x01   /**< IMU control register, Enable bit  */
@@ -109,6 +113,7 @@
 
 /** @} {end defgroup PIC_defs} */
 
-/** @} {end addtogroup BOARD} */
+/** @} {end addtogroup BOARD_4166} */
+/** @} {end addtogroup TBSense_BSP} */
 
-#endif /* __BOARD_PIC_REGS_H_ */
+#endif // BOARD_PIC_REGS_H

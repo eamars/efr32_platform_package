@@ -2,7 +2,7 @@
  * @file btl_debug_swo.c
  * @brief SWO debug plugin for Silicon Labs Bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -38,7 +38,7 @@ void btl_debugInit(void)
 #endif
 
   // TODO: Make pinout/location configurable
-#if defined(_EFM32_GECKO_FAMILY) || defined(_EFM32_TINY_FAMILY)
+#if defined(_SILICON_LABS_GECKO_INTERNAL_SDID_71) || defined(_SILICON_LABS_GECKO_INTERNAL_SDID_73)
   // Set location 1
   GPIO->ROUTE = (GPIO->ROUTE & ~(_GPIO_ROUTE_SWLOCATION_MASK))
                 | GPIO_ROUTE_SWLOCATION_LOC1;
@@ -47,7 +47,7 @@ void btl_debugInit(void)
   GPIO->P[2].MODEH |= GPIO_P_MODEH_MODE15_PUSHPULL;
   // Set TPIU prescaler to 16 (14 MHz / 16 = 875 kHz SWO speed)
   tpiu_prescaler_val = 16 - 1;
-#elif defined(_EFM32_GIANT_FAMILY) || defined(_EFM32_WONDER_FAMILY)
+#elif defined(_SILICON_LABS_GECKO_INTERNAL_SDID_72) || defined(_SILICON_LABS_GECKO_INTERNAL_SDID_74)
   // Set location 0
   GPIO->ROUTE = (GPIO->ROUTE & ~(_GPIO_ROUTE_SWLOCATION_MASK))
                 | GPIO_ROUTE_SWLOCATION_LOC0;
@@ -56,7 +56,7 @@ void btl_debugInit(void)
   GPIO->P[5].MODEL |= GPIO_P_MODEL_MODE2_PUSHPULL;
   // Set TPIU prescaler to 16 (14 MHz / 16 = 875 kHz SWO speed)
   tpiu_prescaler_val = 16 - 1;
-#elif defined(_SILICON_LABS_32B_PLATFORM_2)
+#elif defined(_SILICON_LABS_32B_SERIES_1)
   // Set location 0
   GPIO->ROUTELOC0 = (GPIO->ROUTELOC0 & ~(_GPIO_ROUTELOC0_SWVLOC_MASK))
                     | GPIO_ROUTELOC0_SWVLOC_LOC0;

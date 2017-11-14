@@ -2,7 +2,7 @@
  * @file btl_interface_storage.c
  * @brief Application interface to the storage plugin of the bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -20,9 +20,6 @@
 #ifndef BTL_ASSERT
 #define BTL_ASSERT(x)
 #endif
-
-/// Context size for bootloader verification context
-#define BTL_STORAGE_VERIFICATION_CONTEXT_SIZE   (384)
 
 // -----------------------------------------------------------------------------
 // Functions
@@ -143,7 +140,7 @@ int32_t bootloader_continueVerifyImage(void                       *context,
 int32_t bootloader_verifyImage(uint32_t                   slotId,
                                BootloaderParserCallback_t metadataCallback)
 {
-  uint8_t context[BTL_STORAGE_VERIFICATION_CONTEXT_SIZE];
+  uint8_t context[BOOTLOADER_STORAGE_VERIFICATION_CONTEXT_SIZE];
   int32_t retval;
 
   if (!BTL_TABLE_PTR_VALID(mainBootloaderTable)) {
@@ -152,7 +149,7 @@ int32_t bootloader_verifyImage(uint32_t                   slotId,
 
   retval = bootloader_initVerifyImage(slotId,
                                       context,
-                                      BTL_STORAGE_VERIFICATION_CONTEXT_SIZE);
+                                      BOOTLOADER_STORAGE_VERIFICATION_CONTEXT_SIZE);
 
   if (retval != BOOTLOADER_OK) {
     return retval;
@@ -173,7 +170,7 @@ int32_t bootloader_getImageInfo(uint32_t          slotId,
                                 ApplicationData_t *appInfo,
                                 uint32_t          *bootloaderVersion)
 {
-  uint8_t context[BTL_STORAGE_VERIFICATION_CONTEXT_SIZE];
+  uint8_t context[BOOTLOADER_STORAGE_VERIFICATION_CONTEXT_SIZE];
   int32_t retval;
 
   if (!BTL_TABLE_PTR_VALID(mainBootloaderTable)) {
@@ -186,7 +183,7 @@ int32_t bootloader_getImageInfo(uint32_t          slotId,
   retval = mainBootloaderTable->storage->initParseImage(
     slotId,
     (BootloaderParserContext_t *)context,
-    BTL_STORAGE_VERIFICATION_CONTEXT_SIZE);
+    BOOTLOADER_STORAGE_VERIFICATION_CONTEXT_SIZE);
 
   if (retval != BOOTLOADER_OK) {
     return retval;

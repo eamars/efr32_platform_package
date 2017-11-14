@@ -21,7 +21,7 @@
 #include "em_gpio.h"
 #include "em_usart.h"
 #include "bsp_dk_bcreg_3201.h"
-#include "bsp.h"
+#include "bsp_mcu.h"
 
 #if defined( BSP_DK_BRD3201 )
 /** @cond DO_NOT_INCLUDE_WITH_DOXYGEN */

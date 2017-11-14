@@ -172,7 +172,7 @@
 
 #define  NET_IPv4_CFG_LINK_LOCAL_EN                         DEF_ENABLED
 
-#define  NET_IPv4_CFG_IF_MAX_NBR_ADDR                       4u
+#define  NET_IPv4_CFG_IF_MAX_NBR_ADDR                       2u
 
 #define  NET_IPv6_CFG_EN                                    DEF_ENABLED
 
@@ -180,7 +180,7 @@
 
 #define  NET_IPv6_CFG_DAD_EN                                DEF_ENABLED
 
-#define  NET_IPv6_CFG_IF_MAX_NBR_ADDR                       8u
+#define  NET_IPv6_CFG_IF_MAX_NBR_ADDR                       4u
 
 
 /*
@@ -195,7 +195,7 @@
 
 #define  NET_MCAST_CFG_IPv4_TX_EN                           DEF_ENABLED
 
-#define  NET_MCAST_CFG_HOST_GRP_NBR_MAX                     8u
+#define  NET_MCAST_CFG_HOST_GRP_NBR_MAX                     4u
 
 
 /*

@@ -1,4 +1,5 @@
 #include PLATFORM_HEADER
+#include CONFIGURATION_HEADER
 #include EMBER_AF_API_TRANSPORT_MQTT
 
 /** @brief MQTT Client State Changed Callback

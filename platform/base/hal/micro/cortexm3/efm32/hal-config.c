@@ -21,23 +21,34 @@
 #ifdef _EFR_DEVICE
 #include "pti.h"
 #endif
-#if BSP_VCOM_IOEXP_ENABLE
+#if HAL_IOEXP_VCOM_ENABLE
 #include "bsp.h"
+#endif
+#if HAL_LNA_ENABLE
+#include "util/plugin/plugin-common/module-lna/module-lna.h"
 #endif
 
 static void halConfigClockInit(void)
 {
-  /* HFXO */
+/* HFCLK */
 #if (HAL_CLK_HFCLK_SOURCE == HAL_CLK_HFCLK_SOURCE_HFXO)
+  #if !BSP_CLK_HFXO_PRESENT
+    #error Cannot select HFXO when HFXO is not present
+  #endif
   CMU_HFXOInit_TypeDef hfxoInit = BSP_CLK_HFXO_INIT;
-  #if defined(_CMU_HFXOCTRL_MASK)
+  #if BSP_CLK_HFXO_CTUNE_TOKEN
+    #if defined(_CMU_HFXOCTRL_MASK)
   uint16_t customStartupCtune;
   uint16_t customSteadyCtune;
   if (halInternalGetCtuneToken(&customStartupCtune, &customSteadyCtune)) {
     hfxoInit.ctuneStartup = customStartupCtune;
     hfxoInit.ctuneSteadyState = customSteadyCtune;
   }
-  #endif //_CMU_HFXOCTRL_MASK
+    #endif //_CMU_HFXOCTRL_MASK
+  #elif BSP_CLK_HFXO_CTUNE >= 0
+  hfxoInit.ctuneSteadyState = BSP_CLK_HFXO_CTUNE;
+  #endif // BSP_CLK_HFXO_CTUNE_TOKEN
+
   CMU_HFXOInit(&hfxoInit);
 
   /* Enable HFXO oscillator, and wait for it to be stable */
@@ -46,8 +57,20 @@ static void halConfigClockInit(void)
   /* Setting system HFXO frequency */
   SystemHFXOClockSet(BSP_CLK_HFXO_FREQ);
 
-  /* Using HFXO as high frequency clock, HFCLK */
+  // Enable HFXO oscillator, and wait for it to be stable
+  CMU_OscillatorEnable(cmuOsc_HFXO, true, true);
+
+  #if defined(HAL_CLK_HFXO_AUTOSTART) && HAL_CLK_HFXO_AUTOSTART == HAL_CLK_HFXO_AUTOSTART_SELECT
+  // Automatically start and select HFXO
+  CMU_HFXOAutostartEnable(0, true, true);
+  #else
+  #if defined(HAL_CLK_HFXO_AUTOSTART) && HAL_CLK_HFXO_AUTOSTART == HAL_CLK_HFXO_AUTOSTART_START
+  // Automatically start HFXO
+  CMU_HFXOAutostartEnable(0, true, false);
+  #endif // HAL_CLK_HFXO_AUTOSTART
+  // Use HFXO as high frequency clock
   CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFXO);
+  #endif // HAL_CLK_HFXO_AUTOSTART
 
   /* HFRCO not needed when using HFXO */
   CMU_OscillatorEnable(cmuOsc_HFRCO, false, false);
@@ -55,33 +78,64 @@ static void halConfigClockInit(void)
   CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFRCO);
 #else
   #error Must define HAL_CLK_HFCLK_SOURCE
+#endif // HAL_CLK_HFCLK_SOURCE
+
+/* LFCLK */
+#if (HAL_CLK_LFACLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)  \
+  || (HAL_CLK_LFBCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO) \
+  || (HAL_CLK_LFCCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO) \
+  || (HAL_CLK_LFECLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
+  #if !BSP_CLK_LFXO_PRESENT
+    #error "Cannot select LFXO when LFXO is not present"
+  #else
+  CMU_LFXOInit_TypeDef lfxoInit = BSP_CLK_LFXO_INIT;
+
+  #if defined(_CMU_HFXOCTRL_MASK) && defined(BSP_CLK_LFXO_CTUNE) && BSP_CLK_LFXO_CTUNE > 0
+  lfxoInit.ctune = BSP_CLK_LFXO_CTUNE;
+  #endif
+  CMU_LFXOInit(&lfxoInit);
+
+  // Set system LFXO frequency
+  SystemLFXOClockSet(BSP_CLK_LFXO_FREQ);
+  #endif
 #endif
 
-  /* LFXO */
-#if (HAL_CLK_LFCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
-  /* LFXO Initialization is optional */
-  #ifdef BSP_CLK_LFXO_INIT
-  CMU_LFXOInit_TypeDef lfxoInit = BSP_CLK_LFXO_INIT;
-  CMU_LFXOInit(&lfxoInit);
-  #endif
-
-  /* Enable LFXO oscillator, and wait for it to be stable */
-  CMU_OscillatorEnable(cmuOsc_LFXO, true, true);
-
-  /* Setting system LFXO frequency */
-  SystemLFXOClockSet(BSP_CLK_LFXO_FREQ);
-
-  /* Using LFXO as low frequency clock, LFA/LFB */
+  // LFA
+#if (HAL_CLK_LFACLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
   CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_LFXO);
-  CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_LFXO);
-
-  /* LFRCO not needed when using LFXO */
-  CMU_OscillatorEnable(cmuOsc_LFRCO, false, false);
-#elif (HAL_CLK_LFCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
+#elif (HAL_CLK_LFACLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
   CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_LFRCO);
+#elif (HAL_CLK_LFACLK_SOURCE == HAL_CLK_LFCLK_SOURCE_ULFRCO)
+  CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_ULFRCO);
+#elif (HAL_CLK_LFACLK_SOURCE == HAL_CLK_LFCLK_SOURCE_HFLE)
+  CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_HFCLKLE);
+#endif
+
+  // LFB
+#if (HAL_CLK_LFBCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
+  CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_LFXO);
+#elif (HAL_CLK_LFBCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
   CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_LFRCO);
-#else
-  #error Must define HAL_CLK_LFCLK_SOURCE
+#elif (HAL_CLK_LFBCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_ULFRCO)
+  CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_ULFRCO);
+#elif (HAL_CLK_LFBCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_HFLE)
+  CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_HFCLKLE);
+#endif
+
+  // LFC
+#if (HAL_CLK_LFCCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
+  CMU_ClockSelectSet(cmuClock_LFC, cmuSelect_LFXO);
+#elif (HAL_CLK_LFCCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
+  CMU_ClockSelectSet(cmuClock_LFC, cmuSelect_LFRCO);
+#endif
+
+  // LFE
+#if (HAL_CLK_LFECLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFXO)
+  CMU_ClockSelectSet(cmuClock_LFE, cmuSelect_LFXO);
+#elif (HAL_CLK_LFECLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
+  CMU_ClockSelectSet(cmuClock_LFE, cmuSelect_LFRCO);
+#elif (HAL_CLK_LFECLK_SOURCE == HAL_CLK_LFCLK_SOURCE_ULFRCO)
+  CMU_ClockSelectSet(cmuClock_LFE, cmuSelect_ULFRCO);
 #endif
 }
 
@@ -101,6 +155,19 @@ Ecode_t halConfigInit(void)
 #endif
 #endif //_EMU_DCDCCTRL_MASK
 
+#if HAL_EMU_ENABLE
+  EMU_EM23Init_TypeDef em23init = EMU_EM23INIT_DEFAULT;
+  #if HAL_EMU_EM23_VREG
+  em23init.em23VregFullEn = true;
+  #endif
+  #if HAL_EMU_EM23_VSCALE == HAL_EMU_EM23_VSCALE_FASTWAKEUP
+  em23init.vScaleEM23Voltage = emuVScaleEM23_FastWakeup;
+  #elif HAL_EMU_EM23_VSCALE == HAL_EMU_EM23_VSCALE_LOWPOWER
+  em23init.vScaleEM23Voltage = emuVScaleEM23_LowPower;
+  #endif
+  EMU_EM23Init(&em23init);
+#endif //HAL_EMU_ENABLE
+
   halConfigClockInit();
 
 #if (HAL_BUTTON_COUNT > 0)
@@ -119,10 +186,10 @@ Ecode_t halConfigInit(void)
 #if (HAL_PTI_ENABLE)
   #if HAL_PTI_MODE == HAL_PTI_MODE_SPI
   // SPI Mode
-    #define PTI_MODE RADIO_PTI_MODE_SPI
+    #define PTI_MODE RAIL_PTI_MODE_SPI
   #elif HAL_PTI_MODE == HAL_PTI_MODE_UART
   // UART Mode
-    #define PTI_MODE RADIO_PTI_MODE_UART
+    #define PTI_MODE RAIL_PTI_MODE_UART
   // DCLK unused in UART mode
     #undef BSP_PTI_DCLK_LOC
     #undef BSP_PTI_DCLK_PORT
@@ -132,7 +199,7 @@ Ecode_t halConfigInit(void)
     #define BSP_PTI_DCLK_PIN  0
   #elif HAL_PTI_MODE == HAL_PTI_MODE_UART_ONEWIRE
   // Onewire UART Mode
-    #define PTI_MODE RADIO_PTI_MODE_UART_ONEWIRE
+    #define PTI_MODE RAIL_PTI_MODE_UART_ONEWIRE
   // DCLK unused in onewire mode
     #undef BSP_PTI_DCLK_LOC
     #undef BSP_PTI_DCLK_PORT
@@ -150,53 +217,25 @@ Ecode_t halConfigInit(void)
   #else
     #error HAL_PTI_MODE not recognized
   #endif //HAL_PTI_MODE
-#else //HAL_PTI_ENABLE
-  // PTI not enabled
-  #define PTI_MODE RADIO_PTI_MODE_DISABLED
-  // Reset all settings to 0 when disabled
-  #undef HAL_PTI_BAUD_RATE
-  #undef BSP_PTI_DOUT_LOC
-  #undef BSP_PTI_DOUT_PORT
-  #undef BSP_PTI_DOUT_PIN
-  #undef BSP_PTI_DCLK_LOC
-  #undef BSP_PTI_DCLK_PORT
-  #undef BSP_PTI_DCLK_PIN
-  #undef BSP_PTI_DFRAME_LOC
-  #undef BSP_PTI_DFRAME_PORT
-  #undef BSP_PTI_DFRAME_PIN
-  #define HAL_PTI_BAUD_RATE   0
-  #define BSP_PTI_DOUT_LOC    0
-  #define BSP_PTI_DOUT_PORT   0
-  #define BSP_PTI_DOUT_PIN    0
-  #define BSP_PTI_DCLK_LOC    0
-  #define BSP_PTI_DCLK_PORT   0
-  #define BSP_PTI_DCLK_PIN    0
-  #define BSP_PTI_DFRAME_LOC  0
-  #define BSP_PTI_DFRAME_PORT 0
-  #define BSP_PTI_DFRAME_PIN  0
-#endif //HAL_PTI_ENABLE
-  RADIO_PTIInit_t ptiInit = { PTI_MODE,
-                              HAL_PTI_BAUD_RATE,   /* 1.6 MHz baud */
-                              BSP_PTI_DOUT_LOC,    /* DOUT location */
-                              BSP_PTI_DOUT_PORT,   /* DOUT port */
-                              BSP_PTI_DOUT_PIN,    /* DOUT pin */
-                              BSP_PTI_DCLK_LOC,    /* DCLK location */
-                              BSP_PTI_DCLK_PORT,   /* DCLK port */
-                              BSP_PTI_DCLK_PIN,    /* DCLK pin */
-                              BSP_PTI_DFRAME_LOC,  /* DFRAME location */
-                              BSP_PTI_DFRAME_PORT, /* DFRAME port */
-                              BSP_PTI_DFRAME_PIN }; /* DFRAME pin */
-  RADIO_PTI_Init(&ptiInit);
+  RAIL_PtiConfig_t ptiInit = { PTI_MODE,
+                               HAL_PTI_BAUD_RATE,   /* 1.6 MHz baud */
+                               BSP_PTI_DOUT_LOC,    /* DOUT location */
+                               BSP_PTI_DOUT_PORT,   /* DOUT port */
+                               BSP_PTI_DOUT_PIN,    /* DOUT pin */
+                               BSP_PTI_DCLK_LOC,    /* DCLK location */
+                               BSP_PTI_DCLK_PORT,   /* DCLK port */
+                               BSP_PTI_DCLK_PIN,    /* DCLK pin */
+                               BSP_PTI_DFRAME_LOC,  /* DFRAME location */
+                               BSP_PTI_DFRAME_PORT, /* DFRAME port */
+                               BSP_PTI_DFRAME_PIN }; /* DFRAME pin */
+  PTI_Config(&ptiInit);
+#endif // HAL_PTI_ENABLE
 #endif // _EFR_DEVICE
 
-#if (HAL_PTA_ENABLE)
+#if (HAL_COEX_ENABLE)
   HalPtaOptions ptaOptions = HAL_PTA_OPTIONS;
   halPtaSetOptions(ptaOptions);
   halInternalInitPta();
-#endif
-
-#if (HAL_RHO_ENABLE)
-  halInternalInitRadioHoldOff();
 #endif
 
 #if (HAL_ANTDIV_ENABLE)
@@ -246,8 +285,8 @@ Ecode_t halConfigInit(void)
   }
 #endif
 
-#if (HAL_SERIAL_VCOM_ENABLE)
-  #if BSP_VCOM_IOEXP_ENABLE
+#if (HAL_VCOM_ENABLE)
+  #if HAL_IOEXP_VCOM_ENABLE
   BSP_Init(BSP_INIT_IOEXP);
   BSP_PeripheralAccess(BSP_IOEXP_VCOM, true);
   #else
@@ -259,7 +298,11 @@ Ecode_t halConfigInit(void)
   COM_RxGpioWakeInit();
 #endif
 
-#if (HAL_ENABLE_WATCHDOG)
+#if (HAL_LNA_ENABLE)
+  module_initLna();
+#endif
+
+#if (HAL_WDOG_ENABLE)
   halInternalEnableWatchDog();
 #endif
   return ECODE_OK;

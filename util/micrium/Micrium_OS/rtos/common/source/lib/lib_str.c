@@ -3262,7 +3262,7 @@ CPU_INT16U  Str_Printf (STR_PRINTF_OUT_CB   out_cb,
 *
 * Description : sprintf() implementation.
 *
-* Argument(s) : str             Buffer that will receive the formatted output.
+* Argument(s) : p_str           Buffer that will receive the formatted output.
 *
 *               format          Format string.
 *
@@ -3272,10 +3272,12 @@ CPU_INT16U  Str_Printf (STR_PRINTF_OUT_CB   out_cb,
 * Return(s)   : See Str_PrintfImpl() return value description.
 *
 * Note(s)     : (1) See Str_PrintfImpl() notes.
+*
+*               (2) The number of written characters excludes the ending null character.
 *********************************************************************************************************
 */
 
-CPU_INT16U  Str_Sprintf (      CPU_CHAR     *str,
+CPU_INT16U  Str_Sprintf (      CPU_CHAR     *p_str,
                          const CPU_CHAR     *format,
                                              ...)
 {
@@ -3284,10 +3286,12 @@ CPU_INT16U  Str_Sprintf (      CPU_CHAR     *str,
     va_list             args;
 
 
-    cb_arg.BufPtr = str;
+    cb_arg.BufPtr = p_str;
     cb_arg.CurIx  = 0u;
 
     va_start(args, format);
+                                                                /* Format string according to format specifiers and...  */
+                                                                /* ...store formatted in given buffer.                  */
     char_cnt = Str_PrintfImpl(Str_SprintfCb,
                               &cb_arg,
                               (CPU_INT16U)-1,
@@ -3295,7 +3299,11 @@ CPU_INT16U  Str_Sprintf (      CPU_CHAR     *str,
                               args);
     va_end(args);
 
-    return (char_cnt);
+    if (char_cnt != 0u) {
+        p_str[char_cnt] = '\0';                                 /* Append automatically ending null character.          */
+    }
+
+    return (char_cnt);                                          /* See Note #2.                                         */
 }
 
 
@@ -3305,7 +3313,7 @@ CPU_INT16U  Str_Sprintf (      CPU_CHAR     *str,
 *
 * Description : snprintf() implementation.
 *
-* Argument(s) : str             Buffer that will receive the formatted output.
+* Argument(s) : p_str           Buffer that will receive the formatted output.
 *
 *               size            Total capacity of the given string buffer.
 *
@@ -3317,10 +3325,12 @@ CPU_INT16U  Str_Sprintf (      CPU_CHAR     *str,
 * Return(s)   : See Str_PrintfImpl() return value description.
 *
 * Note(s)     : (1) See Str_PrintfImpl() notes.
+*
+*               (2) The number of written characters excludes the ending null character.
 *********************************************************************************************************
 */
 
-CPU_INT16U  Str_Snprintf (      CPU_CHAR     *str,
+CPU_INT16U  Str_Snprintf (      CPU_CHAR     *p_str,
                                 CPU_INT16U    size,
                           const CPU_CHAR     *format,
                                               ...)
@@ -3330,10 +3340,12 @@ CPU_INT16U  Str_Snprintf (      CPU_CHAR     *str,
     va_list             args;
 
 
-    cb_arg.BufPtr = str;
+    cb_arg.BufPtr = p_str;
     cb_arg.CurIx  = 0u;
 
     va_start(args, format);
+                                                                /* Format string according to format specifiers and...  */
+                                                                /* ...store formatted up to N char in given buffer.     */
     char_cnt = Str_PrintfImpl(Str_SprintfCb,
                               &cb_arg,
                               size - 1u,
@@ -3341,7 +3353,11 @@ CPU_INT16U  Str_Snprintf (      CPU_CHAR     *str,
                               args);
     va_end(args);
 
-    return (char_cnt);
+    if (char_cnt != 0u) {
+        p_str[char_cnt] = '\0';                                 /* Append automatically ending null character.          */
+    }
+
+    return (char_cnt);                                          /* See Note #2.                                         */
 }
 
 
@@ -3370,14 +3386,16 @@ CPU_INT16U  Str_Snprintf (      CPU_CHAR     *str,
 *
 * Return(s)   : In accordance with the C99 specification, this function returns:
 *
-*                  (1) the number of written characters (excluding the ending null character) when no
-*                      truncation occurs;
+*                  (1) the number of written characters when no truncation occurs;
 *
-*                  (2) the number of characters that would have been written (excluding the ending null
-*                      character) given that the buffer was big enough when truncation occurs.
+*                  (2) the number of characters that would have been written given that the buffer was
+*                      big enough when truncation occurs.
 *
-* Note(s)     : (1) A truncation has occured whenever the returned value is equal or greater than the
-*                   'size' parameter.
+* Note(s)     : (1) A truncation has occurred whenever the returned value is equal or greater than the
+*                   'max_char_cnt' parameter.
+*
+*               (2) A ending null character is not appended automatically by this function. If the null
+*                   character is needed, this is the responsibility of the caller function.
 *********************************************************************************************************
 */
 
@@ -3648,8 +3666,6 @@ static  CPU_INT16U  Str_PrintfImpl (      STR_PRINTF_OUT_CB   out_cb,
             }
         }
     }
-
-    out_cb((int)'\0', p_out_cb_arg);
 
     return (output_char_cnt);
 }

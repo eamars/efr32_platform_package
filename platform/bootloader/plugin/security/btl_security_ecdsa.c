@@ -2,7 +2,7 @@
  * @file btl_security_ecdsa.c
  * @brief ECDSA signing functionality for Silicon Labs bootloader
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -21,6 +21,11 @@
 
 #include <stddef.h>
 #include <string.h> // For memset
+
+#if !defined(CRYPTO) && defined(CRYPTO0)
+#define cmuClock_CRYPTO cmuClock_CRYPTO0
+#define CRYPTO CRYPTO0
+#endif
 
 /** Verify the ECDSA signature of the SHA hash, using
  *  the public key in the relevant token, with the signature contained in

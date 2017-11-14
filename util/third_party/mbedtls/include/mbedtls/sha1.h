@@ -98,6 +98,21 @@ void mbedtls_sha1_update( mbedtls_sha1_context *ctx, const unsigned char *input,
  */
 void mbedtls_sha1_finish( mbedtls_sha1_context *ctx, unsigned char output[20] );
 
+/* Internal use */
+void mbedtls_sha1_process( mbedtls_sha1_context *ctx, const unsigned char data[64] );
+
+#ifdef __cplusplus
+}
+#endif
+
+#else  /* MBEDTLS_SHA1_ALT */
+#include "sha1_alt.h"
+#endif /* MBEDTLS_SHA1_ALT */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * \brief          Output = SHA-1( input buffer )
  *
@@ -106,9 +121,6 @@ void mbedtls_sha1_finish( mbedtls_sha1_context *ctx, unsigned char output[20] );
  * \param output   SHA-1 checksum result
  */
 void mbedtls_sha1( const unsigned char *input, size_t ilen, unsigned char output[20] );
-
-/* Internal use */
-void mbedtls_sha1_process( mbedtls_sha1_context *ctx, const unsigned char data[64] );
 
 /**
  * \brief          Checkup routine
@@ -120,9 +132,5 @@ int mbedtls_sha1_self_test( int verbose );
 #ifdef __cplusplus
 }
 #endif
-
-#else  /* MBEDTLS_SHA1_ALT */
-#include "sha1_alt.h"
-#endif /* MBEDTLS_SHA1_ALT */
 
 #endif /* mbedtls_sha1.h */

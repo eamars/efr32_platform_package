@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file retargetserialconfig.h
  * @brief Provide stdio retargeting configuration parameters
- * @version 5.1.3
+ * @version 5.3.3
  *******************************************************************************
- * @section License
- * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * # License
+ * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silicon Labs License Agreement. See the file
@@ -13,8 +13,8 @@
  *
  ******************************************************************************/
 
-#ifndef __RETARGETSERIALCONFIG_H
-#define __RETARGETSERIALCONFIG_H
+#ifndef RETARGETSERIALCONFIG_H
+#define RETARGETSERIALCONFIG_H
 
 /* Override if needed with commandline parameter -DRETARGET_xxx */
 
@@ -39,10 +39,17 @@
   #define RETARGET_RXPIN       1                            /* UART reception pin */
   #define RETARGET_USART       1                            /* Includes em_usart.h */
 
+  #define RETARGET_CTS_LOCATION _USART_ROUTELOC1_CTSLOC_LOC30
+  #define RETARGET_RTS_LOCATION _USART_ROUTELOC1_RTSLOC_LOC30
+  #define RETARGET_CTSPORT      gpioPortA
+  #define RETARGET_CTSPIN       2
+  #define RETARGET_RTSPORT      gpioPortA
+  #define RETARGET_RTSPIN       3
+
   #define RETARGET_PERIPHERAL_ENABLE()
 
 #else
 #error "Illegal USART selection."
 #endif
 
-#endif /* __RETARGETSERIALCONFIG_H */
+#endif // RETARGETSERIALCONFIG_H

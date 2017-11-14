@@ -10,7 +10,7 @@
 *
 * File    : OS_TIME.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -92,7 +92,7 @@ void  OSTimeDly (OS_TICK   dly,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -234,7 +234,7 @@ void  OSTimeDlyHMSM (CPU_INT16U   hours,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -386,7 +386,7 @@ void  OSTimeDlyResume (OS_TCB  *p_tcb,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -400,7 +400,7 @@ void  OSTimeDlyResume (OS_TCB  *p_tcb,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)                          /* ---------------- VALIDATE ARGUMENTS ---------------- */
-    if (p_tcb == DEF_NULL) {                                    /* User must supply a valid OS_TCB                      */
+    if (p_tcb == (OS_TCB *)0) {                                 /* User must supply a valid OS_TCB                      */
        *p_err = OS_ERR_TCB_INVALID;
         return;
     }
@@ -480,7 +480,7 @@ OS_TICK  OSTimeGet (OS_ERR  *p_err)
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -531,11 +531,14 @@ void  OSTimeSet (OS_TICK   ticks,
 {
 #if (OS_CFG_TASK_TICK_EN == DEF_ENABLED)
     CPU_SR_ALLOC();
+
+#else
+    (void)ticks;
 #endif
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -547,7 +550,7 @@ void  OSTimeSet (OS_TICK   ticks,
     CPU_CRITICAL_EXIT();
 #endif
 
-   *p_err     = OS_ERR_NONE;
+   *p_err = OS_ERR_NONE;
 }
 
 
@@ -568,7 +571,7 @@ void  OSTimeSet (OS_TICK   ticks,
 
 void  OSTimeTick (void)
 {
-#if ((OS_CFG_TASK_TICK_EN == DEF_ENABLED) || (OS_CFG_TMR_EN == DEF_ENABLED))
+#if (OS_CFG_TASK_TICK_EN == DEF_ENABLED)
     OS_ERR  err;
 #endif
 

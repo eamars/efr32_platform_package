@@ -47,6 +47,7 @@ var searchData=
   ['spi_20slave_20driver_20error_20codes',['SPI slave driver error codes',['../group__SpiSlaveError.html',1,'']]],
   ['stacktop',['stackTop',['../structBareBootTable__t.html#acbe8d7a123f12c3bbc0d1aa681c7d034',1,'BareBootTable_t']]],
   ['startofappspace',['startOfAppSpace',['../structMainBootloaderTable__t.html#a7999ef70eb5dc2208ab070377f56b725',1,'MainBootloaderTable_t']]],
+  ['state',['state',['../structLz4Context__t.html#aa7f4dbf93cdd69cd2aaf08c76c2f18e7',1,'Lz4Context_t']]],
   ['storage',['storage',['../structMainBootloaderTable__t.html#ad528c2cd0416f2dc0dc17aa79ec8be78',1,'MainBootloaderTable_t::storage()'],['../group__Storage.html',1,'(Global Namespace)']]],
   ['storage_5fappendbootloadlist',['storage_appendBootloadList',['../group__BootloadInfo.html#ga02e64c7a8c13abcc2ffbdf32dea8d558',1,'btl_storage_bootloadinfo.h']]],
   ['storage_5fbootloadapplicationfromslot',['storage_bootloadApplicationFromSlot',['../group__Storage.html#gade37e2657be85459b4637c16485ba2ab',1,'btl_storage.h']]],

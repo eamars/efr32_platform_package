@@ -309,7 +309,7 @@
 
     SEGMENT()
     SEGMENT2()
-    EXCEPTION(     42, CRYPTO_IRQHandler,            4,         0)
+    EXCEPTION(     42, CRYPTO0_IRQHandler,           4,         0)
 
     SEGMENT()
     SEGMENT2()

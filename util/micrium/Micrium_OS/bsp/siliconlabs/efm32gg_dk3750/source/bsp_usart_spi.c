@@ -44,7 +44,7 @@
 #include  <rtos/drivers/io/include/serial_drv.h>
 
 #include  <platform/emdrv/spidrv/inc/spidrv.h>
-#include  <bsp/siliconlabs/efm32gg_dk3750/source/bsp.h>
+#include  <bsp/siliconlabs/efm32gg_dk3750/source/bsp_mcu.h>
 #include  <em_gpio.h>
 
 

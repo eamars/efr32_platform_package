@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file imu_math.c
  * @brief Inertial Measurement Unit Fusion driver math routines
- * @version 5.1.3
+ * @version 5.3.3
  *******************************************************************************
- * @section License
- * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * # License
+ * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silicon Labs License Agreement. See the file
@@ -12,7 +12,7 @@
  * any purpose, you must agree to the terms of that agreement.
  *
  ******************************************************************************/
- 
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -20,11 +20,6 @@
 
 /***************************************************************************//**
  * @addtogroup IMU
- * @{
- ******************************************************************************/
-
-/***************************************************************************//**
- * @addtogroup IMU_Functions IMU Functions
  * @{
  ******************************************************************************/
 
@@ -38,19 +33,17 @@
  * @return
  *    None
  ******************************************************************************/
-void IMU_normalizeAngle( float *a )
+void IMU_normalizeAngle(float *a)
 {
+  while ( *a >= IMU_PI ) {
+    *a -= 2 * IMU_PI;
+  }
 
-   while( *a >= IMU_PI ) {
-      *a -= 2 * IMU_PI;
-   }
+  while ( *a < -IMU_PI ) {
+    *a += 2 * IMU_PI;
+  }
 
-   while( *a < -IMU_PI ) {
-      *a += 2 * IMU_PI;
-   }
-
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -69,24 +62,21 @@ void IMU_normalizeAngle( float *a )
  * @return
  *    None
  ******************************************************************************/
-void IMU_matrixMultiply( float c[3][3], float a[3][3], float b[3][3] )
+void IMU_matrixMultiply(float c[3][3], float a[3][3], float b[3][3])
 {
+  int x, y, w;
+  float op[3];
 
-   int x, y, w;
-   float op[3];
-
-   for( x = 0; x < 3; x++ ) {
-      for( y = 0; y < 3; y++ ) {
-         for( w = 0; w < 3; w++ ) {
-            op[w] = a[x][w] * b[w][y];
-         }
-         c[x][y] = op[0] + op[1] + op[2];
-
+  for ( x = 0; x < 3; x++ ) {
+    for ( y = 0; y < 3; y++ ) {
+      for ( w = 0; w < 3; w++ ) {
+        op[w] = a[x][w] * b[w][y];
       }
-   }
+      c[x][y] = op[0] + op[1] + op[2];
+    }
+  }
 
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -99,17 +89,15 @@ void IMU_matrixMultiply( float c[3][3], float a[3][3], float b[3][3] )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorNormalizeAngle( float v[3] )
+void IMU_vectorNormalizeAngle(float v[3])
 {
+  int n;
 
-   int n;
+  for ( n = 0; n < 3; n++ ) {
+    IMU_normalizeAngle(&v[n]);
+  }
 
-   for( n = 0; n < 3; n++ ) {
-      IMU_normalizeAngle( &v[n] );
-   }
-
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -122,16 +110,15 @@ void IMU_vectorNormalizeAngle( float v[3] )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorZero( float v[3] )
+void IMU_vectorZero(float v[3])
 {
-   int n;
+  int n;
 
-   for( n = 0; n < 3; n++ ) {
-      v[n] = 0.0f;
-   }
+  for ( n = 0; n < 3; n++ ) {
+    v[n] = 0.0f;
+  }
 
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -150,17 +137,15 @@ void IMU_vectorZero( float v[3] )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorScalarMultiplication( float r[3], float v[3], float scale )
+void IMU_vectorScalarMultiplication(float r[3], float v[3], float scale)
 {
+  int n;
 
-   int n;
+  for ( n = 0; n < 3; n++ ) {
+    r[n] = v[n] * scale;
+  }
 
-   for( n = 0; n < 3; n++ ) {
-      r[n] = v[n] * scale;
-   }
-
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -176,17 +161,15 @@ void IMU_vectorScalarMultiplication( float r[3], float v[3], float scale )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorScale( float v[3], float scale )
+void IMU_vectorScale(float v[3], float scale)
 {
+  int n;
 
-   int n;
+  for ( n = 0; n < 3; n++ ) {
+    v[n] *= scale;
+  }
 
-   for( n = 0; n < 3; n++ ) {
-      v[n] *= scale;
-   }
-
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -205,17 +188,15 @@ void IMU_vectorScale( float v[3], float scale )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorAdd( float r[3], float a[3], float b[3] )
+void IMU_vectorAdd(float r[3], float a[3], float b[3])
 {
+  int n;
 
-   int n;
+  for ( n = 0; n < 3; n++ ) {
+    r[n] = a[n] + b[n];
+  }
 
-   for( n = 0; n < 3; n++ ) {
-      r[n] = a[n] + b[n];
-   }
-
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -234,16 +215,15 @@ void IMU_vectorAdd( float r[3], float a[3], float b[3] )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorSubtract( float r[3], float a[3], float b[3] )
+void IMU_vectorSubtract(float r[3], float a[3], float b[3])
 {
-   int n;
+  int n;
 
-   for( n = 0; n < 3; n++ ) {
-      r[n] = a[n] - b[n];
-   }
+  for ( n = 0; n < 3; n++ ) {
+    r[n] = a[n] - b[n];
+  }
 
-   return;
-
+  return;
 }
 
 /***************************************************************************//**
@@ -259,19 +239,17 @@ void IMU_vectorSubtract( float r[3], float a[3], float b[3] )
  * @return
  *    The dot product
  ******************************************************************************/
-float IMU_vectorDotProduct( float a[3], float b[3] )
+float IMU_vectorDotProduct(float a[3], float b[3])
 {
+  float r;
+  int n;
 
-   float r;
-   int n;
+  r = 0.0f;
+  for ( n = 0; n < 3; n++ ) {
+    r += a[n] * b[n];
+  }
 
-   r = 0.0f;
-   for( n = 0; n < 3; n++ ) {
-      r += a[n] * b[n];
-   }
-
-   return r;
-
+  return r;
 }
 
 /***************************************************************************//**
@@ -290,16 +268,13 @@ float IMU_vectorDotProduct( float a[3], float b[3] )
  * @return
  *    None
  ******************************************************************************/
-void IMU_vectorCrossProduct( float r[3], float a[3], float b[3] )
+void IMU_vectorCrossProduct(float r[3], float a[3], float b[3])
 {
+  r[0] = a[1] * b[2] - a[2] * b[1];
+  r[1] = a[2] * b[0] - a[0] * b[2];
+  r[2] = a[0] * b[1] - a[1] * b[0];
 
-   r[0] = a[1] * b[2] - a[2] * b[1];
-   r[1] = a[2] * b[0] - a[0] * b[2];
-   r[2] = a[0] * b[1] - a[1] * b[0];
-
-   return;
-
+  return;
 }
-/** @} (end addtogroup IMU_Functions) */
 
-/** @} (end addtogroup IMU) */
+/** @} */

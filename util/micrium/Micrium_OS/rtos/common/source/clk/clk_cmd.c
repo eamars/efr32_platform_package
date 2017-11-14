@@ -85,12 +85,6 @@
 *********************************************************************************************************
 */
 
-#define  CLK_CMD_TBL_NAME                                    ("clk")
-
-#define  CLK_CMD_NAME_HELP                                   ("clk_help")
-#define  CLK_CMD_NAME_SET                                    ("clk_set")
-#define  CLK_CMD_NAME_GET                                    ("clk_get")
-
 #define  CLK_CMD_HELP                                        ("help")
 #define  CLK_CMD_HELP_SHORT                                  ("h")
 
@@ -203,6 +197,11 @@ static  CPU_INT16S            ClkCmd_Get         (       CPU_INT16U        argc,
                                                          SHELL_OUT_FNCT    out_fnct,
                                                          SHELL_CMD_PARAM  *p_cmd_param);
 
+static  CPU_INT16S            ClkCmd_GetDayOfYr  (       CPU_INT16U        argc,
+                                                         CPU_CHAR         *p_argv[],
+                                                         SHELL_OUT_FNCT    out_fnct,
+                                                         SHELL_CMD_PARAM  *p_cmd_param);
+
 static  CLK_CMD_PARSE_STATUS  ClkCmd_CmdArgParse (       CPU_INT16U        argc,
                                                          CPU_CHAR         *p_argv[],
                                                          CLK_CMD_ARG      *p_cmd_args);
@@ -233,10 +232,11 @@ static  CPU_INT16S            ClkCmd_OutputMsg   (const  CPU_CHAR         *p_msg
 
 static  SHELL_CMD ClkCmdTbl[] =
 {
-    {CLK_CMD_NAME_HELP, ClkCmd_Help},
-    {CLK_CMD_NAME_SET,  ClkCmd_Set},
-    {CLK_CMD_NAME_GET,  ClkCmd_Get},
-    {0,                 0}
+    {"clk_help",           ClkCmd_Help},
+    {"clk_set",            ClkCmd_Set},
+    {"clk_get",            ClkCmd_Get},
+    {"clk_get_day_of_yr",  ClkCmd_GetDayOfYr},
+    {0,          0}
 };
 
 
@@ -308,7 +308,7 @@ void  ClkCmd_Init (RTOS_ERR  *p_err)
     RTOS_ASSERT_DBG_ERR_PTR_VALIDATE(p_err, ;);
 
 
-    Shell_CmdTblAdd((CPU_CHAR *)CLK_CMD_TBL_NAME,
+    Shell_CmdTblAdd((CPU_CHAR *)"clk",
                     ClkCmdTbl,
                     p_err);
 }
@@ -675,24 +675,24 @@ static  CPU_INT16S  ClkCmd_Get (CPU_INT16U        argc,
                                 SHELL_CMD_PARAM  *p_cmd_param)
 {
 #if  (CLK_CFG_STR_CONV_EN == DEF_ENABLED)
-    CPU_CHAR       date_time_str[CLK_STR_FMT_MAX_LEN];
+    CPU_CHAR              date_time_str[CLK_STR_FMT_MAX_LEN];
 #endif
 #if  (CLK_CFG_UNIX_EN == DEF_ENABLED)
-    CLK_TS_SEC     ts_unix_sec;
+    CLK_TS_SEC            ts_unix_sec;
 #endif
 #if  (CLK_CFG_NTP_EN == DEF_ENABLED)
-    CLK_TS_SEC     ts_ntp_sec;
+    CLK_TS_SEC            ts_ntp_sec;
 #endif
 #if ((CLK_CFG_UNIX_EN == DEF_ENABLED) || \
      (CLK_CFG_NTP_EN  == DEF_ENABLED))
-    CPU_CHAR       ts_str[DEF_INT_32U_NBR_DIG_MAX + 1];
+    CPU_CHAR              str[DEF_INT_32U_NBR_DIG_MAX + 1];
 #endif
-    CPU_INT16S     ret_val                             = 0u;
-    CPU_INT16S     byte_out_cnt                        = 0u;
-    CLK_CMD_ARG    cmd_arg;
-    CLK_DATE_TIME  date_time;
-    CPU_BOOLEAN    success;
-    CLK_CMD_PARSE_STATUS       parse_status;
+    CPU_INT16S            ret_val      = 0u;
+    CPU_INT16S            byte_out_cnt = 0u;
+    CLK_CMD_ARG           cmd_arg;
+    CLK_DATE_TIME         date_time;
+    CPU_BOOLEAN           success;
+    CLK_CMD_PARSE_STATUS  parse_status;
 
 
     parse_status = ClkCmd_CmdArgParse(argc,
@@ -740,15 +740,15 @@ static  CPU_INT16S  ClkCmd_Get (CPU_INT16U        argc,
         case CLK_CMD_TIME_TYPE_NONE:
         case CLK_CMD_TIME_TYPE_DATETIME:
              success = Clk_GetDateTime(&date_time);
-             if(success == DEF_FAIL) {
+             if (success == DEF_FAIL) {
                  goto date_time_invalid;
              }
 
 #if (CLK_CFG_STR_CONV_EN == DEF_ENABLED)
              success = Clk_DateTimeToStr(&date_time,
-                                         CLK_STR_FMT_YYYY_MM_DD_HH_MM_SS_UTC,
-                                         date_time_str,
-                                         CLK_STR_FMT_MAX_LEN);
+                                          CLK_STR_FMT_YYYY_MM_DD_HH_MM_SS_UTC,
+                                          date_time_str,
+                                          CLK_STR_FMT_MAX_LEN);
              if(success == DEF_FAIL) {
                  goto date_time_invalid;
              }
@@ -759,7 +759,39 @@ static  CPU_INT16S  ClkCmd_Get (CPU_INT16U        argc,
                                         DEF_NO,
                                         out_fnct,
                                         p_cmd_param);
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
 
+
+             (void)Str_FmtNbr_Int32U(date_time.DayOfWk,
+                                     DEF_INT_32U_NBR_DIG_MAX,
+                                     10u,
+                                     '\0',
+                                     DEF_NO,
+                                     DEF_YES ,
+                                     str);
+
+             ret_val = ClkCmd_OutputMsg(str,
+                                        DEF_YES,
+                                        DEF_YES,
+                                        DEF_NO,
+                                        out_fnct,
+                                        p_cmd_param);
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+
+             (void)Str_FmtNbr_Int32U(date_time.DayOfYr,
+                                     DEF_INT_32U_NBR_DIG_MAX,
+                                     10u,
+                                     '\0',
+                                     DEF_NO,
+                                     DEF_YES ,
+                                     str);
+
+             ret_val = ClkCmd_OutputMsg(str,
+                                        DEF_YES,
+                                        DEF_YES,
+                                        DEF_NO,
+                                        out_fnct,
+                                        p_cmd_param);
              CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
              break;
 #else
@@ -779,9 +811,9 @@ static  CPU_INT16S  ClkCmd_Get (CPU_INT16U        argc,
                                      '\0',
                                      DEF_NO,
                                      DEF_YES ,
-                                     ts_str);
+                                     str);
 
-             ret_val = ClkCmd_OutputMsg(ts_str,
+             ret_val = ClkCmd_OutputMsg(str,
                                         DEF_YES,
                                         DEF_YES,
                                         DEF_NO,
@@ -805,9 +837,9 @@ static  CPU_INT16S  ClkCmd_Get (CPU_INT16U        argc,
                                     '\0',
                                     DEF_NO,
                                     DEF_YES,
-                                    ts_str);
+                                    str);
 
-             ret_val = ClkCmd_OutputMsg(ts_str,
+             ret_val = ClkCmd_OutputMsg(str,
                                         DEF_YES,
                                         DEF_YES,
                                         DEF_NO,
@@ -839,6 +871,189 @@ conv_not_enabled:
 
 date_time_invalid:
     ret_val = ClkCmd_OutputError((CPU_CHAR *)CLK_CMD_OUTPUT_ERR_CMD_INTERNAL_ERR,
+                                 out_fnct,
+                                 p_cmd_param);
+
+    CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+    goto exit_ok;
+
+exit_ok:
+    ret_val = byte_out_cnt;
+
+
+exit_fail:
+    return (ret_val);
+}
+
+
+/*
+*********************************************************************************************************
+*                                       ClkCmd_GetDayOfYr()
+*
+* Description : Manage a clock get command according to the specified format.
+*
+* Argument(s) : argc            Count of the arguments supplied.
+*
+*               p_argv          Array of pointers to the strings which are those arguments.
+*
+*               out_fnct        Callback to a respond to the requester.
+*
+*               p_cmd_param     Pointer to additional information to pass to the command.
+*
+* Return(s)   : The number of positive data octets transmitted, if NO error(s).
+*
+*               SHELL_OUT_RTN_CODE_CONN_CLOSED, if implemented connection closed.
+*
+*               SHELL_OUT_ERR, otherwise.
+*
+* Note(s)     : none.
+*********************************************************************************************************
+*/
+
+static  CPU_INT16S  ClkCmd_GetDayOfYr (CPU_INT16U        argc,
+                                       CPU_CHAR         *p_argv[],
+                                       SHELL_OUT_FNCT    out_fnct,
+                                       SHELL_CMD_PARAM  *p_cmd_param)
+{
+    CPU_CHAR               str_day_of_yr[4] = {0};
+    CLK_TS_SEC             ts;
+    CPU_INT16S             ret_val          =  0u;
+    CPU_INT16S             byte_out_cnt     =  0u;
+    CLK_YR                 yr               =  0u;
+    CLK_MONTH              month            =  0u;
+    CLK_DAY                day              =  0u;
+    CLK_DAY                day_of_yr        =  0u;
+    CLK_DATE_TIME          date;
+    CPU_CHAR              *p_next;
+    CPU_CHAR              *p_next_tmp;
+    CLK_CMD_ARG            cmd_arg;
+    CPU_BOOLEAN            success;
+    CLK_CMD_PARSE_STATUS   status;
+
+
+    status = ClkCmd_CmdArgParse(argc,
+                                p_argv,
+                                &cmd_arg);
+    switch (status) {
+        case CLK_CMD_PARSE_STATUS_SUCCESS:
+             break;
+
+
+        case CLK_CMD_PARSE_STATUS_INVALID_ARG:
+             ret_val = ClkCmd_OutputError((CPU_CHAR *)CLK_CMD_OUTPUT_ERR_CMD_ARG_INVALID,
+                                          out_fnct,
+                                          p_cmd_param);
+
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+             goto exit_ok;
+
+
+        case CLK_CMD_PARSE_STATUS_EMPTY:
+        case CLK_CMD_PARSE_STATUS_HELP:
+        default:
+             ret_val = ClkCmd_OutputMsg(CLK_CMD_HELP_SET,
+                                        DEF_YES,
+                                        DEF_YES,
+                                        DEF_NO,
+                                        out_fnct,
+                                        p_cmd_param);
+
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+
+             ret_val = ClkCmd_OutputMsg(CLK_CMD_HELP_VALUE,
+                                        DEF_YES,
+                                        DEF_YES,
+                                        DEF_NO,
+                                        out_fnct,
+                                        p_cmd_param);
+
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+
+             ret_val = ClkCmd_OutputMsg(CLK_CMD_HELP_FORMAT,
+                                        DEF_YES,
+                                        DEF_YES,
+                                        DEF_NO,
+                                        out_fnct,
+                                        p_cmd_param);
+
+             CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+             goto exit_ok;
+    }
+
+    switch (cmd_arg.TimeType) {
+        case CLK_CMD_TIME_TYPE_NONE:
+        case CLK_CMD_TIME_TYPE_DATETIME:
+                                                                /* Parsing date.                                        */
+             if (cmd_arg.DatePtr != DEF_NULL) {
+                 yr    = (CLK_YR)   Str_ParseNbr_Int32U((const  CPU_CHAR *)cmd_arg.DatePtr,
+                                                        &p_next,
+                                                        10u);
+
+                 month = (CLK_MONTH)Str_ParseNbr_Int32U((const  CPU_CHAR *)&p_next[1],
+                                                        &p_next_tmp,
+                                                        10u);
+
+                 day   = (CLK_DAY)  Str_ParseNbr_Int32U((const  CPU_CHAR *)&p_next_tmp[1],
+                                                        DEF_NULL,
+                                                        10u);
+             } else {
+                 goto arg_invalid;
+             }
+
+             day_of_yr = Clk_GetDayOfYr(yr, month, day);
+
+             break;
+
+#if  (CLK_CFG_NTP_EN == DEF_ENABLED)
+        case CLK_CMD_TIME_TYPE_NTP:
+             ts = Str_ParseNbr_Int32U(cmd_arg.DatePtr, DEF_NULL, 10u);
+
+             success = Clk_TS_NTP_ToDateTime(ts, 0, &date);
+             if(success == DEF_FAIL) {
+                 goto arg_invalid;
+             }
+             day_of_yr = date.DayOfYr;
+             break;
+#endif
+
+
+#if  (CLK_CFG_UNIX_EN == DEF_ENABLED)
+        case CLK_CMD_TIME_TYPE_UNIX:
+             ts = Str_ParseNbr_Int32U(cmd_arg.DatePtr, DEF_NULL, 10u);
+             success = Clk_TS_UnixToDateTime(ts, 0, &date);
+             if(success == DEF_FAIL) {
+                 goto arg_invalid;
+             }
+             day_of_yr = date.DayOfYr;
+             break;
+#endif
+
+        default:
+            goto arg_invalid;
+    }
+
+
+    Str_FmtNbr_Int32U(day_of_yr,
+                      4,
+                      10u,
+                     '\0',
+                      DEF_NO,
+                      DEF_YES ,
+                      str_day_of_yr);
+
+    ret_val = ClkCmd_OutputMsg(str_day_of_yr,
+                               DEF_YES,
+                               DEF_YES,
+                               DEF_NO,
+                               out_fnct,
+                               p_cmd_param);
+    CLK_CMD_OUT_MSG_CHK(ret_val, byte_out_cnt, exit_fail);
+    goto exit_ok;
+
+
+
+arg_invalid:
+    ret_val = ClkCmd_OutputError((CPU_CHAR *)CLK_CMD_OUTPUT_ERR_CMD_ARG_INVALID,
                                  out_fnct,
                                  p_cmd_param);
 

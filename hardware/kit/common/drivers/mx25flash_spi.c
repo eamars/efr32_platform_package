@@ -12,6 +12,21 @@
 #include "em_usart.h"
 #include "em_cmu.h"
 
+/* Fallback to loc 11 if no location is defined for backwards compatibility */
+#ifndef MX25_LOC_RX
+#define MX25_LOC_RX            _USART_ROUTELOC0_RXLOC_LOC11
+#endif
+#ifndef MX25_LOC_SCLK
+#define MX25_LOC_SCLK          _USART_ROUTELOC0_CLKLOC_LOC11
+#endif
+#ifndef MX25_LOC_TX
+#define MX25_LOC_TX            _USART_ROUTELOC0_TXLOC_LOC11
+#endif
+/* Fallback to baudrate of 8 MHz if not defined for backwards compatibility */
+#ifndef MX25_BAUDRATE
+#define MX25_BAUDRATE   8000000
+#endif
+
 /* Local functions */
 
 /* Basic functions */
@@ -41,7 +56,7 @@ void MX25_init( void )
    CMU_ClockEnable( MX25_USART_CLK, true );
 
    init.msbf     = true;
-   init.baudrate = 8000000;
+   init.baudrate = MX25_BAUDRATE;
    USART_InitSync( MX25_USART, &init );
 
    /* IO config */
@@ -50,8 +65,12 @@ void MX25_init( void )
    GPIO_PinModeSet( MX25_PORT_SCLK, MX25_PIN_SCLK, gpioModePushPull, 1 );
    GPIO_PinModeSet( MX25_PORT_CS,   MX25_PIN_CS,   gpioModePushPull, 1 );
 
-   MX25_USART->ROUTELOC0 = ( USART_ROUTELOC0_RXLOC_LOC11 | USART_ROUTELOC0_TXLOC_LOC11 | USART_ROUTELOC0_CLKLOC_LOC11 );
-   MX25_USART->ROUTEPEN  = ( USART_ROUTEPEN_RXPEN | USART_ROUTEPEN_TXPEN | USART_ROUTEPEN_CLKPEN );
+   MX25_USART->ROUTELOC0 = ( (MX25_LOC_RX << _USART_ROUTELOC0_RXLOC_SHIFT)
+                           | (MX25_LOC_TX << _USART_ROUTELOC0_TXLOC_SHIFT)
+                           | (MX25_LOC_SCLK << _USART_ROUTELOC0_CLKLOC_SHIFT) );
+   MX25_USART->ROUTEPEN  = (  USART_ROUTEPEN_RXPEN
+                            | USART_ROUTEPEN_TXPEN
+                            | USART_ROUTEPEN_CLKPEN );
 
    /* Wait for flash warm-up */
    Initial_Spi();
@@ -1385,7 +1404,14 @@ ReturnMsg MX25_CE( void )
  */
 ReturnMsg MX25_DP( void )
 {
-    // Chip select go low to start a flash command
+    // Wake up flash in case the device is in deep power down mode already.
+    CS_Low();
+    InsertDummyCycle ( 20*8 );        // wait for tCRDP=20us  (20 x 8 bit / 8Mbps)
+    CS_High();
+    InsertDummyCycle ( 30*8 );        // wait for tRDP=35us (20 x 8 bit / 8Mbps)
+    InsertDummyCycle ( 5*8 );     
+	
+	// Chip select go low to start a flash command
     CS_Low();
 
     // Deep Power Down Mode command

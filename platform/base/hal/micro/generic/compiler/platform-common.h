@@ -312,17 +312,37 @@ void halCommonMemPGMCopy(void* dest, const void PGM_NO_CONST *source, uint16_t b
 /**
  * @brief Returns the second byte of the 32-bit value \c n as an \c uint8_t.
  */
-#define BYTE_1(n)                    ((uint8_t)(BYTE_0((n) >> 8)))
+#define BYTE_1(n)                    BYTE_0((n) >> 8)
 
 /**
  * @brief Returns the third byte of the 32-bit value \c n as an \c uint8_t.
  */
-#define BYTE_2(n)                    ((uint8_t)(BYTE_0((n) >> 16)))
+#define BYTE_2(n)                    BYTE_0((n) >> 16)
 
 /**
  * @brief Returns the high byte of the 32-bit value \c n as an \c uint8_t.
  */
-#define BYTE_3(n)                    ((uint8_t)(BYTE_0((n) >> 24)))
+#define BYTE_3(n)                    BYTE_0((n) >> 24)
+
+/**
+ * @brief Returns the fifth byte of the 64-bit value \c n as an \c uint8_t.
+ */
+#define BYTE_4(n)                    BYTE_0((n) >> 32)
+
+/**
+ * @brief Returns the sixth byte of the 64-bit value \c n as an \c uint8_t.
+ */
+#define BYTE_5(n)                    BYTE_0((n) >> 40)
+
+/**
+ * @brief Returns the seventh byte of the 64-bit value \c n as an \c uint8_t.
+ */
+#define BYTE_6(n)                    BYTE_0((n) >> 48)
+
+/**
+ * @brief Returns the high byte of the 64-bit value \c n as an \c uint8_t.
+ */
+#define BYTE_7(n)                    BYTE_0((n) >> 56)
 
 /**
  * @brief Returns the number of entries in an array.

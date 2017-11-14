@@ -884,6 +884,8 @@ void  OSIntExit (void)
     OS_TLS_TaskSw();
 #endif
 
+    OS_TRACE_ISR_EXIT_TO_SCHEDULER();
+
     OSIntCtxSw();                                               /* Perform interrupt level ctx switch                   */
 
     CPU_INT_EN();
@@ -1286,6 +1288,14 @@ void  OSStart (RTOS_ERR  *p_err)
 
 /*
 *********************************************************************************************************
+*********************************************************************************************************
+*                                      DEPRECATED GLOBAL FUNCTIONS
+*********************************************************************************************************
+*********************************************************************************************************
+*/
+
+/*
+*********************************************************************************************************
 *                                              OSVersion()
 *
 * Description : Returns the version number of the Kernel. The returned value is the Kernel's version
@@ -1298,7 +1308,8 @@ void  OSStart (RTOS_ERR  *p_err)
 *
 * Return(s)   : The version number of the Kernel multiplied by 10000.
 *
-* Note(s)     : None.
+* Note(s)     : (1) This function is DEPRECATED and will be removed in a future version of this product.
+*                   Instead, use RTOS_Version() or RTOS_VERSION.
 *********************************************************************************************************
 */
 

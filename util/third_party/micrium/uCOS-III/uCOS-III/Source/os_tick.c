@@ -10,7 +10,7 @@
 *
 * File    : OS_TICK.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -81,10 +81,12 @@ void  OS_TickTask (void  *p_arg)
 
     (void)p_arg;                                                /* Prevent compiler warning                             */
 
+    err = OS_ERR_NONE;                                          /* Initialize err explicitly for static analysis.       */
+
     for (;;) {
         (void)OSTaskSemPend(0u,
                             OS_OPT_PEND_BLOCKING,
-                            DEF_NULL,
+                            (CPU_TS *)0,
                             &err);                              /* Wait for signal from tick interrupt                  */
         if (err == OS_ERR_NONE) {
             CPU_CRITICAL_ENTER();
@@ -115,10 +117,10 @@ void  OS_TickTask (void  *p_arg)
 #if (OS_CFG_DYN_TICK_EN == DEF_ENABLED)
             tick_step_dly = (OS_TICK)-1;
             tick_step_timeout = (OS_TICK)-1;
-            if(OSTickListDly.TCB_Ptr != DEF_NULL) {
+            if(OSTickListDly.TCB_Ptr != (OS_TCB *)0) {
                 tick_step_dly = OSTickListDly.TCB_Ptr->TickRemain;
             }
-            if(OSTickListTimeout.TCB_Ptr != DEF_NULL) {
+            if(OSTickListTimeout.TCB_Ptr != (OS_TCB *)0) {
                 tick_step_timeout = OSTickListTimeout.TCB_Ptr->TickRemain;
             }
             OSTickCtrStep = (tick_step_dly < tick_step_timeout) ? tick_step_dly : tick_step_timeout;
@@ -159,8 +161,8 @@ void  OS_TickTaskInit (OS_ERR  *p_err)
     OSTickCtrPend                = 0u;
 #endif
 
-    OSTickListDly.TCB_Ptr        = DEF_NULL;
-    OSTickListTimeout.TCB_Ptr    = DEF_NULL;
+    OSTickListDly.TCB_Ptr        = (OS_TCB *)0;
+    OSTickListTimeout.TCB_Ptr    = (OS_TCB *)0;
 
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     OSTickListDly.NbrEntries     = 0u;
@@ -171,7 +173,7 @@ void  OS_TickTaskInit (OS_ERR  *p_err)
 #endif
 
                                                                 /* --------------- CREATE THE TICK TASK --------------- */
-    if (OSCfg_TickTaskStkBasePtr == DEF_NULL) {
+    if (OSCfg_TickTaskStkBasePtr == (CPU_STK *)0) {
        *p_err = OS_ERR_TICK_STK_INVALID;
         return;
     }
@@ -187,18 +189,22 @@ void  OS_TickTaskInit (OS_ERR  *p_err)
     }
 
     OSTaskCreate(&OSTickTaskTCB,
-                 (CPU_CHAR   *)("uC/OS-III Tick Task"),
-                 OS_TickTask,
-                 DEF_NULL,
-                 OSCfg_TickTaskPrio,
-                 OSCfg_TickTaskStkBasePtr,
-                 OSCfg_TickTaskStkLimit,
-                 OSCfg_TickTaskStkSize,
-                 0u,
-                 0u,
-                 DEF_NULL,
-                 (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS),
-                 p_err);
+#if  (OS_CFG_DBG_EN == DEF_DISABLED)
+                 (CPU_CHAR   *)0,
+#else
+                 (CPU_CHAR   *)"uC/OS-III Tick Task",
+#endif
+                  OS_TickTask,
+                 (void       *)0,
+                  OSCfg_TickTaskPrio,
+                  OSCfg_TickTaskStkBasePtr,
+                  OSCfg_TickTaskStkLimit,
+                  OSCfg_TickTaskStkSize,
+                  0u,
+                  0u,
+                 (void       *)0,
+                 (OS_OPT_TASK_STK_CHK | (OS_OPT)(OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS)),
+                  p_err);
 }
 
 /*
@@ -231,10 +237,10 @@ void  OS_TickListInsert (OS_TICK_LIST  *p_list,
 #endif
 
 
-    if (p_list->TCB_Ptr == DEF_NULL) {                          /* Is the list empty?                                   */
+    if (p_list->TCB_Ptr == (OS_TCB *)0) {                       /* Is the list empty?                                   */
         p_tcb->TickRemain  = time;                              /* Yes, Store time in TCB                               */
-        p_tcb->TickNextPtr = DEF_NULL;
-        p_tcb->TickPrevPtr = DEF_NULL;
+        p_tcb->TickNextPtr = (OS_TCB *)0;
+        p_tcb->TickPrevPtr = (OS_TCB *)0;
         p_tcb->TickListPtr = p_list;                            /* Link to this list                                    */
         p_list->TCB_Ptr    = p_tcb;                             /* Point to TCB of task to place in the list            */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
@@ -247,11 +253,11 @@ void  OS_TickListInsert (OS_TICK_LIST  *p_list,
         p_tcb1 = p_list->TCB_Ptr;
         p_tcb2 = p_list->TCB_Ptr;                               /* No,  Insert somewhere in the list in delta order     */
         remain = time;
-        while (p_tcb2 != DEF_NULL) {
+        while (p_tcb2 != (OS_TCB *)0) {
             if (remain <= p_tcb2->TickRemain) {
-                if (p_tcb2->TickPrevPtr == DEF_NULL) {          /* Insert before the first entry in the list?           */
+                if (p_tcb2->TickPrevPtr == (OS_TCB *)0) {       /* Insert before the first entry in the list?           */
                     p_tcb->TickRemain   = remain;               /* Yes, Store remaining time                            */
-                    p_tcb->TickPrevPtr  = DEF_NULL;
+                    p_tcb->TickPrevPtr  = (OS_TCB *)0;
                     p_tcb->TickNextPtr  = p_tcb2;
                     p_tcb->TickListPtr  = p_list;               /* Link TCB to this list                                */
                     p_tcb2->TickRemain -= remain;               /* Reduce time of next entry in the list                */
@@ -293,7 +299,7 @@ void  OS_TickListInsert (OS_TICK_LIST  *p_list,
         }
         p_tcb->TickRemain   = remain;
         p_tcb->TickPrevPtr  = p_tcb1;
-        p_tcb->TickNextPtr  = DEF_NULL;
+        p_tcb->TickNextPtr  = (OS_TCB *)0;
         p_tcb->TickListPtr  = p_list;                           /* Link the list to the TCB                             */
         p_tcb1->TickNextPtr = p_tcb;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
@@ -423,38 +429,38 @@ void  OS_TickListRemove (OS_TCB  *p_tcb)
     p_list = p_tcb->TickListPtr;
     p_tcb1 = p_tcb->TickPrevPtr;
     p_tcb2 = p_tcb->TickNextPtr;
-    if (p_tcb1 == DEF_NULL) {
-        if (p_tcb2 == DEF_NULL) {                               /* Remove ONLY entry in the list?                       */
-            p_list->TCB_Ptr    = DEF_NULL;
+    if (p_tcb1 == (OS_TCB *)0) {
+        if (p_tcb2 == (OS_TCB *)0) {                            /* Remove ONLY entry in the list?                       */
+            p_list->TCB_Ptr     = (OS_TCB       *)0;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-            p_list->NbrEntries = 0u;
+            p_list->NbrEntries  =                 0u;
 #endif
-            p_tcb->TickRemain   = 0u;
-            p_tcb->TickListPtr  = DEF_NULL;
+            p_tcb->TickRemain   =                 0u;
+            p_tcb->TickListPtr  = (OS_TICK_LIST *)0;
         } else {
-            p_tcb2->TickPrevPtr = DEF_NULL;
+            p_tcb2->TickPrevPtr = (OS_TCB       *)0;
             p_tcb2->TickRemain += p_tcb->TickRemain;            /* Add back the ticks to the delta                      */
-            p_list->TCB_Ptr    = p_tcb2;
+            p_list->TCB_Ptr     = p_tcb2;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
             p_list->NbrEntries--;
 #endif
-            p_tcb->TickNextPtr  = DEF_NULL;
-            p_tcb->TickRemain   = 0u;
-            p_tcb->TickListPtr  = DEF_NULL;
+            p_tcb->TickNextPtr  = (OS_TCB       *)0;
+            p_tcb->TickRemain   =                 0u;
+            p_tcb->TickListPtr  = (OS_TICK_LIST *)0;
         }
     } else {
         p_tcb1->TickNextPtr = p_tcb2;
-        if (p_tcb2 != DEF_NULL) {
+        if (p_tcb2 != (OS_TCB *)0) {
             p_tcb2->TickPrevPtr = p_tcb1;
             p_tcb2->TickRemain += p_tcb->TickRemain;            /* Add back the ticks to the delta list                 */
         }
-        p_tcb->TickPrevPtr  = DEF_NULL;
+        p_tcb->TickPrevPtr  = (OS_TCB       *)0;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
         p_list->NbrEntries--;
 #endif
-        p_tcb->TickNextPtr  = DEF_NULL;
-        p_tcb->TickRemain   = 0u;
-        p_tcb->TickListPtr  = DEF_NULL;
+        p_tcb->TickNextPtr  = (OS_TCB       *)0;
+        p_tcb->TickRemain   =                 0u;
+        p_tcb->TickListPtr  = (OS_TICK_LIST *)0;
     }
 }
 
@@ -493,7 +499,7 @@ static  CPU_TS  OS_TickListUpdateDly (OS_TICK  ticks)
 #endif
     p_list      = &OSTickListDly;
     p_tcb       = p_list->TCB_Ptr;
-    if (p_tcb != DEF_NULL) {
+    if (p_tcb != (OS_TCB *)0) {
         if (p_tcb->TickRemain <= ticks) {
             ticks = ticks - p_tcb->TickRemain;
             p_tcb->TickRemain = 0u;
@@ -517,7 +523,7 @@ static  CPU_TS  OS_TickListUpdateDly (OS_TICK  ticks)
 
             p_list->TCB_Ptr = p_tcb->TickNextPtr;
             p_tcb           = p_list->TCB_Ptr;                  /* Get 'p_tcb' again for loop                           */
-            if (p_tcb == DEF_NULL) {
+            if (p_tcb == (OS_TCB *)0) {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                 p_list->NbrEntries = 0u;
 #endif
@@ -526,7 +532,7 @@ static  CPU_TS  OS_TickListUpdateDly (OS_TICK  ticks)
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                 p_list->NbrEntries--;
 #endif
-                p_tcb->TickPrevPtr = DEF_NULL;
+                p_tcb->TickPrevPtr = (OS_TCB *)0;
             }
 
             if (p_tcb->TickRemain <= ticks) {
@@ -591,7 +597,7 @@ static  CPU_TS  OS_TickListUpdateTimeout (OS_TICK  ticks)
 #endif
     p_list      = &OSTickListTimeout;
     p_tcb       = p_list->TCB_Ptr;
-    if (p_tcb != DEF_NULL) {
+    if (p_tcb != (OS_TCB *)0) {
         if (p_tcb->TickRemain <= ticks) {
             ticks = ticks - p_tcb->TickRemain;
             p_tcb->TickRemain = 0u;
@@ -605,14 +611,14 @@ static  CPU_TS  OS_TickListUpdateTimeout (OS_TICK  ticks)
 #endif
 
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)
-            p_tcb_owner = (OS_TCB *)DEF_NULL;
+            p_tcb_owner = (OS_TCB *)0;
             if (p_tcb->PendOn == OS_TASK_PEND_ON_MUTEX) {
-                p_tcb_owner = (OS_TCB *)((OS_MUTEX *)p_tcb->PendObjPtr)->OwnerTCBPtr;
+                p_tcb_owner = (OS_TCB *)((OS_MUTEX *)((void *)p_tcb->PendObjPtr))->OwnerTCBPtr;
             }
 #endif
 
 #if (OS_MSG_EN == DEF_ENABLED)
-            p_tcb->MsgPtr  = DEF_NULL;
+            p_tcb->MsgPtr  = (void *)0;
             p_tcb->MsgSize = 0u;
 #endif
 #if (OS_CFG_TS_EN == DEF_ENABLED)
@@ -632,7 +638,7 @@ static  CPU_TS  OS_TickListUpdateTimeout (OS_TICK  ticks)
             p_tcb->PendOn     = OS_TASK_PEND_ON_NOTHING;        /* Indicate no longer pending                           */
 
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)
-            if (p_tcb_owner != DEF_NULL) {
+            if (p_tcb_owner != (OS_TCB *)0) {
                 if ((p_tcb_owner->Prio != p_tcb_owner->BasePrio) &&
                     (p_tcb_owner->Prio == p_tcb->Prio)) {       /* Has the owner inherited a priority?                  */
                     prio_new = OS_MutexGrpPrioFindHighest(p_tcb_owner);
@@ -647,7 +653,7 @@ static  CPU_TS  OS_TickListUpdateTimeout (OS_TICK  ticks)
 
             p_list->TCB_Ptr = p_tcb->TickNextPtr;
             p_tcb           = p_list->TCB_Ptr;                  /* Get 'p_tcb' again for loop                           */
-            if (p_tcb == DEF_NULL) {
+            if (p_tcb == (OS_TCB *)0) {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                 p_list->NbrEntries = 0u;
 #endif
@@ -656,7 +662,7 @@ static  CPU_TS  OS_TickListUpdateTimeout (OS_TICK  ticks)
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                 p_list->NbrEntries--;
 #endif
-                p_tcb->TickPrevPtr = DEF_NULL;
+                p_tcb->TickPrevPtr = (OS_TCB *)0;
             }
             if (p_tcb->TickRemain <= ticks) {
                 ticks = ticks - p_tcb->TickRemain;

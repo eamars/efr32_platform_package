@@ -53,14 +53,13 @@
 
 #include  <ex_description.h>
 
-#include  <stdio.h> 
+#include  <rtos/fs/include/fs_core_posix.h>
+
 #include  "ex_fs_file_rd_wr_posix.h"
 #include  "ex_fs_utils.h"
 #include  "ex_fs.h"
 
 #include  <rtos/common/include/rtos_utils.h>
-
-#include  <rtos/fs/include/fs_core_posix.h>
 
 
 /*
@@ -216,7 +215,7 @@ static  void  Ex_FS_FileRdWr_PosixExec (FS_VOL_HANDLE   vol_handle,
     MEM_SEG_INFO   seg_info;
     CPU_SIZE_T     seg_rem_size;
     CPU_SIZE_T     expected_path_len;
-    FS_FILE       *p_file;
+    FILE          *p_file;
     CPU_INT08U     pattern_start = 0;
     CPU_BOOLEAN    ok;
     int            result;

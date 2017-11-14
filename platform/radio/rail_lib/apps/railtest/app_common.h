@@ -16,6 +16,8 @@
 
 #include "rail_types.h"
 
+#include "pa_conversions_efr32.h"
+
 /******************************************************************************
  * Constants
  *****************************************************************************/
@@ -28,10 +30,32 @@
 #define PER_PORT (gpioPortC)
 #define PER_PIN  (7)
 
+typedef enum RailTxType{
+  TX_TYPE_NORMAL,
+  TX_TYPE_CSMA,
+  TX_TYPE_LBT
+} RailTxType_t;
+
 typedef struct ButtonArray{
   GPIO_Port_TypeDef   port;
   unsigned int        pin;
 } ButtonArray_t;
+
+typedef struct RxPacketData {
+  /**
+   * A structure containing the extra information associated with this received
+   * packet.
+   */
+  RAIL_RxPacketDetails_t appendedInfo;
+  /**
+   * The number of bytes that are in the dataPtr array.
+   */
+  uint16_t dataLength;
+  /**
+   * A variable length array holding the receive packet data bytes.
+   */
+  uint8_t dataPtr[];
+} RxPacketData_t;
 
 typedef struct Stats{
   uint32_t samples;
@@ -42,17 +66,28 @@ typedef struct Stats{
 } Stats_t;
 
 typedef struct Counters{
-  uint32_t transmit;
+  // Counts all successful user transmits
+  // "user" in this and following variable names refers to
+  // a transmit that a user initiated, i.e. not an ack
+  uint32_t userTx;
+  // Counts all successful ack transmits
+  uint32_t ackTx;
+  uint32_t userTxAborted;
+  uint32_t ackTxAborted;
+  uint32_t userTxBlocked;
+  uint32_t ackTxBlocked;
+  uint32_t userTxUnderflow;
+  uint32_t ackTxUnderflow;
+
+  // Channel busy doesn't differentiate
+  // between ack/user packets
+  uint32_t txChannelBusy;
+
   uint32_t receive;
   uint32_t syncDetect;
   uint32_t preambleDetect;
   uint32_t frameError;
   uint32_t rxOfEvent;
-  uint32_t rxUfEvent;
-  uint32_t txOfEvent;
-  uint32_t txUfEvent;
-  uint32_t txAbort;
-  uint32_t txChannelBusy;
   uint32_t addrFilterEvent;
   uint32_t rxFail;
   uint32_t calibrations;
@@ -67,15 +102,17 @@ typedef struct Counters{
   uint32_t rxFifoAlmostFull;
   uint32_t timingLost;
   uint32_t timingDetect;
+  uint32_t radioConfigChanged;
   Stats_t rssi;
 } Counters_t;
 
 extern Counters_t counters;
 extern int currentConfig;
 extern bool receiveModeEnabled;
+extern RAIL_RadioState_t rxSuccessTransition;
 extern bool transmitting;
 extern bool txParameterChanged;
-extern uint8_t channel;
+extern uint16_t channel;
 extern uint32_t continuousTransferPeriod;
 extern int32_t txCount;
 extern uint32_t txAfterRxDelay;
@@ -92,7 +129,7 @@ extern bool afterRxCancelAck;
 extern bool afterRxUseTxBufferForAck;
 extern bool newTxError;
 extern uint32_t failPackets;
-extern uint32_t enablePrintCallbacks;
+extern uint32_t enablePrintEvents;
 
 extern uint32_t internalTransmitCounter;
 
@@ -100,17 +137,18 @@ extern uint32_t internalTransmitCounter;
 #define ASYNC_RESPONSE (0x02)
 extern uint8_t logLevel;
 extern uint8_t txData[APP_MAX_PACKET_LENGTH];
-extern RAIL_TxData_t transmitPayload;
+extern uint16_t txDataLen;
 
 extern uint8_t ackData[RAIL_AUTOACK_MAX_LENGTH];
-extern RAIL_AutoAckData_t ackPayload;
+extern uint8_t ackDataLen;
 
-extern RAIL_PreTxOp_t txPreTxOp;
-extern void* txPreTxOpArgs;
+extern RailTxType_t txType;
+extern RAIL_LbtConfig_t *lbtConfig;
+extern RAIL_CsmaConfig_t *csmaConfig;
 
 // Structure that holds txOptions
 extern RAIL_TxOptions_t txOptions;
-// If this pointer is not NULL, call RAIL_TxStartWithOptions
+// If this pointer is NULL, pass in 0 to StartTx
 extern RAIL_TxOptions_t *txOptionsPtr;
 
 // Data Management
@@ -121,7 +159,15 @@ extern RAIL_DataConfig_t railDataConfig;
 extern bool rxFifoManual;
 extern bool txFifoManual;
 
-extern uint32_t railRxConfig;
+// RAIL instance handle
+extern RAIL_Handle_t railHandle;
+
+// Indicator of whether or not to print tx acks as they happens
+extern bool printTxAck;
+
+// Indicator of last power level requested for use
+extern uint8_t lastSetTxPowerLevel;
+
 /**
  * @enum AppMode
  * @brief Enumeration of RailTest transmit states.
@@ -137,44 +183,28 @@ typedef enum AppMode{
   SCHTX_AFTER_RX = 7, /**< Schedule a TX for a fixed delay after receiving a packet */
   RX_OVERFLOW = 8,    /**< Cause overflow on receive */
   TX_UNDERFLOW = 9,   /**< Cause underflows on the next TX sequence */
-  TX_CANCEL = 10,     /**< Cancel a single packet transmit to force an error callback */
+  TX_CANCEL = 10,     /**< Cancel a single packet transmit to force an error event */
   RF_SENSE = 11,      /**< Sense RF energy to wake the radio */
   PER = 12,           /**< Packet Error Rate test mode */
   BER = 13,           /**< Bit Error Rate test mode */
   RX_SCHEDULED = 14,  /**< Enable receive at a time scheduled in the future */
 } AppMode_t;
 
-typedef struct CallbackData{
-  uint32_t        callbackId;
-  uint32_t        timestamp;
-} CallbackData_t;
+typedef struct EventData{
+  RAIL_Events_t events;
+  uint32_t timestamp;
+} EventData_t;
 
 /**
- * @enum RailtestCallbacks
- * @brief Enumeration of callbacks used in railtest.
+ * @enum RailTxType
+ * @brief Enumeration of the types of tx available in RAIL
  *
- * These values serve as an index for the function name
- * strings in RailCbNames. Therefore, the number of enum
- * values here should match the number of elements in that
- * array.
+ * These are used to decide which type of tx to do, based on
+ * what's been configured in railtest. Scheduled is not included
+ * as railtest handles it somewhat separately.
  */
-typedef enum RailtestCallbacks{
-  RAILCB_RX_RADIO_STATUS_EXT,
-  RAILCB_TX_RADIO_STATUS,
-  RAILCB_TX_PACKET_SENT,
-  RAILCB_RX_PACKET_RECEIVED,
-  RAILCB_TX_FIFO_ALMOST_EMPTY,
-  RAILCB_RX_FIFO_ALMOST_FULL,
-  RAILCB_RF_READY,
-  RAILCB_CAL_NEEDED,
-  RAILCB_RADIO_STATE_CHANGED,
-  RAILCB_TIMER_EXPIRED,
-  RAILCB_RX_ACK_TIMEOUT,
-  RAILCB_IEEE802154_DATA_REQUEST_COMMAND,
-  RAILCB_RSSI_AVERAGE_DONE,
-  RAILCB_ASSERT_FAILED
-} RailtestCallbacks_t;
 
+void RAILCb_TimerExpired(RAIL_Handle_t railHandle);
 AppMode_t previousAppMode(void);
 AppMode_t currentAppMode(void);
 void enableAppMode(AppMode_t appMode, bool enable, char *command);
@@ -192,18 +222,16 @@ void updateDisplay(void);
 void changeChannel(uint32_t i);
 void pendPacketTx(void);
 void pendFinishTxSequence(void);
-void setNextPacketTime(uint32_t time, bool isAbs);
+void pendFinishTxAckSequence(void);
 void radioTransmit(uint32_t iterations, char *command);
 void configureTxAfterRx(uint32_t delay, bool enable, char *command);
 void scheduleNextTx(void);
-void changeRadioConfig(int newConfig);
 void printPacket(char *cmdName,
                  uint8_t *data,
                  uint16_t dataLength,
-                 RAIL_RxPacketInfo_t *packetInfo);
+                 RxPacketData_t *packetInfo);
 
 void appHalInit(void);
-void initLeds(void);
 void initButtons(void);
 void initGraphics(void);
 void LedSet(int led);
@@ -215,5 +243,16 @@ void PeripheralEnable(void);
 void enableGraphics(void);
 void usDelay(uint32_t microseconds);
 void serialWaitForTxIdle(void);
-void enqueueCallback(uint32_t callbackId);
+void enqueueEvents(RAIL_Events_t events);
+void rxFifoPrep(void);
+uint8_t chooseTxType(bool reuseCcaConfig);
+const char *getRfStateName(RAIL_RadioState_t state);
+const char *getStatusMessage(RAIL_Status_t status);
+
+void RAILCb_TxPacketSent(RAIL_Handle_t railHandle, bool isAck);
+void RAILCb_RxPacketReceived(RAIL_Handle_t railHandle);
+void RAILCb_TxFifoAlmostEmpty(RAIL_Handle_t railHandle);
+void RAILCb_RxFifoAlmostFull(RAIL_Handle_t railHandle);
+void RAILCb_AssertFailed(RAIL_Handle_t railHandle, uint32_t errorCode);
+
 #endif // __APPS_COMMON_H__

@@ -1254,6 +1254,10 @@ CPU_BOOLEAN  Clk_DateTimeToStr (CLK_DATE_TIME  *p_date_time,
              RTOS_ASSERT_DBG((str_len >= CLK_STR_FMT_HH_MM_SS_AM_PM_LEN), RTOS_ERR_INVALID_ARG, DEF_FAIL);
              break;
 
+        case CLK_STR_FMT_HH_MM_AM_PM:
+             RTOS_ASSERT_DBG((str_len >= CLK_STR_FMT_HH_MM_AM_PM_LEN), RTOS_ERR_INVALID_ARG, DEF_FAIL);
+             break;
+
         default:
              return (DEF_FAIL);
     }
@@ -1546,6 +1550,41 @@ CPU_BOOLEAN  Clk_DateTimeToStr (CLK_DATE_TIME  *p_date_time,
             (void)Str_Cat_N (p_str, ":",   1u);
 
             (void)Str_Cat_N (p_str, sec,   CLK_STR_DIG_SEC_LEN);
+            (void)Str_Cat_N (p_str, " ",   1u);
+
+            (void)Str_Cat_N (p_str, am_pm, CLK_STR_AM_PM_LEN);
+             break;
+
+
+
+        case CLK_STR_FMT_HH_MM_AM_PM:
+             LOG_VRB(("Date/time to string : HH:MM AM|PM"));
+
+             if (p_date_time->Hr < CLK_HR_PER_HALF_DAY) {       /* Chk for AM or PM.                                    */
+                (void)Str_Copy_N(am_pm, "AM", CLK_STR_AM_PM_LEN + 1u);
+                 if (p_date_time->Hr == 0u) {
+                     half_day_hr = CLK_HR_PER_HALF_DAY;
+                 } else {
+                     half_day_hr = p_date_time->Hr;
+                 }
+
+             } else {
+                (void)Str_Copy_N(am_pm, "PM", CLK_STR_AM_PM_LEN + 1u);
+                 half_day_hr = p_date_time->Hr - CLK_HR_PER_HALF_DAY;
+             }
+
+            (void)Str_FmtNbr_Int32U(half_day_hr,
+                                    CLK_STR_DIG_HR_LEN,
+                                    DEF_NBR_BASE_DEC,
+                                    (CPU_CHAR)'0',
+                                    DEF_NO,
+                                    DEF_YES,
+                                    hr);
+
+            (void)Str_Copy_N(p_str, hr,    CLK_STR_DIG_HR_LEN + 1u);
+            (void)Str_Cat_N (p_str, ":",   1u);
+
+            (void)Str_Cat_N (p_str, min,   CLK_STR_DIG_MIN_LEN);
             (void)Str_Cat_N (p_str, " ",   1u);
 
             (void)Str_Cat_N (p_str, am_pm, CLK_STR_AM_PM_LEN);
@@ -2818,7 +2857,9 @@ static  CLK_DAY  Clk_GetDayOfYrHandler (CLK_YR     yr,
     leap_yr_ix = (leap_yr == DEF_YES) ? 1u : 0u;
 
     CPU_CRITICAL_ENTER();
-    if (Clk_CacheMonth != month) {                              /* See if cached val could be used.                     */
+    if ((Clk_CacheYr    != yr) ||
+        (Clk_CacheMonth != month)) {                              /* See if cached val could be used.                     */
+
         CPU_CRITICAL_EXIT();
         days_month = 0u;
         for (month_ix = CLK_FIRST_MONTH_OF_YR; month_ix < month; month_ix++) {
@@ -2826,15 +2867,11 @@ static  CLK_DAY  Clk_GetDayOfYrHandler (CLK_YR     yr,
             days_month    += days_in_month;
         }
 
-        CPU_CRITICAL_ENTER();
-        Clk_CacheMonth     = month;
-        Clk_CacheMonthDays = days_month;
-        CPU_CRITICAL_EXIT();
-
     } else {
         days_month = Clk_CacheMonthDays;
         CPU_CRITICAL_EXIT();
     }
+
 
     day_of_yr += days_month;
     day_of_yr += CLK_FIRST_DAY_OF_YR;

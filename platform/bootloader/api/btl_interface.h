@@ -2,7 +2,7 @@
  * @file btl_interface.h
  * @brief Application interface to the bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * # License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -77,9 +77,11 @@ typedef struct {
 /// Type of bootloader
 typedef enum {
   /// No bootloader present.
-  NONE,
+  NO_BOOTLOADER = 0,
   /// Bootloader is a Silicon Labs bootloader.
-  SL_BOOTLOADER
+  SL_BOOTLOADER = 1,
+  /// @deprecated DO NOT USE
+  NONE = 0
 } BootloaderType_t;
 
 /// Information about the current bootloader
@@ -192,7 +194,11 @@ typedef struct {
 
 /// @cond DO_NOT_INCLUDE_WITH_DOXYGEN
 
+#if defined(MAIN_BOOTLOADER_TEST)
+#define BTL_FIRST_STAGE_SIZE              ((size_t)(0))
+#else
 #define BTL_FIRST_STAGE_SIZE              ((size_t)(FLASH_PAGE_SIZE))
+#endif
 
 #if defined(_SILICON_LABS_GECKO_INTERNAL_SDID_80)
 // EFM32PG1, EFM32JG1, EFR32MG1, EFR32BG1 and EFR32FG1 don't have writeable
@@ -215,12 +221,37 @@ typedef struct {
 #define BTL_FIRST_STAGE_BASE              0x0FE10000UL
 #define BTL_APPLICATION_BASE              0x00000000UL
 #define BTL_MAIN_STAGE_MAX_SIZE           (0x00004000UL - BTL_FIRST_STAGE_SIZE)
+#elif defined(_SILICON_LABS_GECKO_INTERNAL_SDID_95)
+// EFM32PG14, EFM32JG14, EFR32xG14 have a dedicated bootloader area of 18k
+// Place the bootloader in the dedicated bootloader area of the
+// information block
+#define BTL_FIRST_STAGE_BASE              0x0FE10000UL
+#define BTL_APPLICATION_BASE              0x00000000UL
+#define BTL_MAIN_STAGE_MAX_SIZE           (0x00004800UL - BTL_FIRST_STAGE_SIZE)
+#elif defined(_SILICON_LABS_GECKO_INTERNAL_SDID_100)
+// EFM32GG11 has a dedicated bootloader area of 32k
+// Place the bootloader in the dedicated bootloader area of the
+// information block
+#define BTL_FIRST_STAGE_BASE              0x0FE10000UL
+#define BTL_APPLICATION_BASE              0x00000000UL
+#define BTL_MAIN_STAGE_MAX_SIZE           (0x00008000UL - BTL_FIRST_STAGE_SIZE)
+#elif defined(_SILICON_LABS_GECKO_INTERNAL_SDID_103)
+// EFM32TG11 has a dedicated bootloader area of 18k
+// Place the bootloader in the dedicated bootloader area of the
+// information block
+#define BTL_FIRST_STAGE_BASE              0x0FE10000UL
+#define BTL_APPLICATION_BASE              0x00000000UL
+#define BTL_MAIN_STAGE_MAX_SIZE           (0x00004800UL - BTL_FIRST_STAGE_SIZE)
 #else
 #error "This part is not supported in this bootloader version."
 #endif
 
+#if defined(MAIN_BOOTLOADER_TEST)
+#define BTL_MAIN_STAGE_BASE               (0UL)
+#else
 #define BTL_MAIN_STAGE_BASE               (BTL_FIRST_STAGE_BASE \
                                            + BTL_FIRST_STAGE_SIZE)
+#endif
 #define BTL_TABLE_PTR_VALID(table)        (((size_t)(table)           \
                                             >= BTL_MAIN_STAGE_BASE)   \
                                            && ((size_t)(table)        \

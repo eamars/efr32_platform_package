@@ -10,7 +10,7 @@
 ;                                           ARM Cortex-M0 Port
 ;
 ; File      : OS_CPU_A.ASM
-; Version   : V3.06.00
+; Version   : V3.06.01
 ; By        : JJL
 ;             MD
 ;             FF

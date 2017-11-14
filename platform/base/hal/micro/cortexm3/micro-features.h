@@ -7,7 +7,7 @@
  *
  * THIS IS A GENERATED FILE.  DO NOT EDIT.
  *
- * <!-- Copyright 2016 Silicon Laboratories, Inc.                        *80*-->
+ * <!-- Copyright 2017 Silicon Laboratories, Inc.                        *80*-->
  */
 
 #if defined(CORTEXM3_EM317)

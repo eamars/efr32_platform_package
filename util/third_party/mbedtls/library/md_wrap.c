@@ -364,12 +364,6 @@ static void sha1_process_wrap( void *ctx, const unsigned char *data )
     mbedtls_sha1_process( (mbedtls_sha1_context *) ctx, data );
 }
 
-static void sha1_wrap( const unsigned char *input, size_t ilen,
-                    unsigned char *output )
-{
-    mbedtls_sha1( input, ilen, output );
-}
-
 const mbedtls_md_info_t mbedtls_sha1_info = {
     MBEDTLS_MD_SHA1,
     "SHA1",
@@ -378,7 +372,7 @@ const mbedtls_md_info_t mbedtls_sha1_info = {
     sha1_starts_wrap,
     sha1_update_wrap,
     sha1_finish_wrap,
-    sha1_wrap,
+    mbedtls_sha1,
     sha1_ctx_alloc,
     sha1_ctx_free,
     sha1_clone_wrap,

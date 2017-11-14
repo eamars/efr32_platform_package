@@ -24,6 +24,11 @@
 // extern uint32_t* xTaskGetCurrentTaskStackBottom(void);
 #endif // RTOS
 
+#if defined(WDOG0)
+#define WDOG       WDOG0
+#define WDOG_IRQn  WDOG0_IRQn
+#endif
+
 //------------------------------------------------------------------------------
 // Preprocessor definitions
 
@@ -248,11 +253,16 @@ uint16_t halInternalCrashHandler(void)
   // Read the highest priority active exception to get reason for fault
   activeException = c->icsr.bits.VECTACTIVE;
   switch (activeException) {
-    // case NMI_VECTOR_INDEX:
+    #if defined(WDOG_IF_WARN) && !defined(BOOTLOADER)
+    case IRQ_TO_VECTOR_NUMBER(WDOG_IRQn):
+      if (WDOG->IF & WDOG_IF_WARN) {
+        reason = RESET_WATCHDOG_CAUGHT;
+      }
+      break;
+    #endif
+    // case NMI_VECTOR_INDEX
     //   if (INT_NMIFLAG_REG & INT_NMICLK24M_MASK) {
     //     reason = RESET_FATAL_CRYSTAL;
-    //   } else if (INT_NMIFLAG_REG & INT_NMIWDOG_MASK) {
-    //     reason = RESET_WATCHDOG_CAUGHT;
     //   }
     //   break;
     case HARD_FAULT_VECTOR_INDEX:

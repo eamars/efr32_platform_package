@@ -1,4 +1,25 @@
 ================ Revision history ============================================
+5.3.0:
+ - Removed generic device preemption and SL_PAL to optimize for simplicity.
+   The only functions instrumented and allowed to preempt are the BLE helper
+   functions.
+ - Implemented thread-safety using the mbedTLS threading API. For now, this
+   means that when compiling with MBEDTLS_THREADING_C, one should call
+   mbedtls_threading_set_alt(...) with the used OS's functions, and declare
+   mbedtls_threading_mutex_t to be the used OS's mutex primitive. If not
+   instrumenting an RTOS, mbedTLS will be a single-threaded, blocking library.
+ - Added a simple device manager, which will opportunistically allocate the
+   available devices. Therefore, mbedtls_device_init and
+   mbedtls_device_set_instance are no longer provided. All device management
+   now happens internally in the mbedTLS plugins.
+ - Updated upstream mbedTLS library to version 2.5.0 with CMAC HW acceleration
+   support branch cherry-picked.
+ - CCM HW abstraction is still a fork from mbedTLS upstream, awaiting a patch.
+ - Removed/updated Class 1 and Class 2 plugins in favor of one unified HAL.
+ - Removed asynch extensions to reduce the divergence from mainline mbedTLS.
+ - Moved sl_timing since it did not belong in the port, only providing test
+   convenience functions. It is now located in sl_tests/timing.
+
 5.2.2:
  - Added include of stdint.h in slpal_common.h because of its reliance on
    uint32_t.

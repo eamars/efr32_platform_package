@@ -350,7 +350,7 @@ enum HalBoardLedPins {
  * from being compiled in and not conflict with other pieces that
  * might want to use the GPIO or IRQ that VBUS Monitoring needs.
  */
-#define VBUSMON  PA3
+// #define VBUSMON  PA3
 
 /**
  * @brief The GPIO input register for VBUSMON.

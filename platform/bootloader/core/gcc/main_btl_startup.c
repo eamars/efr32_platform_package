@@ -2,7 +2,7 @@
  * @file main_btl_startup.c
  * @brief CMSIS Compatible bootloader startup file in C.
  *        Should be used with GCC 'GNU Tools ARM Embedded'
- * @version 1.1.0
+ * @version 1.4.0
  * Date:    12 June 2014
  *
  */

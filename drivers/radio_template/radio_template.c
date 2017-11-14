@@ -2,7 +2,10 @@
  * Implementation for generic radio operation
  */
 
+#include <stdbool.h>
+
 #include "radio_template.h"
+#include "drv_debug.h"
 
 
 void radio_set_rx_done_handler(radio_t * obj, on_rx_done_handler_t handler, void * args)

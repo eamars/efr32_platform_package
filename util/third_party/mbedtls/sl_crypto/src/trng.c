@@ -38,6 +38,8 @@
 #include "em_common.h"
 #include <string.h>
 
+#if defined(TRNG_PRESENT)
+
 #define FIFO_LEVEL_RETRY   (1000)
 #define TEST_WORDS_MIN      (257)
 
@@ -370,4 +372,23 @@ int mbedtls_trng_poll( mbedtls_trng_context *ctx,
     return ret;
 }
 
+#if defined(MBEDTLS_ENTROPY_HARDWARE_ALT)
+static bool initialized = false;
+static mbedtls_trng_context trng_ctx;
+
+int mbedtls_hardware_poll( void *data,
+                           unsigned char *output,
+                           size_t len,
+                           size_t *olen ) {
+    (void)data;
+    if(!initialized) {
+        mbedtls_trng_init(&trng_ctx);
+        initialized = true;
+    }
+
+
+    return mbedtls_trng_poll(&trng_ctx, output, len, olen);
+}
+#endif
+#endif /* TRNG_PRESENT */
 #endif /* MBEDTLS_TRNG_C */

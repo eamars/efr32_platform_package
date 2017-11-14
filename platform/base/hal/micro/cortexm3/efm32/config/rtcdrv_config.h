@@ -19,8 +19,8 @@
   #include BOARD_HEADER
 #endif
 #ifdef HAL_CONFIG
-  #include HAL_CONFIG
-  #if (HAL_CLK_LFCLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
+  #include "hal-config.h"
+  #if (HAL_CLK_LFECLK_SOURCE == HAL_CLK_LFCLK_SOURCE_LFRCO)
     #define EMDRV_RTCDRV_USE_LFRCO 1
   #endif
 #endif

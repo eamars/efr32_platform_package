@@ -30,9 +30,9 @@ void setTimer(int argc, char **argv)
     mode = RAIL_TIME_ABSOLUTE;
   }
 
-  RAIL_TimerCancel();
-  if (RAIL_TimerSet(timeOut, mode) != RAIL_STATUS_NO_ERROR) {
-    responsePrintError(argv[0], 0x40, "TimerSet failed");
+  RAIL_CancelTimer(railHandle);
+  if (RAIL_SetTimer(railHandle, timeOut, mode, &RAILCb_TimerExpired) != RAIL_STATUS_NO_ERROR) {
+    responsePrintError(argv[0], 0x40, "SetTimer failed");
     return;
   }
 
@@ -41,9 +41,9 @@ void setTimer(int argc, char **argv)
 
 void printTimerStats(int argc, char **argv)
 {
-  bool enabled = RAIL_TimerIsRunning();
-  bool expired = RAIL_TimerExpired();
-  uint32_t expirationTime = RAIL_TimerGet();
+  bool enabled = RAIL_IsTimerRunning(railHandle);
+  bool expired = RAIL_IsTimerExpired(railHandle);
+  uint32_t expirationTime = RAIL_GetTimer(railHandle);
   uint32_t currentTime = RAIL_GetTime();
 
   responsePrint(argv[0],
@@ -58,7 +58,7 @@ void printTimerStats(int argc, char **argv)
 void timerCancel(int argc, char** argv)
 {
   if (inAppMode(NONE, argv[0])) {
-    RAIL_TimerCancel();
+    RAIL_CancelTimer(railHandle);
     printTimerStats(1, argv);
   }
 }

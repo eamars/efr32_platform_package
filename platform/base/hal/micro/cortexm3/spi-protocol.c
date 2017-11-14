@@ -253,6 +253,11 @@ bool halHostSerialTick(bool responseReady)
   return validCommand;
 }
 
+void halNcpClearWakeFlag(void)
+{
+  spipFlagWakeFallingEdge = false;
+}
+
 static void processSpipCommandAndRespond(uint8_t spipResponse)
 {
   DEBUG_SET_LED();//show me when stopped receiving
@@ -285,6 +290,9 @@ static bool halInternalHostSerialTick(bool responseReady)
       halResetWatchdog();                              /*EMHAL-1074*/
     }
     SET_nHOST_INT();
+    // Note: This may not be needed now that we have halNcpClearWakeFlag(),
+    // which can be called from the high-level NCP code to clear the flag after
+    // the low-level nWAKE handshake has occurred.  See: EFM32ESS-4158
     spipFlagWakeFallingEdge = false;
     //The wake handshake is complete, but spipFlagIdleHostInt is saying
     //that there is a callback pending.

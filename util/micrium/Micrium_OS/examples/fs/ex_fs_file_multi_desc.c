@@ -72,7 +72,7 @@
 */
 
 #define  EX_FS_TASK_RD_PRIO                     10u
-#define  EX_FS_TASK_RD_STK_SIZE                 512u
+#define  EX_FS_TASK_RD_STK_SIZE                 768u
 #define  EX_FS_FILE_MULTI_DESC_LB_QTY_MIN       20u
 #define  EX_FS_FILE_MULTI_DESC_LB_QTY_MAX       50u
 
@@ -397,9 +397,9 @@ void  Ex_FS_FileMultiDesc_Exec (FS_VOL_HANDLE   vol_handle,
 
         lb_cnt++;                                               /* Increase logical block count.                        */
         if (lb_cnt == (lb_cnt_max / 4)) {                       /* If enough data written, start Reader task.           */
-            OSSemPost(p_sem_sync,
-                      OS_OPT_POST_1,
-                      p_err);
+            OSTaskSemPost(&Ex_FS_TaskRdTCB,
+                          OS_OPT_POST_NONE,
+                          p_err);
             if (p_err->Code != RTOS_ERR_NONE) {
                 EX_TRACE("Ex_FS_FileMultiDesc_Exec(): Error posting semaphore w/ err %d\r\n", p_err->Code);
                 goto end_task;
@@ -408,7 +408,7 @@ void  Ex_FS_FileMultiDesc_Exec (FS_VOL_HANDLE   vol_handle,
 
         pattern_start++;
 
-        OSTimeDly(1u, OS_OPT_TIME_DLY, &local_err);
+        OSTimeDly(15u, OS_OPT_TIME_DLY, &local_err);
     }
                                                                 /*  Wait for Reader task completion.                    */
     OSSemPend(p_sem_sync,
@@ -418,13 +418,11 @@ void  Ex_FS_FileMultiDesc_Exec (FS_VOL_HANDLE   vol_handle,
               p_err);
     if (p_err->Code != RTOS_ERR_NONE) {
         EX_TRACE("Ex_FS_FileMultiDesc_Exec(): Error waiting Reader task completion w/ err %d\r\n", p_err->Code);
-        goto end_task;
     }
 
-    goto end_sem;                                               /* No error. Reader task deletes itself.                */
                                                                 /* --------------------- CLOSING ---------------------- */
 end_task:
-    OSTaskDel(&Ex_FS_TaskRdTCB, &local_err);                    /* Delete Reader task only in case of error.            */
+	OSTaskDel(&Ex_FS_TaskRdTCB, &local_err);                    /* Delete Reader task.            						*/
     APP_RTOS_ASSERT_CRITICAL(local_err.Code == RTOS_ERR_NONE, ;);
 end_sem:
     OSSemDel(p_sem_sync, OS_OPT_DEL_ALWAYS, &local_err);        /* Delete synchronization semaphore.                    */
@@ -481,11 +479,10 @@ static  void  Ex_FS_TaskRd (void  *p_arg)
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
 
                                                                 /*  Wait enough data written to file by Writer task.    */
-    OSSemPend(p_task_info->ReaderSemPtr,
-              0,
-              OS_OPT_PEND_BLOCKING,
-              DEF_NULL,
-              &err);
+    OSTaskSemPend(0u,
+                  OS_OPT_PEND_BLOCKING,
+                  DEF_NULL,
+                  &err);
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
 
     while (lb_cnt < p_task_info->LbCntMax) {
@@ -510,18 +507,22 @@ static  void  Ex_FS_TaskRd (void  *p_arg)
             }
         }
 
-        OSTimeDly(1u, OS_OPT_TIME_DLY, &err);
+        OSTimeDly(5u, OS_OPT_TIME_DLY, &err);
     }
 
     FSFile_Close(file_rd_handle, &err);
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
                                                                 /*  Inform Writer task about completion.                */
     OSSemPost(p_task_info->ReaderSemPtr,
-              OS_OPT_PEND_BLOCKING,
+              OS_OPT_POST_1,
               &err);
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
 
-    OSTaskDel(DEF_NULL, &err);                                  /* Reader task deletes itself.                          */
+                                                                /* Reader task deleted by Writer task.                  */
+    OSTaskSemPend(0u,                                           /* This semaphore pend is forever until task deleted.   */
+                  OS_OPT_PEND_BLOCKING,
+                  DEF_NULL,
+                  &err);
     APP_RTOS_ASSERT_CRITICAL(err.Code == RTOS_ERR_NONE, ;);
 }
 

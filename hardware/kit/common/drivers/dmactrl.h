@@ -1,9 +1,9 @@
 /***************************************************************************//**
  * @file
  * @brief DMA control data block.
- * @version 5.1.3
+ * @version 5.3.3
  ******************************************************************************
- * @section License
+ * # License
  * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
@@ -12,9 +12,6 @@
  * any purpose, you must agree to the terms of that agreement.
  *
  ******************************************************************************/
-
-
-
 
 #ifndef __DMACTRL_H
 #define __DMACTRL_H

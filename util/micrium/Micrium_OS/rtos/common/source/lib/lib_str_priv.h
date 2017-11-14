@@ -83,11 +83,11 @@ CPU_INT16U  Str_Printf          (      STR_PRINTF_OUT_CB   out_cb,
                                  const CPU_CHAR           *format,
                                                            ...);
 
-CPU_INT16U  Str_Sprintf         (      CPU_CHAR           *str,
+CPU_INT16U  Str_Sprintf         (      CPU_CHAR           *p_str,
                                  const CPU_CHAR           *format,
                                                            ...);
 
-CPU_INT16U  Str_Snprintf        (      CPU_CHAR           *str,
+CPU_INT16U  Str_Snprintf        (      CPU_CHAR           *p_str,
                                        CPU_INT16U          size,
                                  const CPU_CHAR           *format,
                                                            ...);

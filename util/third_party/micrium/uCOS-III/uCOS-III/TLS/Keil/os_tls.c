@@ -35,7 +35,6 @@
 
 #define  MICRIUM_SOURCE
 #include "../../Source/os.h"
-#include <stdlib.h>
 
 #ifdef VSC_INCLUDE_SOURCE_FILE_NAMES
 const  CPU_CHAR  *os_tls__c = "$Id: $";
@@ -77,6 +76,8 @@ static  CPU_DATA             OS_TLS_LibSpaceID;                           /* ID 
 
 static  OS_TLS_LOCK          OS_TLS_LockPoolTbl[OS_TLS_LOCK_MAX];
 static  OS_TLS_LOCK         *OS_TLS_LockPoolListPtr = (OS_TLS_LOCK *)0;   /* Pointer to head of 'OS_TLS_LOCK' list    */
+
+extern  void                *__libspace_start;							  /* Single threaded STDLIB storage pointer   */
 
 
 /*
@@ -343,15 +344,16 @@ void  OS_TLS_SetValue (OS_TCB     *p_tcb,
 ************************************************************************************************************************
 */
 
-void  OS_TLS_Init (OS_ERR *p_err)
+void  OS_TLS_Init (void)
 {
     CPU_INT16U    ix;
     OS_TLS_LOCK  *p_lock;
+    OS_ERR        err;
     CPU_SR_ALLOC();
 
 
     OS_TLS_NextAvailID = 0u;
-    OS_TLS_LibSpaceID  = OS_TLS_GetID(p_err);
+    OS_TLS_LibSpaceID  = OS_TLS_GetID(&err);
 
     CPU_CRITICAL_ENTER();    
                                                                    /* Create the link list of OS_TLS_LOCK objects.    */
@@ -466,6 +468,9 @@ void  OS_TLS_TaskSw (void)
 
 void  *__user_perthread_libspace (void)
 {
+    if (OSRunning == OS_STATE_OS_STOPPED) {
+	    return ((void *)&__libspace_start);
+	}
 	return (OSTCBCurPtr->TLS_Tbl[OS_TLS_LibSpaceID]);
 }
 
@@ -518,7 +523,7 @@ int  _mutex_initialize (void  **p_mutex)
 ************************************************************************************************************************
 */
 
-__attribute__((used))  void  _mutex_acquire (void  **p_mutex)
+__used  void  _mutex_acquire (void  **p_mutex)
 {
     OS_TLS_LOCK  *p_tls_lock;
     OS_ERR        os_err;    
@@ -544,7 +549,7 @@ __attribute__((used))  void  _mutex_acquire (void  **p_mutex)
 ************************************************************************************************************************
 */
 
-__attribute__((used))  void  _mutex_release (void  **p_mutex)
+__used  void  _mutex_release (void  **p_mutex)
 {
     OS_TLS_LOCK  *p_tls_lock;
     OS_ERR        os_err;    

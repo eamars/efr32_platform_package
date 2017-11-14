@@ -7,14 +7,12 @@
 
 #if USE_FREERTOS == 1
 
-#include <unistd.h>
 #include <math.h>
 #include <stdlib.h>
 #include "imu_fxos.h"
 #include "drv_debug.h"
 #include "delay.h"
 #include "gpiointerrupt.h"
-#include "led.h"
 #include "bits.h"
 #include "FreeRTOS.h"
 #include "queue.h"

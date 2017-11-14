@@ -209,6 +209,8 @@ void USBDEP_EpHandler(uint8_t epAddr)
       // uint8_t txSize = (ep->remaining > ep->packetSize) ? ep->packetSize : ep->remaining;
 
       /* There is more data to transmit */
+      // As stated above, this cannot be null.
+      //cstat !PTR-null-assign-fun-pos
       USBD_ArmEp(ep);
       // ep->buf += ep->xferred;
       // ep->buf += txSize;

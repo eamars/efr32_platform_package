@@ -51,7 +51,10 @@ static char rtt_buffer[DEBUG_VUART_BUFFER_DOWN_SIZE];
 #define DEBUG_ENABLED       2
 #define DEBUG_POWERING_DOWN 3
 
+//debugChannelState is a variable only used by Zip and Connect.
+#if defined(EMBER_STACK_IP) || defined(EMBER_STACK_CONNECT)
 static uint8_t debugChannelState = DEBUG_OFF;
+#endif //defined(EMBER_STACK_IP) || defined(EMBER_STACK_CONNECT))
 
 EmberStatus emDebugInit(void)
 {
@@ -70,9 +73,6 @@ EmberStatus emDebugInit(void)
   // enable output on pin - GPIO port f pin 2
   GPIO_PinModeSet(gpioPortF, 2, gpioModePushPull, 1);
 
-  // enable debug clock
-  CMU_OscillatorEnable(cmuOsc_AUXHFRCO, true, true);
-
 #elif defined(_EFR32_MIGHTY_FAMILY) \
   || defined(_EFR32_BLUE_FAMILY)    \
   || defined(_EFR32_FLEX_FAMILY)    \
@@ -88,9 +88,6 @@ EmberStatus emDebugInit(void)
   // enable output on pin
   GPIO_PinModeSet(gpioPortF, 2, gpioModePushPull, 1);
 
-  // enable debug clock
-  CMU_OscillatorEnable(cmuOsc_AUXHFRCO, true, true);
-
 #elif defined(ITM)
 
   // Enable Serial wire output pin
@@ -103,9 +100,6 @@ EmberStatus emDebugInit(void)
   // enable output on pin
   GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 0);
 
-  // enable debug clock
-  CMU_OscillatorEnable(cmuOsc_AUXHFRCO, true, true);
-
 #endif
 
 #if !(defined(__CORTEX_M) && (__CORTEX_M == 0x00))
@@ -113,9 +107,15 @@ EmberStatus emDebugInit(void)
   emberDebugReportRestore(true);
   emDebugPowerUp();
   emDebugClearStats();
+#else
+  // enable debug clock, which is done by emDebugPowerUp for non-M0 cores
+  CMU_OscillatorEnable(cmuOsc_AUXHFRCO, true, true);
 #endif
 
+//debugChannelState is a variable only used by Zip and Connect.
+#if defined(EMBER_STACK_IP) || defined(EMBER_STACK_CONNECT)
   debugChannelState = DEBUG_INITIALIZED;
+#endif //defined(EMBER_STACK_IP) || defined(EMBER_STACK_CONNECT))
 
   // Initialize RTT for debugger -> target input (down-channel)
   SEGGER_RTT_Init();
@@ -137,6 +137,9 @@ EmberStatus emDebugInit(void)
 
 void emDebugPowerUp(void)
 {
+  // enable debug clock
+  CMU_OscillatorEnable(cmuOsc_AUXHFRCO, true, true);
+
   /* Enable trace in core debug */
 #if defined(ITM)
   CoreDebug->DHCSR |= CoreDebug_DHCSR_C_DEBUGEN_Msk;

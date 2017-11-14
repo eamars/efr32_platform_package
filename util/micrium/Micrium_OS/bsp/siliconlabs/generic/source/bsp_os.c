@@ -23,7 +23,7 @@
 /*
 *********************************************************************************************************
 *
-*                                              OS TICK BSP
+*                                              OS BSP
 *
 *                                             Silicon Labs
 *
@@ -43,6 +43,7 @@
 */
 
 #include  "../include/bsp_os.h"
+#include  "../include/bsp_tick_rtcc.h"
 
 #include  <rtos/common/include/lib_def.h>
 #include  <rtos/common/include/lib_utils.h>
@@ -202,7 +203,7 @@ void BSP_SystemInit(void)
 *********************************************************************************************************
 *                                              BSP_Init()
 *
-* Description : Initializes peripheral such as I2C.
+* Description : Initializes peripheral such as USB or Ethernet.
 *
 * Argument(s) : none.
 *
@@ -253,9 +254,9 @@ void BSP_TickInit(void)
 
 
 #if (defined(OS_CFG_DYN_TICK_EN) && OS_CFG_DYN_TICK_EN == DEF_ENABLED)
-                                                                /* Init uC/OS dynamic  time src (???).                  */
-#error  "Dynamic Tick BSP not implemented for this kit"
-#else
+                                                              /* Init uC/OS dynamic  time src                         */
+  BSP_RTCC_TickInit();
+#elif (OS_CFG_TASK_TICK_EN == DEF_ENABLED)
   cpu_freq =  SystemCoreClockGet();                           /* Determine SysTick reference freq.                    */
   cnts     = (cpu_freq / (CPU_INT32U)KAL_TickRateGet());      /* Cal. SysTick counts between two OS tick interrupts.  */
 

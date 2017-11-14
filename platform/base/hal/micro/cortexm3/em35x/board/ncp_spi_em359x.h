@@ -348,9 +348,9 @@ enum HalBoardLedPins {
  * from being compiled in and not conflict with other pieces that
  * might want to use the GPIO or IRQ that VBUS Monitoring needs.
  */
-#if (USB_SELFPWRD_STATE == 1)
-#define VBUSMON  PA3
-#endif
+// #if (USB_SELFPWRD_STATE == 1)
+// #define VBUSMON  PA3
+// #endif
 
 /**
  * @brief The GPIO input register for VBUSMON.

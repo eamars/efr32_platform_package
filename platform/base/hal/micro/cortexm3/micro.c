@@ -173,7 +173,9 @@ void halSuspend(void)
 {
   halInternalPowerDownUart();
 
+  #ifdef CORTEXM3_EM35X_USB
   halInternalSuspendBoard();
+  #endif
 }
 
 // halResume restores all board activity from a previous USB suspend
@@ -193,7 +195,9 @@ void halResume(void)
 
   halCommonCalibratePads();
 
+  #ifdef CORTEXM3_EM35X_USB
   halInternalResumeBoard();
+  #endif
 
   halInternalBlockUntilXtal();
 

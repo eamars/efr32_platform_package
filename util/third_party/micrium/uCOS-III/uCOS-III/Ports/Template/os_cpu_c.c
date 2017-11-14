@@ -12,7 +12,7 @@
 *                                         $$$$ Insert Compiler Name
 *
 * Filename     : os_cpu_c.c
-* Version      : $$$$ V3.06.00
+* Version      : $$$$ V3.06.01
 * By           : $$$$ JJL
 *********************************************************************************************************
 * Note(s)       : (1) This file is used to create a uC/OS-III port.  You can use this template as a

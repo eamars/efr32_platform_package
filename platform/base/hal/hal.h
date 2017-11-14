@@ -79,66 +79,8 @@
   #include BOARD_HEADER
 #endif
 #ifdef HAL_CONFIG
-  #include HAL_CONFIG
-// Support legacy BUTTONn parameter
-  #ifdef BSP_BUTTON0_PIN
-  #define BUTTON0 BSP_BUTTON0_PIN
-  #endif
-  #ifdef BSP_BUTTON1_PIN
-  #define BUTTON1 BSP_BUTTON1_PIN
-  #endif
-  #ifdef BSP_BUTTON2_PIN
-  #define BUTTON2 BSP_BUTTON2_PIN
-  #endif
-  #ifdef BSP_BUTTON3_PIN
-  #define BUTTON3 BSP_BUTTON3_PIN
-  #endif
-  #ifdef BSP_BUTTON4_PIN
-  #define BUTTON4 BSP_BUTTON4_PIN
-  #endif
-  #ifdef BSP_BUTTON5_PIN
-  #define BUTTON5 BSP_BUTTON5_PIN
-  #endif
-  #ifdef BSP_BUTTON6_PIN
-  #define BUTTON6 BSP_BUTTON6_PIN
-  #endif
-  #ifdef BSP_BUTTON7_PIN
-  #define BUTTON7 BSP_BUTTON7_PIN
-  #endif
-  #ifdef HAL_SERIAL_APP_PORT
-  #define APP_SERIAL HAL_SERIAL_APP_PORT
-  #else // support alternatively APP_SERIAL or HAL_SERIAL_APP_PORT
-  #ifdef APP_SERIAL
-    #define HAL_SERIAL_APP_PORT APP_SERIAL
-  #endif
-  #endif
-  #if defined(EMBER_ASSERT_SERIAL_PORT) && defined (HAL_SERIAL_ASSERT_PORT)
-  #undef EMBER_ASSERT_SERIAL_PORT
-  #endif
-  #ifdef HAL_SERIAL_ASSERT_PORT
-  #define EMBER_ASSERT_SERIAL_PORT HAL_SERIAL_ASSERT_PORT
-  #endif
-  #if HAL_ANTDIV_ENABLE
-  #define ANTENNA_SELECT_GPIO   ((BSP_ANTDIV_SEL_PORT << 4) | BSP_ANTDIV_SEL_PIN)
-  #define ANTENNA_nSELECT_GPIO  ((BSP_ANTDIV_NSEL_PORT << 4) | BSP_ANTDIV_NSEL_PIN)
-  #endif
-  #if HAL_PTA_ENABLE
-  #define ENABLE_PTA 1
-  #define PTA_REQ_GPIO      ((BSP_PTA_REQ_PORT << 4) | BSP_PTA_REQ_PIN)
-  #define PTA_GNT_GPIO      ((BSP_PTA_GNT_PORT << 4) | BSP_PTA_GNT_PIN)
-  #define PTA_PRI_GPIO      ((BSP_PTA_PRI_PORT << 4) | BSP_PTA_PRI_PIN)
-  #define PTA_REQ_ASSERTED  BSP_PTA_REQ_ASSERT_LEVEL
-  #define PTA_GNT_ASSERTED  BSP_PTA_GNT_ASSERT_LEVEL
-  #define PTA_PRI_ASSERTED  BSP_PTA_PRI_ASSERT_LEVEL
-  #if BSP_PTA_REQ_SHARED
-    #define PTA_REQ_SHARED  1
-  #endif
-  #endif
-  #if HAL_RHO_ENABLE
-  #define RADIO_HOLDOFF 1
-  #define RHO_GPIO      ((BSP_RHO_PORT << 4) | BSP_RHO_PIN)
-  #define RHO_ASSERTED  BSP_RHO_ASSERT_LEVEL
-  #endif
+  #include "hal-config.h"
+  #include "ember-hal-config.h"
   #ifndef HAL_GPIO_MAX
   #define HAL_GPIO_MAX 0
   #endif
@@ -150,8 +92,10 @@
   #define BSP_EXTDEV_SDN_PORT RF_SDN_PORT
   #define BSP_EXTDEV_SDN_PIN  RF_SDN_PIN
   #endif
+void halConfigPowerDownGpio(void);
+void halConfigPowerUpGpio(void);
 #elif defined(BOARD_HEADER) //HAL_CONFIG
-#define HAL_SERIAL_APP_PORT APP_SERIAL
+#define BSP_SERIAL_APP_PORT APP_SERIAL
 #ifdef COM_RETARGET_SERIAL
   #define BSP_BUTTON0_PIN   BUTTON0
   #define BSP_BUTTON0_PORT  BUTTON0_PORT
@@ -177,6 +121,9 @@
 #endif
 #endif
 #include "micro/pta.h" // pta.h needs defines from the board header
+#ifndef HAL_PTA_OPTIONS
+  #define HAL_PTA_OPTIONS DEFAULT_PTA_OPTIONS
+#endif
 #include "plugin/antenna/antenna.h"
 
 #if (defined(EMBER_STACK_CONNECT))

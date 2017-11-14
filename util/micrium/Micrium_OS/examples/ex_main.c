@@ -52,6 +52,10 @@
 
 #include  "common/common/ex_common.h"
 
+#if (defined(RTOS_MODULE_IO_AVAIL))
+#include  <rtos/io/include/io.h>
+#endif
+
 #if (defined(RTOS_MODULE_IO_SERIAL_SPI_AVAIL) && defined(EX_IO_SPI_INIT_AVAIL))
 #include  "io/ex_spi_init.h"
 #endif
@@ -227,6 +231,11 @@ static  void  Ex_MainStartTask (void  *p_arg)
     BSP_PeriphInit();                                           /* Initialize the BSP. It is expected that the BSP ...  */
                                                                 /* ... will register all the hardware controller to ... */
                                                                 /* ... the platform manager at this moment.             */
+
+#if (defined(RTOS_MODULE_IO_AVAIL))
+    IO_Init(&err);                                              /* Initialize common IO module(s).                      */
+    APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), ;);
+#endif
 
 #if (defined(RTOS_MODULE_IO_SERIAL_SPI_AVAIL) && defined(EX_IO_SPI_INIT_AVAIL))
     Ex_SPI_Init();                                              /* Call SPI module initialization example.              */

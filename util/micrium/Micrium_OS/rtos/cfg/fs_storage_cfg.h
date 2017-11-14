@@ -1,6 +1,6 @@
 /*
 *********************************************************************************************************
-*                                            EXAMPLE CODE
+*                                             EXAMPLE CODE
 *********************************************************************************************************
 * Licensing:
 *   The licensor of this EXAMPLE CODE is Silicon Laboratories Inc.
@@ -28,7 +28,7 @@
 *
 *                                      CONFIGURATION TEMPLATE FILE
 *
-* File : fs_storage_cfg.h
+* Filename      : fs_storage_cfg.h
 *********************************************************************************************************
 */
 
@@ -40,8 +40,8 @@
 *********************************************************************************************************
 */
 
-#ifndef  _FS_STORAGE_CFG_H_
-#define  _FS_STORAGE_CFG_H_
+#ifndef  FS_STORAGE_CFG_H
+#define  FS_STORAGE_CFG_H
 
 
 /*

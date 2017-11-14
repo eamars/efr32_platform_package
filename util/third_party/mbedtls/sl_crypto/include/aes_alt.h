@@ -3,7 +3,7 @@
  *
  * \brief AES block cipher
  *
- *  Copyright (C) 2015-2016, Silicon Labs, http://www.silabs.com
+ *  Copyright (C) 2015-2017, Silicon Labs, http://www.silabs.com
  *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -21,12 +21,6 @@
 #ifndef MBEDTLS_AES_ALT_H
 #define MBEDTLS_AES_ALT_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
-
 /***************************************************************************//**
  * \addtogroup sl_crypto
  * \{
@@ -34,26 +28,9 @@
 
 /***************************************************************************//**
  * \addtogroup sl_crypto_aes AES block cipher
- * \brief CRYPTO hardware accelerated AES block cipher.
+ * \brief Hardware accelerated AES block cipher.
  * \{
  ******************************************************************************/
-
-#if defined( MBEDTLS_SLCL_PLUGINS )
-#include "aesdrv.h"
-#include "sl_crypto.h"
-#endif
-
-#include <stddef.h>
-#include <stdint.h>
-
-#define MBEDTLS_AES_ENCRYPT     1
-#define MBEDTLS_AES_DECRYPT     0
-
-/* Silicon Labs specific error codes: */
-#define MBEDTLS_ERR_AES_NOT_SUPPORTED         ((int)MBEDTLS_ECODE_AESDRV_NOT_SUPPORTED)
-#define MBEDTLS_ERR_AES_AUTHENTICATION_FAILED ((int)MBEDTLS_ECODE_AESDRV_AUTHENTICATION_FAILED)
-#define MBEDTLS_ERR_AES_OUT_OF_RESOURCES      ((int)MBEDTLS_ECODE_AESDRV_OUT_OF_RESOURCES)
-#define MBEDTLS_ERR_AES_INVALID_PARAM         ((int)MBEDTLS_ECODE_AESDRV_INVALID_PARAM)
 
 #if defined(MBEDTLS_AES_ALT)
 /* SiliconLabs CRYPTO hardware acceleration implementation */
@@ -67,14 +44,8 @@ extern "C" {
  */
 typedef struct
 {
-#if defined( MBEDTLS_SLCL_PLUGINS )
-    AESDRV_Context_t                aesdrv_ctx;       /*!< AESDRV context */
-    mbedtls_device_io_mode          io_mode;          /*!< I/O mode */
-    mbedtls_device_io_mode_specific io_mode_specific; /*!< I/O mode specific
-                                                        data */
-#endif
     unsigned int                    keybits;   /*!<  size of key */
-    uint32_t                        key[8];    /*!<  AES key 128 or 256 bits */
+    unsigned char                   key[32];   /*!<  AES key 128 or 256 bits */
 }
 mbedtls_aes_context;
 
@@ -92,85 +63,12 @@ void mbedtls_aes_init( mbedtls_aes_context *ctx );
  */
 void mbedtls_aes_free( mbedtls_aes_context *ctx );
 
-#if defined( MBEDTLS_SLCL_PLUGINS )
-/**
- * \brief
- *   Set the device instance of an AES context.
- *
- * \details
- *   This function sets the AES/CRYPTO device instance of an AES context.
- *   Subsequent calls to AES API functions with this context will use the
- *   new AES/CRYPTO device instance.
- *
- * \param[in] ctx
- *   AES context.
- *  
- * \param[in] devno
- *   AES/CRYPTO hardware device instance to use.
- *  
- * \return
- *   0 if success. Error code if failure, see \ref aes.h.
- ******************************************************************************/
-int mbedtls_aes_set_device_instance(mbedtls_aes_context *ctx,
-                                    unsigned int         devno);
-
-/**
- * \brief
- *   Set the number of ticks to wait for the decice lock.
- *
- * \details
- *   This function sets the number of ticks that the subsequenct API calls
- *   will wait for the device to become available.
- *
- * \param[in] ctx
- *   AES context.
- *  
- * \param[in] ticks
- *   Ticks to wait for device.
- *  
- * \return
- *   0 if success. Error code if failure, see \ref aes.h.
- ******************************************************************************/
-int mbedtls_aes_set_device_lock_wait_ticks(mbedtls_aes_context *ctx,
-                                           int                  ticks);
-
-/**
- * \brief
- *   Set the device I/O mode of an AES context.
- *
- * \details
- *   This function sets the device data I/O mode of an AES context. The data
- *   can be moved by the CPU Core or the DMA between CRYPTO and RAM.
- *
- * \param[in] ctx
- *   AES device context.
- *  
- * \param[in] mode
- *   I/O mode (CPU Core or DMA).
- *  
- * \param[in] specific
- *   I/O mode specific configuration \ref mbedtls_device_io_mode_specific.
- *  
- * \warning
- *   If DMA is selected (\ref MBEDTLS_INCLUDE_IO_MODE_DMA), this function
- *   performs full DMA driver initialization by calling DMADRV_Init
- *   (non-destructive) and allocates DMA channel resources to be used by CCM.
- *
- * \return
- *   0 if success. Error code if failure, see \ref aes.h.
- ******************************************************************************/
-int mbedtls_aes_set_device_io_mode( mbedtls_aes_context             *ctx,
-                                    mbedtls_device_io_mode          mode,
-                                    mbedtls_device_io_mode_specific *specific );
-                                    
-#endif
-  
 /**
  * \brief          AES key schedule (encryption)
  *
  * \param ctx      AES context to be initialized
  * \param key      encryption key
- * \param keybits  must be 128, 192 or 256
+ * \param keybits  must be 128 or 256
  *
  * \return         0 if successful, or MBEDTLS_ERR_AES_INVALID_KEY_LENGTH
  */
@@ -182,7 +80,7 @@ int mbedtls_aes_setkey_enc( mbedtls_aes_context *ctx, const unsigned char *key,
  *
  * \param ctx      AES context to be initialized
  * \param key      decryption key
- * \param keybits  must be 128, 192 or 256
+ * \param keybits  must be 128 or 256
  *
  * \return         0 if successful, or MBEDTLS_ERR_AES_INVALID_KEY_LENGTH
  */
@@ -333,28 +231,39 @@ int mbedtls_aes_crypt_ctr( mbedtls_aes_context *ctx,
                        unsigned char *output );
 #endif /* MBEDTLS_CIPHER_MODE_CTR */
 
+/**
+ * \brief           Internal AES block encryption function
+ *                  (Only exposed to allow overriding it,
+ *                  see MBEDTLS_AES_ENCRYPT_ALT)
+ *
+ * \param ctx       AES context
+ * \param input     Plaintext block
+ * \param output    Output (ciphertext) block
+ */
+void mbedtls_aes_encrypt( mbedtls_aes_context *ctx,
+                          const unsigned char input[16],
+                          unsigned char output[16] );
+
+/**
+ * \brief           Internal AES block decryption function
+ *                  (Only exposed to allow overriding it,
+ *                  see MBEDTLS_AES_DECRYPT_ALT)
+ *
+ * \param ctx       AES context
+ * \param input     Ciphertext block
+ * \param output    Output (plaintext) block
+ */
+void mbedtls_aes_decrypt( mbedtls_aes_context *ctx,
+                          const unsigned char input[16],
+                          unsigned char output[16] );
+
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* MBEDTLS_AES_ALT */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**
- * \brief          Checkup routine
- *
- * \return         0 if successful, or 1 if the test failed
- */
-int mbedtls_aes_self_test( int verbose );
-
-#ifdef __cplusplus
-}
-#endif
-
-/** \} (end addtogroup sl_crypto) */
 /** \} (end addtogroup sl_crypto_aes) */
+/** \} (end addtogroup sl_crypto) */
 
 #endif /* MBEDTLS_AES_ALT_H */

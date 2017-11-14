@@ -45,7 +45,7 @@ void emDebugReceiveTick(void)
 #endif
 
 //Mirror the compile logic seen in base/hal/micro/serial.h
-#if !(defined(CORTEXM3_EFM32_MICRO) && !defined(EMBER_STACK_CONNECT))
+#if !(defined(CORTEXM3_EFM32_MICRO) && !defined(EMBER_STACK_CONNECT)) && !defined(CORTEXM3_EMBER_MICRO)
 void halStackReceiveVuartMessage(uint8_t *data, uint8_t length)
 {
   UNUSED_VAR(data);

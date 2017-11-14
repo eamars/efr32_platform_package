@@ -1,0 +1,11 @@
+
+What's new in Flex 2.0.0.0:
+  
+  Flex SDK:
+    * Released new RAIL API version 2.x designed for dynamic multi-protocol support (note: RAIL API 2.x is not backwards compatible with RAIL API 1.x)
+    * Updated all RAIL and Connect examples applications to work with the new RAIL API 2.x
+    * Added Wireless M-BUS PHYs support in Radio Configurator for all modes
+    * Added simple RAIL TX and RX examples for Wireless M-BUS PHY profiles
+    * Integrated RAIL and Connect examples with the new Hardware Configurator
+    * Added support for basic IEEE 802.15.4 MAC functionality to Connect
+    * Removed support for EZR32 from Flex SDK. EZR32 example applications are now available only through the MCU SDK

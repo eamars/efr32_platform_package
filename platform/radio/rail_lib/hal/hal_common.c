@@ -8,18 +8,10 @@
 #include "hal_common.h"
 #include "rail_types.h"
 
+#include "em_common.h"
 #include "em_cmu.h"
 
-// Define a WEAK macro to work across different compilers
-#ifdef __ICCARM__
-  #define WEAK __weak
-#elif defined(__GNUC__)
-  #define WEAK __attribute__ ((weak))
-#else
-  #define WEAK
-#endif
-
-WEAK void halInitChipSpecific(void)
+SL_WEAK void halInitChipSpecific(void)
 {
   // Do nothing, but allow each chip to override this if necessary
 }

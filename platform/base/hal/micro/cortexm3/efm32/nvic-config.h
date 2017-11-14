@@ -21,8 +21,10 @@
 #elif (defined CORTEXM3_EZR32HG)
     #include "ezr32hg/nvic-config.h"
 #elif defined (_EFR_DEVICE) || defined (CORTEXM3_EFR32_MICRO)
-    #if (defined EFR32_SERIES1_CONFIG3_MICRO)
-    #include "efr32/nvic-config-series1-config3.h"
+    #if (defined EFR32_SERIES1_CONFIG4_MICRO)
+      #include "efr32/nvic-config-series1-config4.h"
+    #elif (defined EFR32_SERIES1_CONFIG3_MICRO)
+      #include "efr32/nvic-config-series1-config3.h"
     #elif (defined EFR32_SERIES1_CONFIG2_MICRO)
       #include "efr32/nvic-config-series1-config2.h"
     #else

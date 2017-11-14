@@ -2580,14 +2580,10 @@ KAL_TICK  KAL_TickGet (RTOS_ERR  *p_err)
 
 KAL_TICK_RATE_HZ  KAL_TickRateGet (void)
 {
-#if (OS_VERSION >= 30000u)
 #if (OS_CFG_COMPAT_INIT_EN == DEF_ENABLED)
     return (OS_CFG_TICK_RATE_HZ);
 #else
     return (OSCfg_TickRate_Hz);
-#endif
-#else
-    return (OS_TICKS_PER_SEC);
 #endif
 }
 

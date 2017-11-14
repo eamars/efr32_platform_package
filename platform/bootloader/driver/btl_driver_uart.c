@@ -2,7 +2,7 @@
  * @file btl_driver_uart.c
  * @brief Universal UART driver for the Silicon Labs Bootloader.
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -27,47 +27,64 @@
 
 #include "plugin/debug/btl_debug.h"
 
-#if BTL_DRIVER_UART_NUMBER == 0
+#if BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART0
 #define BTL_DRIVER_UART                     USART0
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART0
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART0_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART0_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 1
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART1
 #define BTL_DRIVER_UART                     USART1
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART1
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART1_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART1_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 2
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART2
 #define BTL_DRIVER_UART                     USART2
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART2
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART2_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART2_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 3
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART3
 #define BTL_DRIVER_UART                     USART3
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART3
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART3_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART3_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 4
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART4
 #define BTL_DRIVER_UART                     USART4
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART4
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART4_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART4_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 5
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART5
 #define BTL_DRIVER_UART                     USART5
 #define BTL_DRIVER_UART_CLOCK               cmuClock_USART5
 #define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART5_TXBL)
 #define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART5_RXDATAV)
-#elif BTL_DRIVER_UART_NUMBER == 6
-#define BTL_DRIVER_UART                     USART6
-#define BTL_DRIVER_UART_CLOCK               cmuClock_USART6
-#define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_USART6_TXBL)
-#define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_USART6_RXDATAV)
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_UART0
+#define BTL_DRIVER_UART                     UART0
+#define BTL_DRIVER_UART_CLOCK               cmuClock_UART0
+#define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_UART0_TXBL)
+#define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_UART0_RXDATAV)
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_UART1
+#define BTL_DRIVER_UART                     UART1
+#define BTL_DRIVER_UART_CLOCK               cmuClock_UART1
+#define BTL_DRIVER_UART_LDMA_TXBL_SIGNAL    (ldmaPeripheralSignal_UART1_TXBL)
+#define BTL_DRIVER_UART_LDMA_RXDATAV_SIGNAL (ldmaPeripheralSignal_UART1_RXDATAV)
 #else
 #error "Invalid BTL_DRIVER_UART"
 #endif
 
+#define BTL_DRIVER_UART_LDMA_RX_CHANNEL     0
+#define BTL_DRIVER_UART_LDMA_TX_CHANNEL     1
+
 // ‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐‐
 // Configuration validation
+#if HAL_SERIAL_APP_BAUD_RATE < 100
+#warning "UART baud rate is very low, consider increasing speed"
+#endif
+#if BTL_DRIVER_UART_RX_BUFFER_SIZE < 8
+#error "UART RX buffer too small"
+#endif
+#if BTL_DRIVER_UART_TX_BUFFER_SIZE < 8
+#error "UART TX buffer too small"
+#endif
 #if (BTL_DRIVER_UART_RX_BUFFER_SIZE % 2) != 0
 #error "UART RX buffer size is not even"
 #endif
@@ -186,8 +203,8 @@ void uart_init(void)
     refFreq = 38400000;
   }
 
-  clkdiv = 32 * refFreq + (16 * BTL_DRIVER_UART_BAUDRATE) / 2;
-  clkdiv /= (16 * BTL_DRIVER_UART_BAUDRATE);
+  clkdiv = 32 * refFreq + (16 * HAL_SERIAL_APP_BAUD_RATE) / 2;
+  clkdiv /= (16 * HAL_SERIAL_APP_BAUD_RATE);
   clkdiv -= 32;
   clkdiv *= 8;
 
@@ -199,37 +216,40 @@ void uart_init(void)
 
   BTL_DRIVER_UART->CLKDIV = clkdiv;
 
-  GPIO_PinModeSet(BTL_DRIVER_UART_TX_PORT,
-                  BTL_DRIVER_UART_TX_PIN,
+  GPIO_PinModeSet(BSP_SERIAL_APP_TX_PORT,
+                  BSP_SERIAL_APP_TX_PIN,
                   gpioModePushPull,
                   1);
-  GPIO_PinModeSet(BTL_DRIVER_UART_RX_PORT,
-                  BTL_DRIVER_UART_RX_PIN,
+  GPIO_PinModeSet(BSP_SERIAL_APP_RX_PORT,
+                  BSP_SERIAL_APP_RX_PIN,
                   gpioModeInput,
                   1);
 
   // Configure route
-  BTL_DRIVER_UART->ROUTELOC0 = (BTL_DRIVER_UART_TX_LOCATION
+  BTL_DRIVER_UART->ROUTELOC0 = (BSP_SERIAL_APP_TX_LOC
                                 << _USART_ROUTELOC0_TXLOC_SHIFT)
-                               | (BTL_DRIVER_UART_RX_LOCATION
+                               | (BSP_SERIAL_APP_RX_LOC
                                   << _USART_ROUTELOC0_RXLOC_SHIFT);
   BTL_DRIVER_UART->ROUTEPEN = USART_ROUTEPEN_TXPEN | USART_ROUTEPEN_RXPEN;
 
   // Configure CTS/RTS in case of flow control
-#if defined (BTL_DRIVER_UART_FC)
-  GPIO_PinModeSet(BTL_DRIVER_UART_RTS_PORT,
-                  BTL_DRIVER_UART_RTS_PIN,
+#if (HAL_SERIAL_APP_FLOW_CONTROL == HAL_USART_FLOW_CONTROL_HW)      \
+  || (HAL_SERIAL_APP_FLOW_CONTROL == HAL_USART_FLOW_CONTROL_HWUART) \
+  || (HAL_SERIAL_APP_FLOW_CONTROL == HAL_UART_FLOW_CONTROL_HW)      \
+  || (HAL_SERIAL_APP_FLOW_CONTROL == HAL_UART_FLOW_CONTROL_HWUART)
+  GPIO_PinModeSet(BSP_SERIAL_APP_RTS_PORT,
+                  BSP_SERIAL_APP_RTS_PIN,
                   gpioModePushPull,
                   1);
-  GPIO_PinModeSet(BTL_DRIVER_UART_CTS_PORT,
-                  BTL_DRIVER_UART_CTS_PIN,
+  GPIO_PinModeSet(BSP_SERIAL_APP_CTS_PORT,
+                  BSP_SERIAL_APP_CTS_PIN,
                   gpioModeInput,
                   1);
 
   // Configure CTS/RTS route
-  BTL_DRIVER_UART->ROUTELOC1 = (BTL_DRIVER_UART_RTS_LOCATION
+  BTL_DRIVER_UART->ROUTELOC1 = (BSP_SERIAL_APP_RTS_LOC
                                 << _USART_ROUTELOC1_RTSLOC_SHIFT)
-                               | (BTL_DRIVER_UART_CTS_LOCATION
+                               | (BSP_SERIAL_APP_CTS_LOC
                                   << _USART_ROUTELOC1_CTSLOC_SHIFT);
   BTL_DRIVER_UART->ROUTEPEN |= USART_ROUTEPEN_RTSPEN | USART_ROUTEPEN_CTSPEN;
 
@@ -237,9 +257,9 @@ void uart_init(void)
   BTL_DRIVER_UART->CTRLX |= USART_CTRLX_CTSEN;
 #endif
 
-#if defined(BTL_DRIVER_UART_USE_ENABLE)
-  GPIO_PinModeSet(BTL_DRIVER_UART_EN_PORT,
-                  BTL_DRIVER_UART_EN_PIN,
+#if defined(HAL_VCOM_ENABLE) && defined(BSP_VCOM_ENABLE_PORT)
+  GPIO_PinModeSet(BSP_VCOM_ENABLE_PORT,
+                  BSP_VCOM_ENABLE_PIN,
                   gpioModePushPull,
                   1);
 #endif

@@ -213,6 +213,49 @@ static PGM_P PGM intActiveBits[] =
   "LESENSE_IRQn",     // B43
   "CRYPTO1_IRQn",     // B44
   "TRNG0_IRQn"        // B45
+  #elif defined (_SILICON_LABS_32B_SERIES_1_CONFIG_4)
+  "EMU_IRQn",         // B0
+  "FRC_PRI_IRQn",     // B1
+  "WDOG0_IRQn",       // B2
+  "WDOG1_IRQn",       // B3
+  "FRC_IRQn",         // B4
+  "MODEM_IRQn",       // B5
+  "RAC_SEQ_IRQn",     // B6
+  "RAC_RSM_IRQn",     // B7
+  "BUFC_IRQn",        // B8
+  "LDMA_IRQn",        // B9
+  "GPIO_EVEN_IRQn",   // B10
+  "TIMER0_IRQn",      // B11
+  "USART0_RX_IRQn",   // B12
+  "USART0_TX_IRQn",   // B13
+  "ACMP0_IRQn",       // B14
+  "ADC0_IRQn",        // B15
+  "IDAC0_IRQn",       // B16
+  "I2C0_IRQn",        // B17
+  "GPIO_ODD_IRQn",    // B18
+  "TIMER1_IRQn",      // B19
+  "USART1_RX_IRQn",   // B20
+  "USART1_TX_IRQn",   // B21
+  "LEUART0_IRQn",     // B22
+  "PCNT0_IRQn",       // B23
+  "CMU_IRQn",         // B24
+  "MSC_IRQn",         // B25
+  "CRYPTO0_IRQn",     // B26
+  "LETIMER0_IRQn",    // B27
+  "AGC_IRQn",         // B28
+  "PROTIMER_IRQn",    // B29
+  "PRORTC_IRQn",      // B30
+  "RTCC_IRQn",        // B31
+  "SYNTH_IRQn",       // B32
+  "CRYOTIMER_IRQn",   // B33
+  "RFSENSE_IRQn",     // B34
+  "FPUEH_IRQn",       // B35
+  "SMU_IRQn",         // B36
+  "WTIMER0_IRQn",     // B37
+  "VDAC0_IRQn",       // B38
+  "LESENSE_IRQn",     // B39
+  "TRNG0_IRQn"        // B40
+  "SYSCFG_IRQn"       // B41
   #endif
 #elif defined (CORTEXM3_EFM32_MICRO)
   "DMA",            // B0

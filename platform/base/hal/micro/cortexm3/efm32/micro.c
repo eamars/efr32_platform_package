@@ -36,8 +36,9 @@
 
 #ifdef _EFR_DEVICE
 #include "hal/plugin/glib/graphics.h"
-#include "pti.h"
+#ifndef PHY_RAIL
 #include "pa.h"
+#endif//PHY_RAIL
 #include "tempdrv.h"
 #include "sleep-efm32.h"
 #endif
@@ -56,6 +57,18 @@
 
 extern void halStackRadioHoldOffPowerDown(void); // fwd ref
 extern void halStackRadioHoldOffPowerUp(void);   // fwd ref
+
+// Declares the PA curves only if we're in RAIL
+#ifdef PHY_RAIL
+#include "../plugin/pa-conversions/pa_conversions_efr32.h"
+#if HAL_PA_VOLTAGE == 3300
+//cstat !MISRAC2012-Rule-20.7
+RAIL_DECLARE_TX_POWER_VBAT_CURVES(RAIL_PiecewiseSegments, RAIL_CurvesSg, RAIL_Curves24Hp, RAIL_Curves24Lp);
+#else
+//cstat !MISRAC2012-Rule-20.7
+RAIL_DECLARE_TX_POWER_DCDC_CURVES(RAIL_PiecewiseSegments, RAIL_CurvesSg, RAIL_Curves24Hp, RAIL_Curves24Lp);
+#endif
+#endif
 
 #ifndef RHO_GPIO
 WEAK(void halStackRadioHoldOffPowerDown(void)) {
@@ -101,41 +114,65 @@ WEAK(halPtaReq_t halPtaFilterPassReq(void)) {
 #endif //!defined(PTA_REQ_GPIO) && !defined(PTA_GNT_GPIO)
 
 #ifdef _EFR_DEVICE
-
 // Provide HAL pointers to board-header-defined PA configuration(s)
 // for use by App, RAIL, or PHY library.
-#ifdef  HAL_PA_2P4_ENABLE
-static const RADIO_PAInit_t paInit2p4 =                            \
-{                                                                  \
-  PA_SEL_2P4_HP,            /* Power Amplifier mode */             \
-  HAL_PA_2P4_VOLTMODE,      /* Power Amplifier vPA Voltage mode */ \
-  HAL_PA_2P4_POWER,         /* Desired output power in dBm * 10 */ \
-  HAL_PA_2P4_OFFSET,        /* Output power offset in dBm * 10 */  \
-  HAL_PA_2P4_RAMP,          /* Desired ramp time in us */          \
+#ifdef  HAL_PA_ENABLE
+static const RAIL_TxPowerConfig_t paInit2p4 =
+{
+#if HAL_PA_2P4_LOWPOWER
+  .mode = RAIL_TX_POWER_MODE_2P4_LP, /* Power Amplifier mode */
+#else
+  .mode = RAIL_TX_POWER_MODE_2P4_HP, /* Power Amplifier mode */
+#endif
+  .voltage = HAL_PA_VOLTAGE,         /* Power Amplifier vPA Voltage mode */
+  .rampTime = HAL_PA_RAMP,           /* Desired ramp time in us */
 };
-const RADIO_PAInit_t* halInternalPa2p4GHzInit = &paInit2p4;
-#else//!HAL_PA_2P4_ENABLE
-const RADIO_PAInit_t* halInternalPa2p4GHzInit = NULL;
-#endif//HAL_PA_2P4_ENABLE
-
-#if HAL_PA_SUBGIG_ENABLE
-static const RADIO_PAInit_t paInitSub =                            \
-{                                                                  \
-  PA_SEL_SUBGIG,            /* Power Amplifier mode */             \
-  HAL_PA_SUBGIG_VOLTMODE,   /* Power Amplifier vPA Voltage mode */ \
-  HAL_PA_SUBGIG_POWER,      /* Desired output power in dBm * 10 */ \
-  HAL_PA_SUBGIG_OFFSET,     /* Output power offset in dBm * 10 */  \
-  HAL_PA_SUBGIG_RAMP,       /* Desired ramp time in us */          \
+const RAIL_TxPowerConfig_t* halInternalPa2p4GHzInit = &paInit2p4;
+static const RAIL_TxPowerConfig_t paInitSub =
+{
+  .mode = RAIL_TX_POWER_MODE_SUBGIG, /* Power Amplifier mode */
+  .voltage = HAL_PA_VOLTAGE,         /* Power Amplifier vPA Voltage mode */
+  .rampTime = HAL_PA_RAMP,           /* Desired ramp time in us */
 };
-const RADIO_PAInit_t* halInternalPaSubGHzInit = &paInitSub;
-#else//!HAL_PA_SUBGIG_ENABLE
-const RADIO_PAInit_t* halInternalPaSubGHzInit = NULL;
-#endif//HAL_PA_SUBGIG_ENABLE
+const RAIL_TxPowerConfig_t* halInternalPaSubGHzInit = &paInitSub;
+#else//!HAL_PA_ENABLE
+const RAIL_TxPowerConfig_t* halInternalPa2p4GHzInit = NULL;
+const RAIL_TxPowerConfig_t* halInternalPaSubGHzInit = NULL;
+#endif//HAL_PA_ENABLE
 #endif// _EFR_DEVICE
 
 #if defined(_EZR_DEVICE) || HAL_EZRADIOPRO_ENABLE
-const USART_TypeDef* pro2SpiPort = BSP_EZRADIOPRO_USART;
-const uint8_t pro2SpiClockMHz = BSP_EZRADIOPRO_FREQ;
+#if BSP_EZRADIOPRO_USART == HAL_SPI_PORT_USART0
+#define PRO2_USART USART0
+#elif BSP_EZRADIOPRO_USART == HAL_SPI_PORT_USART1
+#define PRO2_USART USART1
+#elif BSP_EZRADIOPRO_USART == HAL_SPI_PORT_USART2
+#define PRO2_USART USART2
+#elif BSP_EZRADIOPRO_USART == HAL_SPI_PORT_USART3
+#define PRO2_USART USART3
+#else
+#error "Invalid EZRADIOPRO USART"
+#endif
+const uint8_t pro2SpiClockMHz = HAL_EZRADIOPRO_FREQ / 1000000;
+#ifdef  _EFR_DEVICE
+#include "spidrv.h"
+const SPIDRV_Init_t pro2SpiConfig = {
+  .port             = PRO2_USART,
+  .portLocationTx   = BSP_EZRADIOPRO_MOSI_LOC,
+  .portLocationRx   = BSP_EZRADIOPRO_MISO_LOC,
+  .portLocationClk  = BSP_EZRADIOPRO_CLK_LOC,
+  .portLocationCs   = 0, //not used by application
+  .bitRate          = HAL_EZRADIOPRO_FREQ,
+/**** Below fields should NOT be modified by customers ****/
+  .frameLength      = 8,
+  .dummyTxValue     = 0xFF,
+  .type             = spidrvMaster,
+  .bitOrder         = spidrvBitOrderMsbFirst,
+  .clockMode        = spidrvClockMode0,
+  .csControl        = spidrvCsControlApplication,
+  .slaveStartMode   = spidrvSlaveStartImmediate,
+};
+#endif//_EFR_DEVICE
 #endif
 
 // halInit is called on first initial boot, not on wakeup from sleep.
@@ -162,6 +199,11 @@ void halInit(void)
 #endif
 
   halInternalStartSystemTimer();
+
+#ifdef PHY_RAIL
+  RAIL_TxPowerCurvesConfig_t txPowerCurvesConfig = { RAIL_Curves24Hp, RAIL_CurvesSg, RAIL_Curves24Lp, RAIL_PiecewiseSegments };
+  RAIL_InitTxPowerCurves(&txPowerCurvesConfig);
+#endif
 }
 
 void halReboot(void)

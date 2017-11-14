@@ -10,12 +10,9 @@
 // any purpose, you must agree to the terms of that agreement.
 //
 // -----------------------------------------------------------------------------
-#ifndef HAL_CONFIG_H
-#define HAL_CONFIG_H
+#ifndef APP_HAL_CONFIG_H
+#define APP_HAL_CONFIG_H
 
 #include "hal-config-types.h"
-#include BOARD_HEADER
 
-#define BSP_SPINCP_USART_PORT     1
-
-#endif //HAL_CONFIG_H
+#endif //APP_HAL_CONFIG_H

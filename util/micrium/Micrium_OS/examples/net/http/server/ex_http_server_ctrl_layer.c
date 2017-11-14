@@ -744,8 +744,8 @@ static  CPU_BOOLEAN  Ex_HTTP_Server_AuthLogoutParse (const  HTTPs_INSTANCE    *p
     CPU_BOOLEAN     is_logout = DEF_NO;
 #if (HTTPs_CFG_FORM_EN == DEF_ENABLED)
     HTTPs_KEY_VAL  *p_current;
-    CPU_INT16S       cmp_val;
 #endif
+    CPU_INT16S      cmp_val;
 
 
     PP_UNUSED_PARAM(p_instance);

@@ -51,11 +51,11 @@
 #define BSP_USART0_TX_PORT     BSP_VCOM_TX_PORT
 #endif
 #endif
-#if ((HAL_SERIAL_APP_PORT == 1) || (HAL_SERIAL_APP_PORT == 0x20))
+#if ((BSP_SERIAL_APP_PORT == 1) || (BSP_SERIAL_APP_PORT == 0x20))
   #define BTL_UART USART0
   #define BTL_UART_CLK cmuClock_USART0
 #else
-  #error UART bootloader must select USART0 as HAL_SERIAL_APP_PORT
+  #error UART bootloader must select USART0 as BSP_SERIAL_APP_PORT
 #endif
 
 // Function Name: serInit

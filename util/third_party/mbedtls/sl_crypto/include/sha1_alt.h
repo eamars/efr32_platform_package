@@ -21,12 +21,6 @@
 #ifndef MBEDTLS_SHA1_ALT_H
 #define MBEDTLS_SHA1_ALT_H
 
-#if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
-#else
-#include MBEDTLS_CONFIG_FILE
-#endif
-
 /***************************************************************************//**
  * \addtogroup sl_crypto
  * \{
@@ -40,16 +34,6 @@
 
 #if defined(MBEDTLS_SHA1_ALT)
 
-/* SiliconLabs CRYPTO hardware acceleration implementation */
-
-#if defined( MBEDTLS_SLCL_PLUGINS )
-#include "slcl_device_crypto.h"
-#endif
-#include <stddef.h>
-#include <stdint.h>
-
-#define MBEDTLS_ERR_SHA1_BAD_INPUT      -0x5100  /**< Bad input parameters to function. */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,11 +43,7 @@ extern "C" {
  */
 typedef struct
 {
-#if defined( MBEDTLS_SLCL_PLUGINS )
-    slcl_context slcl_ctx;      /*!< SLCL context */
-#else
     uint32_t state[8];          /*!< intermediate digest state  */
-#endif
     uint32_t total[2];          /*!< number of bytes processed  */
     unsigned char buffer[64];   /*!< data block being processed */
 }
@@ -82,50 +62,6 @@ void mbedtls_sha1_init( mbedtls_sha1_context *ctx );
  * \param ctx      SHA-1 context to be cleared
  */
 void mbedtls_sha1_free( mbedtls_sha1_context *ctx );
-
-#if defined( MBEDTLS_SLCL_PLUGINS )
-/**
- * \brief
- *   Set the device instance of a SHA1 context.
- *
- * \details
- *   This function sets the AES/CRYPTO device instance of a SHA1 context.
- *   Subsequent calls to SHA1 API functions with this context will use the
- *   new AES/CRYPTO device instance.
- *
- * \param[in] ctx
- *   SHA1 device context.
- *  
- * \param[in] devno
- *   AES/CRYPTO hardware device instance to use.
- *  
- * \return
- *   0 if success. Error code if failure, see \ref sha1.h.
- ******************************************************************************/
-int mbedtls_sha1_set_device_instance(mbedtls_sha1_context* ctx,
-                                    unsigned int           devno);
-  
-/**
- * \brief
- *   Set the number of ticks to wait for the decice lock.
- *
- * \details
- *   This function sets the number of ticks that the subsequenct API calls
- *   will wait for the device to become available.
- *
- * \param[in] ctx
- *   SHA-1 context.
- *  
- * \param[in] ticks
- *   Ticks to wait for device.
- *  
- * \return
- *   0 if success. Error code if failure, see \ref aes.h.
- ******************************************************************************/
-int mbedtls_sha1_set_device_lock_wait_ticks(mbedtls_sha1_context *ctx,
-                                            int                   ticks);
-
-#endif /* #if defined( MBEDTLS_SLCL_PLUGINS ) */
   
 /**
  * \brief          Clone (the state of) a SHA-1 context
@@ -141,7 +77,7 @@ void mbedtls_sha1_clone( mbedtls_sha1_context *dst,
  *
  * \param ctx      context to be initialized
  */
-int mbedtls_sha1_starts( mbedtls_sha1_context *ctx );
+void mbedtls_sha1_starts( mbedtls_sha1_context *ctx );
 
 /**
  * \brief          SHA-1 process buffer
@@ -162,28 +98,6 @@ void mbedtls_sha1_finish( mbedtls_sha1_context *ctx, unsigned char output[20] );
 
 /* Internal use */
 void mbedtls_sha1_process( mbedtls_sha1_context *ctx, const unsigned char data[64] );
-
-/**
- * \brief          Output = SHA-1( input buffer )
- *
- * \param input    Buffer holding the data. The input buffer needs to be big
- *                 enough to hold the padding (MD-strenghtening) at the end,
- *                 after the message of 'ilen' length. This function will
- *                 perform MD-strengthening and append to the end of the
- *                 input buffer.
- * \param ilen     length of the input data
- * \param output   SHA-1 checksum result
- *
- */
-int mbedtls_sha1( const unsigned char *input, size_t ilen,
-                  unsigned char output[20]);
-
-/**
- * \brief          Checkup routine
- *
- * \return         0 if successful, or 1 if the test failed
- */
-int mbedtls_sha1_self_test( int verbose, int device_instance );
   
 #ifdef __cplusplus
 }
@@ -191,7 +105,7 @@ int mbedtls_sha1_self_test( int verbose, int device_instance );
 
 #endif /* #if defined(MBEDTLS_SHA1_ALT) */
 
-/** \} (end addtogroup sl_crypto) */
 /** \} (end addtogroup sl_crypto_sha1) */
+/** \} (end addtogroup sl_crypto) */
 
 #endif /* #ifndef MBEDTLS_SHA1_ALT_H */

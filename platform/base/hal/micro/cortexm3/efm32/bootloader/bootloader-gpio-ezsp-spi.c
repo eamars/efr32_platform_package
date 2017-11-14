@@ -45,23 +45,23 @@
 // If you edit this file, be sure to also edit bootloader-gpio.c //
 ///////////////////////////////////////////////////////////////////
 
-#if !defined(HAL_BTL_BUTTON_PORT) || !defined(HAL_BTL_BUTTON_PIN)
+#if !defined(BSP_BTL_BUTTON_PORT) || !defined(BSP_BTL_BUTTON_PIN)
 // Default to using nWake for the bootloader recovery GPIO.
 // This can be overridden in the BOARD_HEADER.
   #if defined(DISABLE_NWAKE)
-    #error Please define HAL_BTL_BUTTON_PORT and HAL_BTL_BUTTON_PIN when disabling nWake
+    #error Please define BSP_BTL_BUTTON_PORT and BSP_BTL_BUTTON_PIN when disabling nWake
   #endif
 
-  #if defined(HAL_BTL_BUTTON_PORT) || defined(HAL_BTL_BUTTON_PIN)
-    #error Please define both HAL_BTL_BUTTON_PORT and HAL_BTL_BUTTON_PIN when overriding
+  #if defined(BSP_BTL_BUTTON_PORT) || defined(BSP_BTL_BUTTON_PIN)
+    #error Please define both BSP_BTL_BUTTON_PORT and BSP_BTL_BUTTON_PIN when overriding
   #endif
 
-  #define HAL_BTL_BUTTON_PORT      BSP_SPINCP_NWAKE_PORT
-  #define HAL_BTL_BUTTON_PIN       BSP_SPINCP_NWAKE_PIN
-#endif//!defined(HAL_BTL_BUTTON_PORT) || !defined(HAL_BTL_BUTTON_PIN)
+  #define BSP_BTL_BUTTON_PORT      BSP_SPINCP_NWAKE_PORT
+  #define BSP_BTL_BUTTON_PIN       BSP_SPINCP_NWAKE_PIN
+#endif//!defined(BSP_BTL_BUTTON_PORT) || !defined(BSP_BTL_BUTTON_PIN)
 
-#define BUTTON_RECOVERY_SET()     GPIO_PinOutSet(HAL_BTL_BUTTON_PORT, HAL_BTL_BUTTON_PIN)
-#define BUTTON_RECOVERY_PRESSED() (GPIO_PinInGet(HAL_BTL_BUTTON_PORT, HAL_BTL_BUTTON_PIN) == 0)
+#define BUTTON_RECOVERY_SET()     GPIO_PinOutSet(BSP_BTL_BUTTON_PORT, BSP_BTL_BUTTON_PIN)
+#define BUTTON_RECOVERY_PRESSED() (GPIO_PinInGet(BSP_BTL_BUTTON_PORT, BSP_BTL_BUTTON_PIN) == 0)
 
 // Function Name: bootloadForceActivation
 // Description:   Decides whether to continue launching the bootloader or vector
@@ -85,7 +85,7 @@ bool bootloadForceActivation(void)
   CMU_ClockEnable(cmuClock_GPIO, true);
   bool pressed = false;
 
-  GPIO_PinModeSet(HAL_BTL_BUTTON_PORT, HAL_BTL_BUTTON_PIN, gpioModeInputPull, 1);
+  GPIO_PinModeSet(BSP_BTL_BUTTON_PORT, BSP_BTL_BUTTON_PIN, gpioModeInputPull, 1);
   BUTTON_RECOVERY_SET();
   for (i = 0; i < 10; i++) {
     __no_operation();
@@ -98,7 +98,7 @@ bool bootloadForceActivation(void)
   }
 
   //restore IO to its reset state
-  GPIO_PinModeSet(HAL_BTL_BUTTON_PORT, HAL_BTL_BUTTON_PIN, gpioModeDisabled, 0);
+  GPIO_PinModeSet(BSP_BTL_BUTTON_PORT, BSP_BTL_BUTTON_PIN, gpioModeDisabled, 0);
   CMU_ClockEnable(cmuClock_GPIO, false);
   return pressed;
 }

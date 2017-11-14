@@ -12,8 +12,8 @@ var searchData=
   ['mainbootloader',['mainBootloader',['../structFirstBootloaderTable__t.html#ae382ebb2a2eece6b2b5e34b7548fbebc',1,'FirstBootloaderTable_t']]],
   ['mainbootloadertable',['mainBootloaderTable',['../group__CommonInterface.html#ga7729c13bf7a5f98b29280a836b3d1a84',1,'btl_interface.h']]],
   ['mainbootloadertable_5ft',['MainBootloaderTable_t',['../structMainBootloaderTable__t.html',1,'']]],
+  ['matchlength',['matchLength',['../structLz4Context__t.html#a52a4411a97dddd4860e0bccfb85f3a22',1,'Lz4Context_t']]],
   ['metadata',['metaData',['../structEblMetadata__t.html#a27f61c9773926d96fb5d73a17d33bb0b',1,'EblMetadata_t']]],
-  ['metadataaddress',['metadataAddress',['../structParserContext__t.html#a617f8ec8cf520a0009f4758995f05cc0',1,'ParserContext_t']]],
   ['metadatacallback',['metadataCallback',['../structBootloaderParserCallbacks__t.html#a56b2ab84ae6e26db1f8112c406665b12',1,'BootloaderParserCallbacks_t']]],
   ['msglen',['msgLen',['../structEblEncryptionInitAesCcm__t.html#a1bf7a2c1e0e0963bb9beabf1d225d86f',1,'EblEncryptionInitAesCcm_t']]]
 ];

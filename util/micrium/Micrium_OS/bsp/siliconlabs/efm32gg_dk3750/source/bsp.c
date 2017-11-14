@@ -46,7 +46,7 @@
 #include  <rtos/common/include/lib_utils.h>
 #include  <rtos_description.h>
 
-#include  <bsp/siliconlabs/efm32gg_dk3750/source/bsp.h>
+#include  <bsp/siliconlabs/efm32gg_dk3750/source/bsp_mcu.h>
 
 #if defined(RTOS_MODULE_USB_HOST_AVAIL) || defined(RTOS_MODULE_USB_DEV_AVAIL)
 #include  <rtos/usb/include/usb_ctrlr.h>

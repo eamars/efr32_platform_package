@@ -95,7 +95,7 @@
 /**
  * @brief GPIO used to control antenna select(low for antenna 1, high for antenna 2).
  */
-#if defined(ANTENNA_SELECT_GPIO_PORT) && defined(ANTENNA_SELECT_GPIO_PIN)
+#if defined(ANTENNA_SELECT_GPIO_PORT) && defined(ANTENNA_SELECT_GPIO_PIN) && !defined(ANTENNA_SELECT_GPIO)
 #define ANTENNA_SELECT_GPIO GPIO_PIN_DEF(ANTENNA_SELECT_GPIO)
 #endif
 
@@ -114,7 +114,7 @@
 /**
  * @brief GPIO used to control inverted antenna select(high for antenna 1, low for antenna 2).
  */
-#if defined(ANTENNA_nSELECT_GPIO_PORT) && defined(ANTENNA_nSELECT_GPIO_PIN)
+#if defined(ANTENNA_nSELECT_GPIO_PORT) && defined(ANTENNA_nSELECT_GPIO_PIN) && !defined(ANTENNA_nSELECT_GPIO)
 #define ANTENNA_nSELECT_GPIO GPIO_PIN_DEF(ANTENNA_nSELECT_GPIO)
 #endif
 

@@ -578,6 +578,11 @@ CPU_BOOLEAN  Ex_FS_BufValidate (CPU_INT08U  *p_buf,
 *                   time, SD cards have this default block size. For other media (e.g. NAND, NOR), the
 *                   I/O error is trapped.
 *
+*               (2) If no media is defined, 512 is returned as the logical block size. The media set
+*                   to "None" can indicate that the SCSI storage is available. In that case, the file
+*                   system initialization must continue even if the SCSI device is not yet connected to
+*                   your target. All SCSI devices use a default block size of 512 bytes.
+*
 *********************************************************************************************************
 */
 
@@ -589,6 +594,10 @@ static  CPU_SIZE_T  Ex_FS_MediaLbSizeMaxGet (void)
     CPU_SIZE_T         lb_size;
     FS_MEDIA_TYPE      media_type;
 
+
+    if (Str_Cmp(EX_CFG_FS_ACTIVE_MEDIA_NAME, "None") == 0u) {   /* See Note #2.                                         */
+        return (512u);
+    }
 
     media_handle = FSMedia_Get(EX_CFG_FS_ACTIVE_MEDIA_NAME);    /* Get media handle.                                    */
     APP_RTOS_ASSERT_CRITICAL(!FS_MEDIA_HANDLE_IS_NULL(media_handle), 0u);

@@ -1,9 +1,9 @@
 /***************************************************************************//**
  * @file
  * @brief I2C simple poll-based master mode driver for the DK/STK.
- * @version 5.1.3
+ * @version 5.3.3
  *******************************************************************************
- * @section License
+ * # License
  * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>
  *******************************************************************************
  *
@@ -16,7 +16,11 @@
 #ifndef __SILICON_LABS_I2CSPM_H__
 #define __SILICON_LABS_I2CSPM_H__
 
+#if defined(HAL_CONFIG)
+#include "i2cspmhalconfig.h"
+#else
 #include "i2cspmconfig.h"
+#endif
 #include "em_gpio.h"
 #include "em_i2c.h"
 
@@ -26,7 +30,7 @@
  * @details
  *  Drivers and support modules for board components such as displays, sensors and
  *  memories on EFM32, EZR32 and EFR32 kits.
- *  
+ *
  * @{
  ******************************************************************************/
 
@@ -48,8 +52,7 @@ extern "C" {
     required for driver instance initialization.
     This struct is passed to @ref I2CSPM_Init() when initializing a I2CSPM
     instance. */
-typedef struct
-{
+typedef struct {
   I2C_TypeDef           *port;          /**< Peripheral port */
   GPIO_Port_TypeDef     sclPort;        /**< SCL pin port number */
   uint8_t               sclPin;         /**< SCL pin number */
@@ -66,23 +69,21 @@ typedef struct
   I2C_ClockHLR_TypeDef  i2cClhr;        /**< Clock low/high ratio control */
 } I2CSPM_Init_TypeDef;
 
-
 /** Default config for I2C init structure. The default may be overridden
     by a i2cspmconfig.h file. */
-#if !defined( I2CSPM_INIT_DEFAULT )
-#define I2CSPM_INIT_DEFAULT     \
-  { I2C0,                       /* Use I2C instance 0 */                        \
-    gpioPortC,                  /* SCL port */                                  \
-    5,                          /* SCL pin */                                   \
-    gpioPortC,                  /* SDA port */                                  \
-    4,                          /* SDA pin */                                   \
-    0,                          /* Location */                                  \
-    0,                          /* Use currently configured reference clock */  \
-    I2C_FREQ_STANDARD_MAX,      /* Set to standard rate  */                     \
-    i2cClockHLRStandard,        /* Set to use 4:4 low/high duty cycle */        \
+#if !defined(I2CSPM_INIT_DEFAULT)
+#define I2CSPM_INIT_DEFAULT                                                    \
+  { I2C0,                       /* Use I2C instance 0 */                       \
+    gpioPortC,                  /* SCL port */                                 \
+    5,                          /* SCL pin */                                  \
+    gpioPortC,                  /* SDA port */                                 \
+    4,                          /* SDA pin */                                  \
+    0,                          /* Location */                                 \
+    0,                          /* Use currently configured reference clock */ \
+    I2C_FREQ_STANDARD_MAX,      /* Set to standard rate  */                    \
+    i2cClockHLRStandard,        /* Set to use 4:4 low/high duty cycle */       \
   }
 #endif
-
 
 /*******************************************************************************
  *****************************   PROTOTYPES   **********************************

@@ -10,7 +10,7 @@
 *
 * File    : OS_SEM.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -79,7 +79,7 @@ void  OSSemCreate (OS_SEM      *p_sem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -100,7 +100,7 @@ void  OSSemCreate (OS_SEM      *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                 /* Validate 'p_sem'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -183,7 +183,7 @@ OS_OBJ_QTY  OSSemDel (OS_SEM  *p_sem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -216,7 +216,7 @@ OS_OBJ_QTY  OSSemDel (OS_SEM  *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                 /* Validate 'p_sem'                                     */
         OS_TRACE_SEM_DEL_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return (0u);
@@ -236,7 +236,7 @@ OS_OBJ_QTY  OSSemDel (OS_SEM  *p_sem,
     nbr_tasks   = 0u;
     switch (opt) {
         case OS_OPT_DEL_NO_PEND:                                /* Delete semaphore only if no task waiting             */
-             if (p_pend_list->HeadPtr == DEF_NULL) {
+             if (p_pend_list->HeadPtr == (OS_TCB *)0) {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                  OS_SemDbgListRemove(p_sem);
                  OSSemQty--;
@@ -257,7 +257,7 @@ OS_OBJ_QTY  OSSemDel (OS_SEM  *p_sem,
 #else
              ts = 0u;
 #endif
-             while (p_pend_list->HeadPtr != DEF_NULL) {         /* Remove all tasks on the pend list                    */
+             while (p_pend_list->HeadPtr != (OS_TCB *)0) {      /* Remove all tasks on the pend list                    */
                  p_tcb = p_pend_list->HeadPtr;
                  OS_PendAbort(p_tcb,
                               ts,
@@ -352,7 +352,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 #endif
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -378,7 +378,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                 /* Validate 'p_sem'                                     */
         OS_TRACE_SEM_PEND_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return (0u);
@@ -410,7 +410,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
     if (p_sem->Ctr > 0u) {                                      /* Resource available?                                  */
         p_sem->Ctr--;                                           /* Yes, caller may proceed                              */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-        if (p_ts != DEF_NULL) {
+        if (p_ts != (CPU_TS *)0) {
            *p_ts = p_sem->TS;                                   /* get timestamp of last post                           */
         }
 #endif
@@ -424,7 +424,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 
     if ((opt & OS_OPT_PEND_NON_BLOCKING) != 0u) {               /* Caller wants to block if not available?              */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-        if (p_ts != DEF_NULL) {
+        if (p_ts != (CPU_TS *)0) {
            *p_ts = 0u;
         }
 #endif
@@ -437,7 +437,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
     } else {                                                    /* Yes                                                  */
         if (OSSchedLockNestingCtr > 0u) {                       /* Can't pend when the scheduler is locked              */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-            if (p_ts != DEF_NULL) {
+            if (p_ts != (CPU_TS *)0) {
                *p_ts = 0u;
             }
 #endif
@@ -460,7 +460,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
     switch (OSTCBCurPtr->PendStatus) {
         case OS_STATUS_PEND_OK:                                 /* We got the semaphore                                 */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -470,7 +470,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 
         case OS_STATUS_PEND_ABORT:                              /* Indicate that we aborted                             */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -480,7 +480,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 
         case OS_STATUS_PEND_TIMEOUT:                            /* Indicate that we didn't get semaphore within timeout */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = 0u;
              }
 #endif
@@ -490,7 +490,7 @@ OS_SEM_CTR  OSSemPend (OS_SEM   *p_sem,
 
         case OS_STATUS_PEND_DEL:                                /* Indicate that object pended on has been deleted      */
 #if (OS_CFG_TS_EN == DEF_ENABLED)
-             if (p_ts != DEF_NULL) {
+             if (p_ts != (CPU_TS *)0) {
                 *p_ts = OSTCBCurPtr->TS;
              }
 #endif
@@ -559,7 +559,7 @@ OS_OBJ_QTY  OSSemPendAbort (OS_SEM  *p_sem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -580,7 +580,7 @@ OS_OBJ_QTY  OSSemPendAbort (OS_SEM  *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                 /* Validate 'p_sem'                                     */
        *p_err =  OS_ERR_OBJ_PTR_NULL;
         return (0u);
     }
@@ -606,7 +606,7 @@ OS_OBJ_QTY  OSSemPendAbort (OS_SEM  *p_sem,
 
     CPU_CRITICAL_ENTER();
     p_pend_list = &p_sem->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on semaphore?                       */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on semaphore?                       */
         CPU_CRITICAL_EXIT();                                    /* No                                                   */
        *p_err =  OS_ERR_PEND_ABORT_NONE;
         return (0u);
@@ -618,7 +618,7 @@ OS_OBJ_QTY  OSSemPendAbort (OS_SEM  *p_sem,
 #else
     ts        = 0u;
 #endif
-    while (p_pend_list->HeadPtr != DEF_NULL) {
+    while (p_pend_list->HeadPtr != (OS_TCB *)0) {
         p_tcb = p_pend_list->HeadPtr;
         OS_PendAbort(p_tcb,
                      ts,
@@ -686,7 +686,7 @@ OS_SEM_CTR  OSSemPost (OS_SEM  *p_sem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -703,7 +703,7 @@ OS_SEM_CTR  OSSemPost (OS_SEM  *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                    /* Validate 'p_sem'                                     */
         OS_TRACE_SEM_POST_FAILED(p_sem);
         OS_TRACE_SEM_POST_EXIT(OS_ERR_OBJ_PTR_NULL);
        *p_err  = OS_ERR_OBJ_PTR_NULL;
@@ -741,7 +741,7 @@ OS_SEM_CTR  OSSemPost (OS_SEM  *p_sem,
     OS_TRACE_SEM_POST(p_sem);
     CPU_CRITICAL_ENTER();
     p_pend_list = &p_sem->PendList;
-    if (p_pend_list->HeadPtr == DEF_NULL) {                     /* Any task waiting on semaphore?                       */
+    if (p_pend_list->HeadPtr == (OS_TCB *)0) {                  /* Any task waiting on semaphore?                       */
         if (p_sem->Ctr == (OS_SEM_CTR)-1) {
            CPU_CRITICAL_EXIT();
           *p_err = OS_ERR_SEM_OVF;
@@ -760,11 +760,11 @@ OS_SEM_CTR  OSSemPost (OS_SEM  *p_sem,
     }
 
     p_tcb = p_pend_list->HeadPtr;
-    while (p_tcb != DEF_NULL) {
+    while (p_tcb != (OS_TCB *)0) {
         p_tcb_next = p_tcb->PendNextPtr;
         OS_Post((OS_PEND_OBJ *)((void *)p_sem),
                 p_tcb,
-                DEF_NULL,
+                (void *)0,
                 0u,
                 ts);
         if ((opt & OS_OPT_POST_ALL) == 0u) {                     /* Post to all tasks waiting?                           */
@@ -821,7 +821,7 @@ void  OSSemSet (OS_SEM      *p_sem,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -835,7 +835,7 @@ void  OSSemSet (OS_SEM      *p_sem,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_sem == DEF_NULL) {                                    /* Validate 'p_sem'                                     */
+    if (p_sem == (OS_SEM *)0) {                                 /* Validate 'p_sem'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -854,7 +854,7 @@ void  OSSemSet (OS_SEM      *p_sem,
         p_sem->Ctr = cnt;                                       /* Yes, set it to the new value specified.              */
     } else {
         p_pend_list = &p_sem->PendList;                         /* No                                                   */
-        if (p_pend_list->HeadPtr == DEF_NULL) {                 /* See if task(s) waiting?                              */
+        if (p_pend_list->HeadPtr == (OS_TCB *)0) {              /* See if task(s) waiting?                              */
             p_sem->Ctr = cnt;                                   /* No, OK to set the value                              */
         } else {
            *p_err      = OS_ERR_TASK_WAITING;
@@ -915,9 +915,9 @@ void  OS_SemClr (OS_SEM  *p_sem)
 void  OS_SemDbgListAdd (OS_SEM  *p_sem)
 {
     p_sem->DbgNamePtr               = (CPU_CHAR *)((void *)" ");
-    p_sem->DbgPrevPtr               = DEF_NULL;
-    if (OSSemDbgListPtr == DEF_NULL) {
-        p_sem->DbgNextPtr           = DEF_NULL;
+    p_sem->DbgPrevPtr               = (OS_SEM *)0;
+    if (OSSemDbgListPtr == (OS_SEM *)0) {
+        p_sem->DbgNextPtr           = (OS_SEM *)0;
     } else {
         p_sem->DbgNextPtr           =  OSSemDbgListPtr;
         OSSemDbgListPtr->DbgPrevPtr =  p_sem;
@@ -935,22 +935,22 @@ void  OS_SemDbgListRemove (OS_SEM  *p_sem)
     p_sem_prev = p_sem->DbgPrevPtr;
     p_sem_next = p_sem->DbgNextPtr;
 
-    if (p_sem_prev == DEF_NULL) {
+    if (p_sem_prev == (OS_SEM *)0) {
         OSSemDbgListPtr = p_sem_next;
-        if (p_sem_next != DEF_NULL) {
-            p_sem_next->DbgPrevPtr = DEF_NULL;
+        if (p_sem_next != (OS_SEM *)0) {
+            p_sem_next->DbgPrevPtr = (OS_SEM *)0;
         }
-        p_sem->DbgNextPtr = DEF_NULL;
+        p_sem->DbgNextPtr = (OS_SEM *)0;
 
-    } else if (p_sem_next == DEF_NULL) {
-        p_sem_prev->DbgNextPtr = DEF_NULL;
-        p_sem->DbgPrevPtr      = DEF_NULL;
+    } else if (p_sem_next == (OS_SEM *)0) {
+        p_sem_prev->DbgNextPtr = (OS_SEM *)0;
+        p_sem->DbgPrevPtr      = (OS_SEM *)0;
 
     } else {
         p_sem_prev->DbgNextPtr =  p_sem_next;
         p_sem_next->DbgPrevPtr =  p_sem_prev;
-        p_sem->DbgNextPtr      = DEF_NULL;
-        p_sem->DbgPrevPtr      = DEF_NULL;
+        p_sem->DbgNextPtr      = (OS_SEM *)0;
+        p_sem->DbgPrevPtr      = (OS_SEM *)0;
     }
 }
 #endif

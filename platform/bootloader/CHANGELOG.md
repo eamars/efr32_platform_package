@@ -3,6 +3,82 @@
 All notable changes to the bootloader will be documented in this file. The
 version number given in the Change Log is on the format `major`.`minor`.`patch`.
 
+## 1.4.0 - 2017-09-30
+
+### Added
+ - Support for EFR32xG14, EFM32PG1, EFM32PG12, EFM32JG1, EFM32JG12 and
+   EFM32GG11 has been added in this release.
+
+### Changed
+ - The Gecko bootloader now uses HAL Configuration headers for peripheral
+   configuration, rather than its own set of #defines. Support for the
+   Hardware Configurator has also been integrated into the Application Builder
+   for the Gecko bootloader. This allows for graphical configuration.
+ - All cryptographic operations using the CRYPTO hardware accelerator protect
+   critical operations using critical sections, allowing preemption of CRYPTO
+   operations when using the application interface.
+ - The `bootloader_getImageInfo` function now returns an error code if the
+   storage slot is invalid or empty.
+
+### Fixed
+ - When verifying an LZ4 compressed image in storage using the application
+   interface, the bootloader could erroneously touch application RAM outside
+   the allocated context.
+ - An issue preventing bootloader upgrades from working when applied in a GBL
+   file together with a compressed application image has been resolved.
+
+## 1.3.0 - 2017-07-28
+
+### Changed
+ - The GBL and EBL upgrade image parsing support has been split out from the
+   core bootloader library `libbootloader` into two libraries `libparser` and
+   `libparser-eblv2`. The former supports GBL only, the latter supports both
+   GBL and the legacy EBL format. Selection of which library to use is done
+   by selecting the "Image Parser" or "Image Parser with legacy EBL support"
+   plugin in AppBuilder. Users who previously enabled EBL support by checking
+   "Allow legacy format" in the Image Parser plugin, should use the new
+   "Image Parser with legacy EBL support" plugin instead.
+
+### Fixed
+ - The image parser for GBL files could fail to write data to address 0x8004
+   if the word at that address started with 0xFF.
+ - The LZ4 decompressor for compressed GBL files could in rare cases repeat
+   the wrong byte when decompressing certain repeated patterns.
+
+## 1.2.0 - 2017-06-16
+
+### Added
+ - The GBL parser now supports LZ4 compressed programming tags. Decompression
+   is only supported when running in the context of the bootloader, not using
+   the application interface. Verification of a GBL file containing compressed
+   tags is supported in both modes of operation.
+
+### Changed
+ - The `parser_parse` function takes a flags argument, which is used to signal
+   whether tags such as the LZ4 compressed tag should be parsed (decompressed)
+   or skipped over. If `flags = PARSER_FLAG_PARSE_CUSTOM_TAGS`, custom tags will
+   be fully parsed. If `flags = 0`, custom tags will be treated as binary blobs
+   that are passed over.
+ - Enumeration values with too generic names have been renamed to prevent naming
+   collisions with other software components. In `BootloaderType_t`, `NONE` has
+   been renamed `NO_BOOTLOADER`. In `BootloaderStorageType_t`, `CUSTOM` has been
+   renamed `CUSTOM_STORAGE`.
+ - Main bootloader main function has been refactored to allow running a
+   bootloader that supports both storage and communication. When both a storage
+   and a communication plugin is enabled, the storage plugin will run first. If
+   it reports anything other than a firmware upgrade success, the communication
+   plugin will run.
+
+### Fixed
+ - A false verification failure using the `bootloader_verifyApplication`
+   function for CRC-checksummed application images that did not start at the
+   beginning of the application area in main flash has been fixed.
+ - Prebuilt sample bootloader binaries were previously added to all
+   bootloader projects in Simplicity Studio. These have now been moved to a
+   different location to avoid cluttering up the projects.
+ - Default enable pin for UART on BRD4165B changed from PA5 to PA4 to reflect
+   actual board configuration.
+
 ## 1.1.0 - 2017-06-09
 
 ### Added

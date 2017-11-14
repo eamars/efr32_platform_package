@@ -30,6 +30,21 @@ void halIrqxIsr(uint8_t pin);
 
 //== HELPER FUNCTIONS ==
 
+/** @brief Safe method to ensure GPIO interrupts are on at top-level
+ *  since GPIOINT_Init() is *not* safe and could cause event lossage.
+ */
+static void GPIOINT_InitSafe(void)
+{
+  // Enable GPIO clock for configuring interrupts
+  CMU_ClockEnable(cmuClock_GPIO, true);
+
+  // Turn on GPIO interrupts only if they weren't enabled elsewhere
+  if (CORE_NvicIRQDisabled(GPIO_ODD_IRQn)
+      || CORE_NvicIRQDisabled(GPIO_EVEN_IRQn)) {
+    GPIOINT_Init();
+  }
+}
+
 /** @brief Configure and enable/disable the device ready IRQ
  */
 static void halExtDeviceRdyCfgIrq(void)
@@ -107,6 +122,7 @@ HalExtDeviceConfig halExtDeviceInit(HalExtDeviceIrqCB deviceIntCB,
   halExtDeviceIntCB = deviceIntCB;
 
   CMU_ClockEnable(cmuClock_PRS, true);
+  GPIOINT_InitSafe();
 
   /* Pin is configured to Push-pull: SDN */
   GPIO_PinModeSet((GPIO_Port_TypeDef) BSP_EXTDEV_SDN_PORT,

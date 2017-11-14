@@ -265,7 +265,8 @@ uint8_t emberAfPluginEepromWrite(uint32_t address,
   if (pageEraseRequired() && (emberAfPluginEepromGetWordSize() > 1)) {
     uint8_t partialWriteData[EM_AF_EEPROM_MAX_WORD_SIZE];
     uint8_t index = checkForPreceedingPartialWrite(address);
-    if (index != INVALID_INDEX) {
+    if (index != INVALID_INDEX
+        && index < EMBER_AF_PLUGIN_EEPROM_PARTIAL_WORD_STORAGE_COUNT) {
       eepromDebugPrintln("Previous partial word detected at 0x%4X", address);
       partialWriteData[1] = data[0];
       totalLength--;

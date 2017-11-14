@@ -42,6 +42,8 @@
 #define MAC_FRAME_FLAG_INTRA_PAN            BIT(6)
 // Bit 7 is reserved
 #define MAC_FRAME_FLAG_RESERVED             BIT(7)
+//we use the reserved flag internally for CCA inhibit
+#define MAC_INHIBIT_CCA                     BIT(7)
 // 802.15.4e-2012: Bit 8 is sequence number suppression
 #define MAC_FRAME_FLAG_SEQ_SUPPRESSION      ((uint16_t)(BIT(8)))
 // 802.15.4e-2012: Bit 9 is presence of information elements

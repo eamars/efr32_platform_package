@@ -1,8 +1,8 @@
 /** @file hal/micro/cortexm3/efm/micro.h
- * @brief Utility and convenience functions for EM35x microcontroller.
+ * @brief Utility and convenience functions for EFM32 microcontroller.
  * See @ref micro for documentation.
  *
- * <!-- Copyright 2008 by Ember Corporation.             All rights reserved.-->
+ * <!-- Copyright 2017 by Ember Corporation.             All rights reserved.-->
  */
 
 /** @addtogroup micro
@@ -42,24 +42,15 @@ typedef uint8_t EmberStatus;
 // that represent an actual second.
 #define MILLISECOND_TICKS_PER_SECOND 1000UL
 
-// Define the priority registers of system handlers and interrupts.
-// This example shows how to save the current ADC interrupt priority and
-// then set it to 24:
-//    uint8_t oldAdcPriority = INTERRUPT_PRIORITY_REGISTER(ADC);
-//    INTERRUPT_PRIORITY_REGISTER(ADC) = 24;
+// Define the priority registers of system handlers.
 
-// For Cortex-M3 faults and exceptions
+// For Cortex-M faults and exceptions
 #define HANDLER_PRIORITY_REGISTER(handler) \
   (*(((uint8_t *)SCS_SHPR_7to4_ADDR) + handler##_VECTOR_INDEX - 4))
 
-// For EM3XX-specific interrupts
-#define INTERRUPT_PRIORITY_REGISTER(interrupt) \
-  (*(((uint8_t *)NVIC_IPR_3to0_ADDR) + interrupt##_VECTOR_INDEX - 16))
-
-// The reset types of the EM300 series have both a base type and an
-//  extended type.  The extended type is a 16-bit value which has the base
-//  type in the upper 8-bits, and the extended classification in the
-//  lower 8-bits
+// The reset types have both a base type and an extended type.  The extended
+//  type is a 16-bit value which has the base type in the upper 8-bits, and the
+//  extended classification in the lower 8-bits
 // For backwards compatibility with other platforms, only the base type is
 //  returned by the halGetResetInfo() API.  For the full extended type, the
 //  halGetExtendedResetInfo() API should be called.
@@ -120,10 +111,9 @@ uint32_t halInternalGetHeapBottom(void);
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 /** @name Vector Table Index Definitions
- * These are numerical definitions for vector table. Indices 0 through 15 are
- * Cortex-M3 standard exception vectors and indices 16 through 35 are EM3XX
- * specific interrupt vectors.
- *
+ * These are numerical definitions for vector table. Only Cortex-M standard
+ * exception vectors (indices 0 through 15) are represented since device
+ * specific vectors can be (and often are) different across dies.
  *@{
  */
 
@@ -146,45 +136,23 @@ uint32_t halInternalGetHeapBottom(void);
 #define RESERVED13_VECTOR_INDEX     13
 #define PENDSV_VECTOR_INDEX         14
 #define SYSTICK_VECTOR_INDEX        15
-#define EMU_VECTOR_INDEX            16
-#define FRC_PRI_VECTOR_INDEX        17
-#define FRC_VECTOR_INDEX            18
-#define MODEM_VECTOR_INDEX          19
-#define RAC_SEQ_VECTOR_INDEX        20
-#define RAC_RSM_VECTOR_INDEX        21
-#define BUFC_VECTOR_INDEX           22
-#define LDMA_VECTOR_INDEX           23
-#define GPIO_EVEN_VECTOR_INDEX      24
-#define TIMER0_VECTOR_INDEX         25
-#define USART0_RX_VECTOR_INDEX      26
-#define USART0_TX_VECTOR_INDEX      27
-#define ACMP0_VECTOR_INDEX          28
-#define ADC0_VECTOR_INDEX           29
-#define IDAC0_VECTOR_INDEX          30
-#define I2C0_VECTOR_INDEX           31
-#define GPIO_ODD_VECTOR_INDEX       32
-#define TIMER1_VECTOR_INDEX         33
-#define USART1_RX_VECTOR_INDEX      34
-#define USART1_TX_VECTOR_INDEX      35
-#define LEUART0_VECTOR_INDEX        36
-#define PCNT0_VECTOR_INDEX          37
-#define CMU_VECTOR_INDEX            38
-#define MSC_VECTOR_INDEX            39
-#define CRYPTO_VECTOR_INDEX         40
-#define LETIMER0_VECTOR_INDEX       41
-#define AGC_VECTOR_INDEX            42
-#define PROTIMER_VECTOR_INDEX       43
-#define RTCC_VECTOR_INDEX           44
-#define SYNTH_VECTOR_INDEX          45
-#define CRYOTIMER_VECTOR_INDEX      46
-#define RFSENSE_VECTOR_INDEX        47
-#define FPUEH_VECTOR_INDEX          48
-#define WDOG_VECTOR_INDEX           49
+
+/**
+ * @brief Utility macro to convert from IRQ numbers to exception numbers/
+ * vector indices.
+ *
+ * These are different because the latter include the Cortex-M standard
+ * exceptions while the former do not.
+ */
+#define IRQ_TO_VECTOR_NUMBER(x)     (x + 16)
 
 /**
  * @brief Number of vectors.
+ *
+ * EXT_IRQ_COUNT is defined in the device header but does not include the
+ * Cortex-M standard exceptions.
  */
-#define VECTOR_TABLE_LENGTH         49
+#define VECTOR_TABLE_LENGTH         (IRQ_TO_VECTOR_NUMBER(EXT_IRQ_COUNT))
 
 /** @}  Vector Table Index Definitions */
 
@@ -210,6 +178,10 @@ uint16_t halGetExtendedResetInfo(void);
  * @return A pointer to a program space string.
  */
 PGM_P halGetExtendedResetString(void);
+
+
+
+
 
 
 
@@ -276,7 +248,7 @@ bool halGetRadioHoldOff(void);
  * only to the pins identified in the global variable gpioRadioPowerBoardMask.
  * The stack will automatically call this function as needed, but it
  * will only change GPIO state based on gpioRadioPowerBoardMask.  Most
- * commonly, the bits set in gpioRadioPowerBoardMask petain to using a
+ * commonly, the bits set in gpioRadioPowerBoardMask pertain to using a
  * Front End Module.  This function is often called from interrupt context.
  */
 void halStackRadioPowerDownBoard(void);
@@ -288,7 +260,7 @@ void halStackRadioPowerDownBoard(void);
  * only to the pins identified in the global variable gpioRadioPowerBoardMask.
  * The stack will automatically call this function as needed, but it
  * will only change GPIO state based on gpioRadioPowerBoardMask.  Most
- * commonly, the bits set in gpioRadioPowerBoardMask petain to using a
+ * commonly, the bits set in gpioRadioPowerBoardMask pertain to using a
  * Front End Module.  This function is often called from interrupt context.
  */
 void halStackRadio2PowerDownBoard(void);
@@ -300,7 +272,7 @@ void halStackRadio2PowerDownBoard(void);
  * only to the pins identified in the global variable gpioRadioPowerBoardMask.
  * The stack will automatically call this function as needed, but it
  * will only change GPIO state based on gpioRadioPowerBoardMask.  Most
- * commonly, the bits set in gpioRadioPowerBoardMask petain to using a
+ * commonly, the bits set in gpioRadioPowerBoardMask pertain to using a
  * Front End Module.  This function can be called from interrupt context.
  */
 void halStackRadioPowerUpBoard(void);
@@ -312,7 +284,7 @@ void halStackRadioPowerUpBoard(void);
  * only to the pins identified in the global variable gpioRadioPowerBoardMask.
  * The stack will automatically call this function as needed, but it
  * will only change GPIO state based on gpioRadioPowerBoardMask.  Most
- * commonly, the bits set in gpioRadioPowerBoardMask petain to using a
+ * commonly, the bits set in gpioRadioPowerBoardMask pertain to using a
  * Front End Module.  This function can be called from interrupt context.
  */
 void halStackRadio2PowerUpBoard(void);

@@ -2,7 +2,7 @@
  * @file btl_image_parser.c
  * @brief Image parser for Silicon Labs bootloader
  * @author Silicon Labs
- * @version 1.1.0
+ * @version 1.4.0
  *******************************************************************************
  * @section License
  * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
@@ -30,16 +30,6 @@ bool parser_requireAuthenticity(void)
 bool parser_requireConfidentiality(void)
 {
 #if defined(BOOTLOADER_ENFORCE_ENCRYPTED_UPGRADE)
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool parser_allowLegacyFormat(void)
-{
-  // Default to backwards compatibility not allowed
-#if defined(BTL_EBL_PARSER_ALLOW_V2)
   return true;
 #else
   return false;

@@ -10,7 +10,7 @@
 *
 * File    : OS_TMR.C
 * By      : JJL
-* Version : V3.06.00
+* Version : V3.06.01
 *
 * LICENSING TERMS:
 * ---------------
@@ -27,7 +27,7 @@
 *           Your honesty is greatly appreciated.
 *
 *           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
+*           more information at doc.micrium.com.
 *           You can contact us at www.micrium.com.
 ************************************************************************************************************************
 */
@@ -112,7 +112,7 @@ void  OSTmrCreate (OS_TMR               *p_tmr,
                    OS_ERR               *p_err)
 {
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -133,7 +133,7 @@ void  OSTmrCreate (OS_TMR               *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {                                    /* Validate 'p_tmr'                                     */
+    if (p_tmr == (OS_TMR *)0) {                                 /* Validate 'p_tmr'                                     */
        *p_err = OS_ERR_OBJ_PTR_NULL;
         return;
     }
@@ -145,7 +145,7 @@ void  OSTmrCreate (OS_TMR               *p_tmr,
                  return;
              }
 
-             if (p_callback == DEF_NULL) {                      /* No point in a periodic timer without a callback      */
+             if (p_callback == (OS_TMR_CALLBACK_PTR)0) {        /* No point in a periodic timer without a callback      */
                 *p_err = OS_ERR_TMR_INVALID_CALLBACK;
                  return;
              }
@@ -177,14 +177,14 @@ void  OSTmrCreate (OS_TMR               *p_tmr,
 #else
     (void)p_name;
 #endif
-    p_tmr->Dly            = dly;
-    p_tmr->Remain         = 0u;
-    p_tmr->Period         = period;
-    p_tmr->Opt            = opt;
-    p_tmr->CallbackPtr    = p_callback;
-    p_tmr->CallbackPtrArg = p_callback_arg;
-    p_tmr->NextPtr        = DEF_NULL;
-    p_tmr->PrevPtr        = DEF_NULL;
+    p_tmr->Dly            =  dly;
+    p_tmr->Remain         =           0u;
+    p_tmr->Period         =  period;
+    p_tmr->Opt            =  opt;
+    p_tmr->CallbackPtr    =  p_callback;
+    p_tmr->CallbackPtrArg =  p_callback_arg;
+    p_tmr->NextPtr        = (OS_TMR *)0;
+    p_tmr->PrevPtr        = (OS_TMR *)0;
 
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     OS_TmrDbgListAdd(p_tmr);
@@ -237,7 +237,7 @@ CPU_BOOLEAN  OSTmrDel (OS_TMR  *p_tmr,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (DEF_FALSE);
     }
@@ -265,7 +265,7 @@ CPU_BOOLEAN  OSTmrDel (OS_TMR  *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {
+    if (p_tmr == (OS_TMR *)0) {
        *p_err = OS_ERR_TMR_INVALID;
         return (DEF_FALSE);
     }
@@ -356,7 +356,7 @@ OS_TICK  OSTmrRemainGet (OS_TMR  *p_tmr,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (0u);
     }
@@ -377,7 +377,7 @@ OS_TICK  OSTmrRemainGet (OS_TMR  *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {
+    if (p_tmr == (OS_TMR *)0) {
        *p_err = OS_ERR_TMR_INVALID;
         return (0u);
     }
@@ -484,7 +484,7 @@ void  OSTmrSet (OS_TMR               *p_tmr,
                 OS_ERR               *p_err)
 {
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return;
     }
@@ -505,7 +505,7 @@ void  OSTmrSet (OS_TMR               *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {                                    /* Validate 'p_tmr'                                     */
+    if (p_tmr == (OS_TMR *)0) {                                 /* Validate 'p_tmr'                                     */
        *p_err = OS_ERR_TMR_INVALID;
         return;
     }
@@ -526,7 +526,7 @@ void  OSTmrSet (OS_TMR               *p_tmr,
                  return;
              }
 
-             if (p_callback == DEF_NULL) {                      /* No point in a periodic timer without a callback      */
+             if (p_callback == (OS_TMR_CALLBACK_PTR)0) {        /* No point in a periodic timer without a callback      */
                 *p_err = OS_ERR_TMR_INVALID_CALLBACK;
                  return;
              }
@@ -596,7 +596,7 @@ CPU_BOOLEAN  OSTmrStart (OS_TMR  *p_tmr,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (DEF_FALSE);
     }
@@ -617,7 +617,7 @@ CPU_BOOLEAN  OSTmrStart (OS_TMR  *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {
+    if (p_tmr == (OS_TMR *)0) {
        *p_err = OS_ERR_TMR_INVALID;
         return (DEF_FALSE);
     }
@@ -651,19 +651,19 @@ CPU_BOOLEAN  OSTmrStart (OS_TMR  *p_tmr,
              } else {
                  p_tmr->Remain = p_tmr->Dly;
              }
-             if (OSTmrListPtr ==  DEF_NULL) {                   /* Link into timer list                                 */
-                 p_tmr->NextPtr   = DEF_NULL;                   /* This is the first timer in the list                  */
-                 p_tmr->PrevPtr   = DEF_NULL;
-                 OSTmrListPtr     = p_tmr;
+             if (OSTmrListPtr == (OS_TMR *)0) {                 /* Link into timer list                                 */
+                 p_tmr->NextPtr   = (OS_TMR *)0;                /* This is the first timer in the list                  */
+                 p_tmr->PrevPtr   = (OS_TMR *)0;
+                 OSTmrListPtr     =  p_tmr;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-                 OSTmrListEntries = 1u;
+                 OSTmrListEntries =           1u;
 #endif
              } else {
-                 p_next           = OSTmrListPtr;               /* Insert at the beginning of the list                  */
-                 p_tmr->NextPtr   = OSTmrListPtr;
-                 p_tmr->PrevPtr   = DEF_NULL;
-                 p_next->PrevPtr  = p_tmr;
-                 OSTmrListPtr     = p_tmr;
+                 p_next           =  OSTmrListPtr;              /* Insert at the beginning of the list                  */
+                 p_tmr->NextPtr   =  OSTmrListPtr;
+                 p_tmr->PrevPtr   = (OS_TMR *)0;
+                 p_next->PrevPtr  =  p_tmr;
+                 OSTmrListPtr     =  p_tmr;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                  OSTmrListEntries++;
 #endif
@@ -725,7 +725,7 @@ OS_STATE  OSTmrStateGet (OS_TMR  *p_tmr,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (OS_TMR_STATE_UNUSED);
     }
@@ -746,7 +746,7 @@ OS_STATE  OSTmrStateGet (OS_TMR  *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {
+    if (p_tmr == (OS_TMR *)0) {
        *p_err = OS_ERR_TMR_INVALID;
         return (OS_TMR_STATE_UNUSED);
     }
@@ -832,7 +832,7 @@ CPU_BOOLEAN  OSTmrStop (OS_TMR  *p_tmr,
 
 
 #ifdef OS_SAFETY_CRITICAL
-    if (p_err == DEF_NULL) {
+    if (p_err == (OS_ERR *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
         return (DEF_FALSE);
     }
@@ -853,7 +853,7 @@ CPU_BOOLEAN  OSTmrStop (OS_TMR  *p_tmr,
 #endif
 
 #if (OS_CFG_ARG_CHK_EN == DEF_ENABLED)
-    if (p_tmr == DEF_NULL) {
+    if (p_tmr == (OS_TMR *)0) {
        *p_err = OS_ERR_TMR_INVALID;
         return (DEF_FALSE);
     }
@@ -875,8 +875,8 @@ CPU_BOOLEAN  OSTmrStop (OS_TMR  *p_tmr,
                  case OS_OPT_TMR_CALLBACK:
                       OS_TmrUnlink(p_tmr);                      /* Remove from timer list                               */
                       p_fnct = p_tmr->CallbackPtr;              /* Execute callback function ...                        */
-                      if (p_fnct != DEF_NULL) {                 /* ... if available                                     */
-                        (*p_fnct)(p_tmr, p_tmr->CallbackPtrArg);/* Use callback arg when timer was created     */
+                      if (p_fnct != (OS_TMR_CALLBACK_PTR)0) {   /* ... if available                                     */
+                        (*p_fnct)(p_tmr, p_tmr->CallbackPtrArg);/* Use callback arg when timer was created              */
                       } else {
                          *p_err = OS_ERR_TMR_NO_CALLBACK;
                       }
@@ -885,7 +885,7 @@ CPU_BOOLEAN  OSTmrStop (OS_TMR  *p_tmr,
                  case OS_OPT_TMR_CALLBACK_ARG:
                       OS_TmrUnlink(p_tmr);                      /* Remove from timer list                               */
                       p_fnct = p_tmr->CallbackPtr;              /* Execute callback function if available ...           */
-                      if (p_fnct != DEF_NULL) {
+                      if (p_fnct != (OS_TMR_CALLBACK_PTR)0) {
                         (*p_fnct)(p_tmr, p_callback_arg);       /* .. using the 'callback_arg' provided in call       */
                       } else {
                          *p_err = OS_ERR_TMR_NO_CALLBACK;
@@ -951,14 +951,14 @@ void  OS_TmrClr (OS_TMR  *p_tmr)
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     p_tmr->NamePtr        = (CPU_CHAR *)((void *)"?TMR");
 #endif
-    p_tmr->Dly            = 0u;
-    p_tmr->Remain         = 0u;
-    p_tmr->Period         = 0u;
-    p_tmr->Opt            = 0u;
-    p_tmr->CallbackPtr    = DEF_NULL;
-    p_tmr->CallbackPtrArg = DEF_NULL;
-    p_tmr->NextPtr        = DEF_NULL;
-    p_tmr->PrevPtr        = DEF_NULL;
+    p_tmr->Dly            =                      0u;
+    p_tmr->Remain         =                      0u;
+    p_tmr->Period         =                      0u;
+    p_tmr->Opt            =                      0u;
+    p_tmr->CallbackPtr    = (OS_TMR_CALLBACK_PTR)0;
+    p_tmr->CallbackPtrArg = (void              *)0;
+    p_tmr->NextPtr        = (OS_TMR            *)0;
+    p_tmr->PrevPtr        = (OS_TMR            *)0;
 }
 
 
@@ -980,9 +980,9 @@ void  OS_TmrClr (OS_TMR  *p_tmr)
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
 void  OS_TmrDbgListAdd (OS_TMR  *p_tmr)
 {
-    p_tmr->DbgPrevPtr               = DEF_NULL;
-    if (OSTmrDbgListPtr == DEF_NULL) {
-        p_tmr->DbgNextPtr           = DEF_NULL;
+    p_tmr->DbgPrevPtr               = (OS_TMR *)0;
+    if (OSTmrDbgListPtr == (OS_TMR *)0) {
+        p_tmr->DbgNextPtr           = (OS_TMR *)0;
     } else {
         p_tmr->DbgNextPtr           =  OSTmrDbgListPtr;
         OSTmrDbgListPtr->DbgPrevPtr =  p_tmr;
@@ -1001,22 +1001,22 @@ void  OS_TmrDbgListRemove (OS_TMR  *p_tmr)
     p_tmr_prev = p_tmr->DbgPrevPtr;
     p_tmr_next = p_tmr->DbgNextPtr;
 
-    if (p_tmr_prev == DEF_NULL) {
-        OSTmrDbgListPtr = p_tmr_next;
-        if (p_tmr_next != DEF_NULL) {
-            p_tmr_next->DbgPrevPtr = DEF_NULL;
+    if (p_tmr_prev == (OS_TMR *)0) {
+        OSTmrDbgListPtr   = p_tmr_next;
+        if (p_tmr_next != (OS_TMR *)0) {
+            p_tmr_next->DbgPrevPtr = (OS_TMR *)0;
         }
-        p_tmr->DbgNextPtr = DEF_NULL;
+        p_tmr->DbgNextPtr = (OS_TMR *)0;
 
-    } else if (p_tmr_next == DEF_NULL) {
-        p_tmr_prev->DbgNextPtr = DEF_NULL;
-        p_tmr->DbgPrevPtr      = DEF_NULL;
+    } else if (p_tmr_next == (OS_TMR *)0) {
+        p_tmr_prev->DbgNextPtr = (OS_TMR *)0;
+        p_tmr->DbgPrevPtr      = (OS_TMR *)0;
 
     } else {
-        p_tmr_prev->DbgNextPtr = p_tmr_next;
-        p_tmr_next->DbgPrevPtr = p_tmr_prev;
-        p_tmr->DbgNextPtr      = DEF_NULL;
-        p_tmr->DbgPrevPtr      = DEF_NULL;
+        p_tmr_prev->DbgNextPtr =  p_tmr_next;
+        p_tmr_next->DbgPrevPtr =  p_tmr_prev;
+        p_tmr->DbgNextPtr      = (OS_TMR *)0;
+        p_tmr->DbgPrevPtr      = (OS_TMR *)0;
     }
 }
 #endif
@@ -1045,12 +1045,12 @@ void  OS_TmrDbgListRemove (OS_TMR  *p_tmr)
 void  OS_TmrInit (OS_ERR  *p_err)
 {
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSTmrDbgListPtr = DEF_NULL;
+    OSTmrDbgListPtr     = (OS_TMR *)0;
 #endif
 
-    OSTmrListPtr        = DEF_NULL;                             /* Create an empty timer list                           */
+    OSTmrListPtr        = (OS_TMR *)0;                          /* Create an empty timer list                           */
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
-    OSTmrListEntries    = 0u;
+    OSTmrListEntries    =           0u;
 #endif
 
     if (OSCfg_TmrTaskRate_Hz > 0u) {
@@ -1068,7 +1068,11 @@ void  OS_TmrInit (OS_ERR  *p_err)
 
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)
     OSMutexCreate(&OSTmrMutex,                                  /* Use a mutex to protect the timers                    */
+#if  (OS_CFG_DBG_EN == DEF_DISABLED)
+                  (CPU_CHAR *)0,
+#else
                   (CPU_CHAR *)"OS Tmr Mutex",
+#endif
                   p_err);
     if (*p_err != OS_ERR_NONE) {
         return;
@@ -1076,7 +1080,7 @@ void  OS_TmrInit (OS_ERR  *p_err)
 #endif
 
                                                                 /* -------------- CREATE THE TIMER TASK --------------- */
-    if (OSCfg_TmrTaskStkBasePtr == DEF_NULL) {
+    if (OSCfg_TmrTaskStkBasePtr == (CPU_STK *)0) {
        *p_err = OS_ERR_TMR_STK_INVALID;
         return;
     }
@@ -1092,18 +1096,22 @@ void  OS_TmrInit (OS_ERR  *p_err)
     }
 
     OSTaskCreate(&OSTmrTaskTCB,
+#if  (OS_CFG_DBG_EN == DEF_DISABLED)
+                 (CPU_CHAR   *)0,
+#else
                  (CPU_CHAR   *)"uC/OS-III Timer Task",
-                 OS_TmrTask,
-                 DEF_NULL,
-                 OSCfg_TmrTaskPrio,
-                 OSCfg_TmrTaskStkBasePtr,
-                 OSCfg_TmrTaskStkLimit,
-                 OSCfg_TmrTaskStkSize,
-                 0u,
-                 0u,
-                 DEF_NULL,
-                 (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS),
-                 p_err);
+#endif
+                  OS_TmrTask,
+                 (void       *)0,
+                  OSCfg_TmrTaskPrio,
+                  OSCfg_TmrTaskStkBasePtr,
+                  OSCfg_TmrTaskStkLimit,
+                  OSCfg_TmrTaskStkSize,
+                  0u,
+                  0u,
+                 (void       *)0,
+                 (OS_OPT_TASK_STK_CHK | (OS_OPT)(OS_OPT_TASK_STK_CLR | OS_OPT_TASK_NO_TLS)),
+                  p_err);
 }
 
 
@@ -1131,20 +1139,20 @@ void  OS_TmrUnlink (OS_TMR  *p_tmr)
     if (OSTmrListPtr == p_tmr) {                                /* See if timer to remove is at the beginning of list   */
         p_tmr1       = p_tmr->NextPtr;
         OSTmrListPtr = p_tmr1;
-        if (p_tmr1 != DEF_NULL) {
-            p_tmr1->PrevPtr = DEF_NULL;
+        if (p_tmr1 != (OS_TMR *)0) {
+            p_tmr1->PrevPtr = (OS_TMR *)0;
         }
     } else {
         p_tmr1          = p_tmr->PrevPtr;                       /* Remove timer from somewhere in the list              */
         p_tmr2          = p_tmr->NextPtr;
         p_tmr1->NextPtr = p_tmr2;
-        if (p_tmr2 != DEF_NULL) {
+        if (p_tmr2 != (OS_TMR *)0) {
             p_tmr2->PrevPtr = p_tmr1;
         }
     }
     p_tmr->State   = OS_TMR_STATE_STOPPED;
-    p_tmr->NextPtr = DEF_NULL;
-    p_tmr->PrevPtr = DEF_NULL;
+    p_tmr->NextPtr = (OS_TMR *)0;
+    p_tmr->PrevPtr = (OS_TMR *)0;
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
     OSTmrListEntries--;
 #endif
@@ -1182,6 +1190,9 @@ void  OS_TmrTask (void  *p_arg)
 
 
     (void)p_arg;                                                /* Not using 'p_arg', prevent compiler warning          */
+
+    err = OS_ERR_NONE;                                          /* Initialize err explicitly for static analysis.       */
+
     for (;;) {
 #if (OS_CFG_DYN_TICK_EN != DEF_ENABLED)
         (void)OSTaskSemPend( 0u,                                /* Wait for signal indicating time to update tmrs       */
@@ -1201,7 +1212,7 @@ void  OS_TmrTask (void  *p_arg)
 #endif
         OSTmrTickCtr++;                                         /* Increment the current time                           */
         p_tmr    = OSTmrListPtr;
-        while (p_tmr != DEF_NULL) {                             /* Update all the timers in the list                    */
+        while (p_tmr != (OS_TMR *)0) {                          /* Update all the timers in the list                    */
             OSSchedLock(&err);
             (void)err;
             p_tmr_next = p_tmr->NextPtr;
@@ -1256,17 +1267,19 @@ static  void  OS_TmrLock (void)
     OS_ERR  err;
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)
     CPU_TS  ts;
+#endif
 
+    err = OS_ERR_NONE;                                          /* Initialize err explicitly for static analysis.       */
 
+#if (OS_CFG_MUTEX_EN == DEF_ENABLED)
     OSMutexPend(&OSTmrMutex,                                    /* Use a mutex to protect the timers                    */
-                0u,
-                OS_OPT_PEND_BLOCKING,
+                 0u,
+                 OS_OPT_PEND_BLOCKING,
                 &ts,
                 &err);
 #else
     OSSchedLock(&err);                                          /* Lock the scheduler to protect the timers             */
 #endif
-    (void)err;
 }
 
 
@@ -1277,6 +1290,8 @@ static  void  OS_TmrUnlock (void)
     OS_ERR  err;
 
 
+    err = OS_ERR_NONE;                                          /* Initialize err explicitly for static analysis.       */
+
 #if (OS_CFG_MUTEX_EN == DEF_ENABLED)
     OSMutexPost(&OSTmrMutex,                                    /* Use a mutex to protect the timers                    */
                  OS_OPT_POST_NONE,
@@ -1284,7 +1299,6 @@ static  void  OS_TmrUnlock (void)
 #else
     OSSchedUnlock(&err);                                        /* Lock the scheduler to protect the timers             */
 #endif
-    (void)err;
 }
 
 #endif
