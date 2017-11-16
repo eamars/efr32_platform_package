@@ -15,4 +15,6 @@ ADD_LIBRARY (${LIB_NAME} ${SRC} ${EXT_SRC})
 
 # add dependency and build order
 #ADD_DEPENDENCIES(${LIB_NAME} emlib rail)
-#TARGET_LINK_LIBRARIES(${LIB_NAME} emlib rail)
+TARGET_LINK_LIBRARIES(${LIB_NAME}
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/autogen/librail_release/librail_efr32xg12_gcc_release.a
+		)
