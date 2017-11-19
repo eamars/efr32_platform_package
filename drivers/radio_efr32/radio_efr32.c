@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
-#include <drivers/radio_template/radio_template.h>
 
 #include "radio_efr32.h"
 #include "drv_debug.h"
@@ -43,8 +42,63 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 
     if (events & RAIL_EVENT_RX_PACKET_RECEIVED)
     {
+        RAIL_RxPacketInfo_t packet_info;
+        RAIL_RxPacketDetails_t packet_details;
+        RAIL_RxPacketHandle_t packet_handle;
 
+        // get packet handle
+        packet_handle = RAIL_GetRxPacketInfo(rail_handle, RAIL_RX_PACKET_HANDLE_NEWEST, &packet_info);
+
+        // get packet details
+        RAIL_GetRxPacketDetails(rail_handle, packet_handle, &packet_details);
+
+        if (packet_info.packetStatus != RAIL_RX_PACKET_READY_SUCCESS && packet_info.packetStatus != RAIL_RX_PACKET_READY_CRC_ERROR)
+        {
+            // some non crc error case
+            DRV_ASSERT(false);
+            return;
+        }
+
+        // send data to callback function
+        if (radio_efr32_singleton_instance.base.on_tx_done_cb.callback)
+        {
+            ((on_rx_done_handler_t) radio_efr32_singleton_instance.base.on_rx_done_cb.callback)(
+                    radio_efr32_singleton_instance.base.on_rx_done_cb.args,
+                    packet_info.firstPortionData,
+                    packet_info.packetBytes,
+                    packet_details.rssi,
+                    packet_details.lqi
+            );
+        }
     }
+}
+
+static void radio_efr32_set_opmode_idle_pri(radio_efr32_t * obj)
+{
+    obj->base.opmode = RADIO_OPMODE_IDLE;
+
+    RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+}
+
+static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
+{
+    obj->base.opmode = RADIO_OPMODE_SLEEP;
+
+    RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+}
+
+static void radio_efr32_set_opmode_tx_pri(radio_efr32_t * obj)
+{
+    obj->base.opmode = RADIO_OPMODE_TX;
+
+    RAIL_StartTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, NULL);
+}
+
+static void radio_efr32_set_opmode_rx_pri(radio_efr32_t * obj)
+{
+    obj->base.opmode = RADIO_OPMODE_RX;
+
+    RAIL_StartRx(obj->rail_handle, obj->channel, NULL);
 }
 
 radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], bool use_dcdc)
@@ -128,12 +182,56 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
 
         RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
         RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
-
-        // set radio to idle state
-        RAIL_Idle(radio_efr32_singleton_instance.rail_handle, RAIL_IDLE, true);
     }
+
+    // configure default callbacks
+    radio_set_opmode_handler(
+            &radio_efr32_singleton_instance.base,
+            RADIO_OPMODE_IDLE,
+            (radio_opmode_transition_t) radio_efr32_set_opmode_idle_pri,
+            &radio_efr32_singleton_instance
+    );
+
+    radio_set_opmode_handler(
+            &radio_efr32_singleton_instance.base,
+            RADIO_OPMODE_SLEEP,
+            (radio_opmode_transition_t) radio_efr32_set_opmode_idle_pri,
+            &radio_efr32_singleton_instance
+    );
+
+    radio_set_opmode_handler(
+            &radio_efr32_singleton_instance.base,
+            RADIO_OPMODE_TX,
+            (radio_opmode_transition_t) radio_efr32_set_opmode_tx_pri,
+            &radio_efr32_singleton_instance
+    );
+
+    radio_set_opmode_handler(
+            &radio_efr32_singleton_instance.base,
+            RADIO_OPMODE_RX,
+            (radio_opmode_transition_t) radio_efr32_set_opmode_rx_pri,
+            &radio_efr32_singleton_instance
+    );
+
+    // set default channel
+    radio_efr32_set_channel(&radio_efr32_singleton_instance, 0);
+
+    // set default rx state
+    radio_efr32_set_opmode_idle_pri(&radio_efr32_singleton_instance);
 
     return &radio_efr32_singleton_instance;
 }
 
+void radio_efr32_set_channel(radio_efr32_t * obj, uint8_t channel)
+{
+    obj->channel = channel;
+}
 
+void radio_efr32_send(radio_efr32_t * obj, void * buffer, uint8_t size)
+{
+    // write buffer
+    RAIL_SetTxFifo(obj->rail_handle, buffer, size, size);
+
+    // set to tx state
+    radio_efr32_set_opmode_tx_pri(obj);
+}

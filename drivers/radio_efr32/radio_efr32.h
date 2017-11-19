@@ -23,8 +23,14 @@ typedef struct
     RAIL_Handle_t rail_handle;
 
     uint8_t buffer[RADIO_EFR32_MAX_BUF_LEN];
+
+    uint8_t channel;
 } radio_efr32_t;
 
 radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], bool use_dcdc);
+
+void radio_efr32_set_channel(radio_efr32_t * obj, uint8_t channel);
+
+void radio_efr32_send(radio_efr32_t * obj, void * buffer, uint8_t size);
 
 #endif
