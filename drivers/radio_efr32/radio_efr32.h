@@ -14,7 +14,8 @@
 #include "radio_template.h"
 #include "rail.h"
 
-#define RADIO_EFR32_MAX_BUF_LEN 0xff
+#define RADIO_EFR32_MAX_BUF_LEN 512
+#define RADIO_EFR32_FIFO_THRESHOLD 128
 
 typedef struct
 {
@@ -22,7 +23,7 @@ typedef struct
 
     RAIL_Handle_t rail_handle;
 
-    uint8_t buffer[RADIO_EFR32_MAX_BUF_LEN];
+    uint8_t tx_buffer[RADIO_EFR32_MAX_BUF_LEN];
 
     uint8_t channel;
 } radio_efr32_t;
