@@ -15,9 +15,9 @@
 
 #define PA_RAMP                                   (10)
 #define PA_2P4_LOWPOWER                           (0)
-#define PA_DEFAULT_POWER                                  (252)
-#define PA_DCDC_VOLTAGE                                (1800)
-#define PA_VBAT_VOLTAGE                                (1800)
+#define PA_DEFAULT_POWER                          (252)
+#define PA_DCDC_VOLTAGE                           (1800)
+#define PA_VBAT_VOLTAGE                           (1800)
 
 static radio_efr32_t radio_efr32_singleton_instance;
 static bool radio_efr32_initialized = false;
@@ -176,8 +176,8 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
 
         // set default transition state
         RAIL_StateTransitions_t transitions = {
-                .success = RAIL_RF_STATE_RX,
-                .error = RAIL_RF_STATE_RX
+                .success = RAIL_RF_STATE_IDLE,
+                .error = RAIL_RF_STATE_IDLE
         };
 
         RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
@@ -216,7 +216,7 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     // set default channel
     radio_efr32_set_channel(&radio_efr32_singleton_instance, 0);
 
-    // set default rx state
+    // set default idle state
     radio_efr32_set_opmode_idle_pri(&radio_efr32_singleton_instance);
 
     return &radio_efr32_singleton_instance;
