@@ -14,6 +14,12 @@
 #include "radio_template.h"
 #include "rail.h"
 
+#if USE_FREERTOS == 1
+#include "FreeRTOS.h"
+#include "timers.h"
+#endif
+
+
 #define RADIO_EFR32_MAX_BUF_LEN 512
 #define RADIO_EFR32_FIFO_THRESHOLD 128
 
@@ -30,6 +36,12 @@ typedef struct
     uint8_t tx_buffer[RADIO_EFR32_MAX_BUF_LEN];
 
     uint8_t channel;
+
+#if USE_FREERTOS == 1
+    xTimerHandle rx_timeout_timer;
+    xTimerHandle tx_timeout_timer;
+#endif
+
 } radio_efr32_t;
 
 radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], bool use_dcdc);

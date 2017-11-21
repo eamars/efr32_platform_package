@@ -9,10 +9,11 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "em_core.h"
+#include "radio_template.h"
 #include "radio_efr32.h"
 #include "drv_debug.h"
 #include "pa_conversions_efr32.h"
+#include "irq.h"
 
 #define PA_RAMP                                   (10)
 #define PA_2P4_LOWPOWER                           (0)
@@ -85,30 +86,138 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 
 static void radio_efr32_set_opmode_idle_pri(radio_efr32_t * obj)
 {
-    obj->base.opmode = RADIO_OPMODE_IDLE;
+    if (obj->base.opmode != RADIO_OPMODE_IDLE)
+    {
+#if USE_FREERTOS == 1
+        // stop all timers before entering idle state
+        if (__IS_INTERRUPT())
+        {
+            xTimerStopFromISR(obj->rx_timeout_timer, NULL);
+            xTimerStopFromISR(obj->tx_timeout_timer, NULL);
+        }
+        else
+        {
+            xTimerStop(obj->rx_timeout_timer, portMAX_DELAY);
+            xTimerStop(obj->tx_timeout_timer, portMAX_DELAY);
+        }
+#endif
 
-    RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+        RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+
+        obj->base.opmode = RADIO_OPMODE_IDLE;
+    }
 }
 
 static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
 {
-    obj->base.opmode = RADIO_OPMODE_SLEEP;
+    if (obj->base.opmode != RADIO_OPMODE_SLEEP)
+    {
+#if USE_FREERTOS == 1
+        // stop all timers before entering sleep state
+        if (__IS_INTERRUPT())
+        {
+            xTimerStopFromISR(obj->rx_timeout_timer, NULL);
+            xTimerStopFromISR(obj->tx_timeout_timer, NULL);
+        }
+        else
+        {
+            xTimerStop(obj->rx_timeout_timer, portMAX_DELAY);
+            xTimerStop(obj->tx_timeout_timer, portMAX_DELAY);
+        }
+#endif
 
-    RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+        RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+
+        obj->base.opmode = RADIO_OPMODE_SLEEP;
+    }
+
 }
 
 static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
-    obj->base.opmode = RADIO_OPMODE_TX;
+    if (obj->base.opmode != RADIO_OPMODE_TX)
+    {
+        // call RAIL API to enter Tx mode
+        DRV_ASSERT(RAIL_StartTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, NULL) == RAIL_STATUS_NO_ERROR);
 
-    DRV_ASSERT(RAIL_StartTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, NULL) == RAIL_STATUS_NO_ERROR);
+#if USE_FREERTOS == 1
+        if (timeout_ms != 0)
+        {
+            if (__IS_INTERRUPT())
+            {
+                xTimerChangePeriodFromISR(obj->tx_timeout_timer, pdMS_TO_TICKS(timeout_ms), NULL);
+                xTimerStartFromISR(obj->tx_timeout_timer, NULL);
+            }
+            else
+            {
+                xTimerChangePeriod(obj->tx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+                xTimerStart(obj->tx_timeout_timer, portMAX_DELAY);
+            }
+        }
+#endif
+
+        obj->base.opmode = RADIO_OPMODE_TX;
+    }
 }
 
 static void radio_efr32_set_opmode_rx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
-    obj->base.opmode = RADIO_OPMODE_RX;
+    if (obj->base.opmode != RADIO_OPMODE_RX)
+    {
+        DRV_ASSERT(RAIL_StartRx(obj->rail_handle, obj->channel, NULL) == RAIL_STATUS_NO_ERROR);
 
-    DRV_ASSERT(RAIL_StartRx(obj->rail_handle, obj->channel, NULL) == RAIL_STATUS_NO_ERROR);
+#if USE_FREERTOS == 1
+        if (timeout_ms != 0)
+        {
+            if (__IS_INTERRUPT())
+            {
+                xTimerChangePeriodFromISR(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), NULL);
+                xTimerStartFromISR(obj->rx_timeout_timer, NULL);
+            }
+            else
+            {
+                xTimerChangePeriod(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+                xTimerStart(obj->rx_timeout_timer, portMAX_DELAY);
+            }
+        }
+#endif
+
+        obj->base.opmode = RADIO_OPMODE_RX;
+    }
+
+}
+
+static void radio_efr32_on_timer_timeout(TimerHandle_t xTimer)
+{
+    DRV_ASSERT(xTimer);
+
+    xTimerStop(xTimer, portMAX_DELAY);
+
+    radio_efr32_t * obj = (radio_efr32_t *) pvTimerGetTimerID(xTimer);
+
+    switch (obj->base.opmode)
+    {
+        case RADIO_OPMODE_RX:
+        {
+            if (obj->base.on_rx_timeout_cb.callback)
+                ((on_rx_timeout_handler_t) obj->base.on_rx_timeout_cb.callback)(obj->base.on_rx_timeout_cb.args);
+
+            break;
+        }
+
+        case RADIO_OPMODE_TX:
+        {
+            if (obj->base.on_tx_timeout_cb.callback)
+                ((on_rx_timeout_handler_t) obj->base.on_tx_timeout_cb.callback)(obj->base.on_tx_timeout_cb.args);
+
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+    }
 }
 
 radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], bool use_dcdc)
@@ -206,16 +315,34 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     radio_efr32_singleton_instance.base.radio_set_opmode_sleep_cb.callback = radio_efr32_set_opmode_sleep_pri;
     radio_efr32_singleton_instance.base.radio_set_opmode_sleep_cb.args = &radio_efr32_singleton_instance;
 
-    radio_efr32_singleton_instance.base.radio_set_opmode_rx_timeout_cb.callback = radio_efr32_set_opmode_idle_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_rx_timeout_cb.callback = radio_efr32_set_opmode_rx_timeout_pri;
     radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
 
-    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.callback = radio_efr32_set_opmode_idle_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.callback = radio_efr32_set_opmode_tx_timeout_pri;
     radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
-
 
     // register internal send callback function
     radio_efr32_singleton_instance.base.radio_send_cb.callback = radio_efr32_send_timeout;
     radio_efr32_singleton_instance.base.radio_send_cb.args = &radio_efr32_singleton_instance;
+
+#if USE_FREERTOS == 1
+    // initialize timer
+    radio_efr32_singleton_instance.rx_timeout_timer = xTimerCreate(
+            "efr_rx_t",
+            pdMS_TO_TICKS(1),
+            pdFALSE,
+            &radio_efr32_singleton_instance,
+            radio_efr32_on_timer_timeout
+    );
+
+    radio_efr32_singleton_instance.tx_timeout_timer = xTimerCreate(
+            "efr_tx_t",
+            pdMS_TO_TICKS(1),
+            pdFALSE,
+            &radio_efr32_singleton_instance,
+            radio_efr32_on_timer_timeout
+    );
+#endif
 
     return &radio_efr32_singleton_instance;
 }
