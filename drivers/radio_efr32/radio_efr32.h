@@ -21,7 +21,11 @@ typedef struct
 {
     radio_t base;
 
+    // low level RAIL handle
     RAIL_Handle_t rail_handle;
+
+    // NOTE: the config need to be static since RAIL will keep referencing this value
+    RAIL_Config_t rail_cfg;
 
     uint8_t tx_buffer[RADIO_EFR32_MAX_BUF_LEN];
 

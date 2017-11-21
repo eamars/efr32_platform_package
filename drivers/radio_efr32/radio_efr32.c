@@ -81,8 +81,6 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
             );
         }
     }
-    else
-        DRV_ASSERT(false);
 }
 
 static void radio_efr32_set_opmode_idle_pri(radio_efr32_t * obj)
@@ -129,12 +127,10 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     memset(&radio_efr32_singleton_instance, 0x0, sizeof(radio_efr32_t));
 
     // initialize RAIL
-    RAIL_Config_t rail_cfg = {
-            .eventsCallback = radio_efr32_rail_interrupt_handler_pri,
-    };
+    radio_efr32_singleton_instance.rail_cfg.eventsCallback = radio_efr32_rail_interrupt_handler_pri;
 
     // get rail handler
-    radio_efr32_singleton_instance.rail_handle = RAIL_Init(&rail_cfg, NULL);
+    radio_efr32_singleton_instance.rail_handle = RAIL_Init(&radio_efr32_singleton_instance.rail_cfg, NULL);
     DRV_ASSERT(radio_efr32_singleton_instance.rail_handle);
 
     // configure available channels
