@@ -19,6 +19,7 @@ SET(ENABLED_DRIVERS
 		radio_efr32
 		lorawan
 		lora_phy
+		wg_mac
         imu_fxos
 		battery_monitor
 		# simgbpr
