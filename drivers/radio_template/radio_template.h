@@ -26,7 +26,13 @@ typedef void (*on_tx_done_handler_t)(void * obj);
 typedef void (*on_tx_timeout_handler_t)(void * obj);
 
 // prototype for radio mode transitions
-typedef void (*radio_opmode_transition_t)(void * obj);
+typedef void (*radio_set_opmode_idle_t)(void * obj);
+typedef void (*radio_set_opmode_sleep_t)(void * obj);
+typedef void (*radio_set_opmode_rx_timeout_t)(void * obj, uint32_t timeout_ms);
+typedef void (*radio_set_opmode_tx_timeout_t)(void * obj, uint32_t timeout_ms);
+
+// prototype for generic radio send function
+typedef void (*radio_send_timeout_t)(void * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
 
 // generic radio opmode states
 typedef enum
@@ -48,7 +54,13 @@ typedef struct
     radio_callback_t on_tx_timeout_cb;
 
     // define mode transition functions
-    radio_callback_t radio_opmode_transition_functions[4];
+    radio_callback_t radio_set_opmode_idle_cb;
+    radio_callback_t radio_set_opmode_sleep_cb;
+    radio_callback_t radio_set_opmode_tx_timeout_cb;
+    radio_callback_t radio_set_opmode_rx_timeout_cb;
+
+    // define generic send function
+    radio_callback_t radio_send_cb;
 
     // define generic radio opmode
     radio_opmode_t opmode;
@@ -59,20 +71,23 @@ typedef struct
 extern "C" {
 #endif
 
-void radio_set_rx_done_handler(radio_t * obj, on_rx_done_handler_t handler, void * args);
-void radio_set_rx_error_handler(radio_t * obj, on_rx_error_handler_t handler, void * args);
-void radio_set_rx_timeout_handler(radio_t * obj, on_rx_timeout_handler_t handler, void * args);
-void radio_set_tx_done_handler(radio_t * obj, on_tx_done_handler_t handler, void * args);
-void radio_set_tx_timeout_handler(radio_t * obj, on_tx_timeout_handler_t handler, void * args);
+void radio_set_rx_done_handler(radio_t * obj, void * handler, void * args);
+void radio_set_rx_error_handler(radio_t * obj, void * handler, void * args);
+void radio_set_rx_timeout_handler(radio_t * obj, void * handler, void * args);
+void radio_set_tx_done_handler(radio_t * obj, void * handler, void * args);
+void radio_set_tx_timeout_handler(radio_t * obj, void * handler, void * args);
 
-void radio_set_opmode_handler(radio_t * obj, radio_opmode_t opmode, radio_opmode_transition_t handler, void * args);
+void radio_set_opmode_idle(radio_t * obj);
+void radio_set_opmode_sleep(radio_t * obj);
+void radio_set_opmode_rx_timeout(radio_t * obj, uint32_t timeout_ms);
+void radio_set_opmode_tx_timeout(radio_t * obj, uint32_t timeout_ms);
 
-void radio_set_opmode(radio_t * obj, radio_opmode_t opmode);
 static inline radio_opmode_t radio_get_opmode(radio_t * obj)
 {
     return obj->opmode;
 }
 
+void radio_send_timeout(radio_t * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
 
 
 #ifdef __cplusplus

@@ -97,14 +97,14 @@ static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
     RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
 }
 
-static void radio_efr32_set_opmode_tx_pri(radio_efr32_t * obj)
+static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
     obj->base.opmode = RADIO_OPMODE_TX;
 
     DRV_ASSERT(RAIL_StartTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, NULL) == RAIL_STATUS_NO_ERROR);
 }
 
-static void radio_efr32_set_opmode_rx_pri(radio_efr32_t * obj)
+static void radio_efr32_set_opmode_rx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
     obj->base.opmode = RADIO_OPMODE_RX;
 
@@ -193,40 +193,29 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
     RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
 
-    // configure default callbacks
-    radio_set_opmode_handler(
-            &radio_efr32_singleton_instance.base,
-            RADIO_OPMODE_IDLE,
-            (radio_opmode_transition_t) radio_efr32_set_opmode_idle_pri,
-            &radio_efr32_singleton_instance
-    );
-
-    radio_set_opmode_handler(
-            &radio_efr32_singleton_instance.base,
-            RADIO_OPMODE_SLEEP,
-            (radio_opmode_transition_t) radio_efr32_set_opmode_idle_pri,
-            &radio_efr32_singleton_instance
-    );
-
-    radio_set_opmode_handler(
-            &radio_efr32_singleton_instance.base,
-            RADIO_OPMODE_TX,
-            (radio_opmode_transition_t) radio_efr32_set_opmode_tx_pri,
-            &radio_efr32_singleton_instance
-    );
-
-    radio_set_opmode_handler(
-            &radio_efr32_singleton_instance.base,
-            RADIO_OPMODE_RX,
-            (radio_opmode_transition_t) radio_efr32_set_opmode_rx_pri,
-            &radio_efr32_singleton_instance
-    );
-
     // set default channel
     radio_efr32_set_channel(&radio_efr32_singleton_instance, 0);
 
     // set default idle state
     radio_efr32_set_opmode_idle_pri(&radio_efr32_singleton_instance);
+
+    // configure default callbacks
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.callback = radio_efr32_set_opmode_idle_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
+
+    radio_efr32_singleton_instance.base.radio_set_opmode_sleep_cb.callback = radio_efr32_set_opmode_sleep_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_sleep_cb.args = &radio_efr32_singleton_instance;
+
+    radio_efr32_singleton_instance.base.radio_set_opmode_rx_timeout_cb.callback = radio_efr32_set_opmode_idle_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
+
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.callback = radio_efr32_set_opmode_idle_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
+
+
+    // register internal send callback function
+    radio_efr32_singleton_instance.base.radio_send_cb.callback = radio_efr32_send_timeout;
+    radio_efr32_singleton_instance.base.radio_send_cb.args = &radio_efr32_singleton_instance;
 
     return &radio_efr32_singleton_instance;
 }
@@ -236,15 +225,31 @@ void radio_efr32_set_channel(radio_efr32_t * obj, uint8_t channel)
     obj->channel = channel;
 }
 
-void radio_efr32_send(radio_efr32_t * obj, void * buffer, uint8_t size)
+void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size, uint32_t timeout_ms)
 {
+    DRV_ASSERT(obj);
+    DRV_ASSERT(obj->rail_handle);
+
+    // set mode to idle preventing any unwanted error
     radio_efr32_set_opmode_idle_pri(obj);
 
     // write buffer
     memcpy(obj->tx_buffer, buffer, size);
-
     RAIL_SetTxFifo(obj->rail_handle, obj->tx_buffer, size, size);
 
     // set to tx mode
-    radio_efr32_set_opmode_tx_pri(obj);
+    radio_efr32_set_opmode_tx_timeout_pri(obj, timeout_ms);
+}
+
+
+uint32_t radio_efr32_generate_random_number(radio_efr32_t * obj)
+{
+    DRV_ASSERT(obj);
+    DRV_ASSERT(obj->rail_handle);
+
+    uint32_t number = 0;
+
+    DRV_ASSERT(RAIL_GetRadioEntropy(obj->rail_handle, (void *) &number, sizeof(uint32_t)));
+
+    return number;
 }

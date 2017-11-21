@@ -36,6 +36,8 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
 
 void radio_efr32_set_channel(radio_efr32_t * obj, uint8_t channel);
 
-void radio_efr32_send(radio_efr32_t * obj, void * buffer, uint8_t size);
+void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
+
+uint32_t radio_efr32_generate_random_number(radio_efr32_t * obj);
 
 #endif
