@@ -96,6 +96,8 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 
 static void radio_efr32_set_opmode_idle_pri(radio_efr32_t * obj)
 {
+    DRV_ASSERT(obj);
+
     if (obj->base.opmode != RADIO_OPMODE_IDLE)
     {
 #if USE_FREERTOS == 1
@@ -120,6 +122,8 @@ static void radio_efr32_set_opmode_idle_pri(radio_efr32_t * obj)
 
 static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
 {
+    DRV_ASSERT(obj);
+
     if (obj->base.opmode != RADIO_OPMODE_SLEEP)
     {
 #if USE_FREERTOS == 1
@@ -145,6 +149,8 @@ static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
 
 static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
+    DRV_ASSERT(obj);
+
     if (obj->base.opmode != RADIO_OPMODE_TX)
     {
         // call RAIL API to enter Tx mode
@@ -172,6 +178,8 @@ static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t 
 
 static void radio_efr32_set_opmode_rx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
+    DRV_ASSERT(obj);
+    
     if (obj->base.opmode != RADIO_OPMODE_RX)
     {
         DRV_ASSERT(RAIL_StartRx(obj->rail_handle, obj->channel, NULL) == RAIL_STATUS_NO_ERROR);
@@ -328,10 +336,10 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     radio_efr32_singleton_instance.base.radio_set_opmode_sleep_cb.args = &radio_efr32_singleton_instance;
 
     radio_efr32_singleton_instance.base.radio_set_opmode_rx_timeout_cb.callback = radio_efr32_set_opmode_rx_timeout_pri;
-    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
+    radio_efr32_singleton_instance.base.radio_set_opmode_rx_timeout_cb.args = &radio_efr32_singleton_instance;
 
-    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.callback = radio_efr32_set_opmode_tx_timeout_pri;
-    radio_efr32_singleton_instance.base.radio_set_opmode_idle_cb.args = &radio_efr32_singleton_instance;
+    radio_efr32_singleton_instance.base.radio_set_opmode_tx_timeout_cb.callback = radio_efr32_set_opmode_tx_timeout_pri;
+    radio_efr32_singleton_instance.base.radio_set_opmode_tx_timeout_cb.args = &radio_efr32_singleton_instance;
 
     // register internal send callback function
     radio_efr32_singleton_instance.base.radio_send_cb.callback = radio_efr32_send_timeout;
