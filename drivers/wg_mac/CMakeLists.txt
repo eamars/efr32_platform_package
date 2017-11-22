@@ -10,5 +10,5 @@ FILE (GLOB SRC *.c)
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency and build order
-ADD_DEPENDENCIES(${LIB_NAME} radio_rfm9x)
-TARGET_LINK_LIBRARIES(${LIB_NAME} radio_rfm9x)
+ADD_DEPENDENCIES(${LIB_NAME} radio_template)
+TARGET_LINK_LIBRARIES(${LIB_NAME} radio_template)

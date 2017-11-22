@@ -18,6 +18,7 @@
 
 
 #define WG_MAC_MSG_BUFFER_SIZE 0xff
+#define WG_MAC_DEFAULT_TIMEOUT_MS 2000
 
 
 /**
@@ -86,7 +87,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8);
  */
 bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_send(obj, msg) \
-		wg_mac_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
+		wg_mac_send_timeout((obj), (msg), WG_MAC_DEFAULT_TIMEOUT_MS)
 #define wg_mac_send_block(obj, msg) \
 		wg_mac_send_timeout((obj), (msg), portMAX_DELAY)
 
@@ -99,7 +100,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
  */
 bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_recv(obj, msg) \
-		wg_mac_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
+		wg_mac_recv_timeout((obj), (msg), WG_MAC_DEFAULT_TIMEOUT_MS)
 #define wg_mac_recv_block(obj, msg) \
 		wg_mac_recv_timeout((obj), (msg), portMAX_DELAY)
 

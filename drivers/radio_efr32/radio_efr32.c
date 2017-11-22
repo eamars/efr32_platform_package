@@ -28,6 +28,11 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 {
     if (events & RAIL_EVENT_TX_PACKET_SENT)
     {
+#if USE_FREERTOS == 1
+        // stop the tx timeout timer
+        xTimerStopFromISR(radio_efr32_singleton_instance.tx_timeout_timer, NULL);
+#endif
+
         if (radio_efr32_singleton_instance.base.on_tx_done_cb.callback)
             ((on_tx_done_handler_t) radio_efr32_singleton_instance.base.on_tx_done_cb.callback)(
                     radio_efr32_singleton_instance.base.on_tx_done_cb.args
@@ -47,6 +52,11 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
         RAIL_RxPacketInfo_t packet_info;
         RAIL_RxPacketDetails_t packet_details;
         RAIL_RxPacketHandle_t packet_handle;
+
+#if USE_FREERTOS == 1
+        // stop the rx timout timer
+        xTimerStopFromISR(radio_efr32_singleton_instance.rx_timeout_timer, NULL);
+#endif
 
         // get packet handle
         packet_handle = RAIL_GetRxPacketInfo(rail_handle, RAIL_RX_PACKET_HANDLE_NEWEST, &packet_info);
@@ -187,6 +197,7 @@ static void radio_efr32_set_opmode_rx_timeout_pri(radio_efr32_t * obj, uint32_t 
 
 }
 
+#if USE_FREERTOS == 1
 static void radio_efr32_on_timer_timeout(TimerHandle_t xTimer)
 {
     DRV_ASSERT(xTimer);
@@ -219,6 +230,7 @@ static void radio_efr32_on_timer_timeout(TimerHandle_t xTimer)
         }
     }
 }
+#endif
 
 radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], bool use_dcdc)
 {

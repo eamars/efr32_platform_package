@@ -53,22 +53,7 @@ static void wg_mac_on_rx_timeout_isr(wg_mac_t * obj)
 }
 
 
-static void lora_phy_on_rx_window_timeout(TimerHandle_t xTimer)
-{
-    DRV_ASSERT(xTimer);
-    xTimerStop(xTimer, 0);
-
-    // read radio object
-    wg_mac_t *obj = (wg_mac_t *) pvTimerGetTimerID(xTimer);
-
-    // if the receive window is still open, then put the device to sleep state, otherwise leave the device as is
-    if (radio_get_opmode(obj->radio) == RADIO_OPMODE_RX)
-    {
-        radio_set_opmode_sleep(obj->radio);
-    }
-}
-
-static void lora_phy_fsm_thread(wg_mac_t * obj)
+static void wg_mac_fsm_thread(wg_mac_t * obj)
 {
     while (1)
     {
@@ -248,7 +233,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
     obj->fsm_tx_done = xSemaphoreCreateBinary();
     obj->fsm_poll_event = xSemaphoreCreateBinary();
 
-    xTaskCreate((void *) lora_phy_fsm_thread, "lora_phy", 500, obj, 3, &obj->fsm_thread_handler);
+    xTaskCreate((void *) wg_mac_fsm_thread, "wg_mac", 500, obj, 3, &obj->fsm_thread_handler);
 
     DRV_ASSERT(obj->tx_queue);
     DRV_ASSERT(obj->rx_queue_pri);
