@@ -25,33 +25,58 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
     obj->last_packet_rssi = (int16_t) rssi;
     obj->last_packet_snr = (int8_t) snr;
 
-    DRV_ASSERT(xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL));
+    // reset to rx to clear buffer
+    radio_set_opmode_rx_timeout(obj->radio, 0);
 
-    obj->fsm_state = WG_MAC_FSM_RX_DONE;
-    xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
+    // send message to thread handler
+    xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
 }
 
 static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
 {
     // indicate the Tx is ready
     xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
-
-    obj->fsm_state = WG_MAC_FSM_TX_DONE;
-    xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
 }
 
-static void wg_mac_on_rx_error_isr(wg_mac_t * obj)
+static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_seqid)
 {
-    obj->fsm_state = WG_MAC_FSM_RX_ERROR;
-    xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
+    if  (generate_seqid)
+    {
+        // give seq id
+        subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
+        header->seq_id = obj->local_seq_id++;
+    }
+
+    // send to phy layer handler
+    radio_send_timeout(obj->radio, msg->buffer, msg->size, 0);
+    obj->fsm_state = WG_MAC_TX;
 }
 
-static void wg_mac_on_rx_timeout_isr(wg_mac_t * obj)
+static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 {
-    obj->fsm_state = WG_MAC_FSM_RX_TIMEOUT;
-    xSemaphoreGiveFromISR(obj->fsm_poll_event, NULL);
-}
+    DRV_ASSERT(xTimer);
+    xTimerStop(xTimer, 0);
 
+    // read radio object
+    wg_mac_t * obj = (wg_mac_t *) pvTimerGetTimerID(xTimer);
+
+    // at the moment where this function is called, which indicates no proper response is received from node, we need
+    // to start the retransmission
+
+    // we can bypass the idle state to transmit packet
+    obj->retransmit.retry_counter += 1;
+
+    if (obj->retransmit.retry_counter >= obj->retransmit.max_retries)
+    {
+        // reset to idle state
+        obj->fsm_state = WG_MAC_IDLE;
+    }
+    else
+    {
+        // for the retransmission, we don't generate a different seqid
+        wg_mac_send_pri(obj, &obj->retransmit.prev_packet, false);
+    }
+}
 
 static void wg_mac_fsm_thread(wg_mac_t * obj)
 {
@@ -59,148 +84,130 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
     {
         switch (obj->fsm_state)
         {
-            case WG_MAC_FSM_RX_IDLE:
+            case WG_MAC_IDLE:
             {
-                // the state machine thread stopped as nothing is received or is required to be transmitted
-                // the fsm will start running when event occurred, for example, radio ISR or packet is ready to be
-                // transmitted
-                xSemaphoreTake(obj->fsm_poll_event, portMAX_DELAY);
+                radio_set_opmode_sleep(obj->radio);
 
-                // read data from tx queue, checking if data is queueing
-                // if so, then transmit data
+                // in the idle state the fsm will wait for any new message that is ready to transmit
                 wg_mac_msg_t tx_msg;
-                if (xQueueReceive(obj->tx_queue, &tx_msg, 0))
+                if (xQueueReceive(obj->tx_queue, &tx_msg, portMAX_DELAY))
                 {
-                    // give seq id
-                    subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) tx_msg.buffer;
-                    header->seq_id = obj->local_seq_id++;
+                    // set information for retransmission
+                    obj->retransmit.retry_counter = 0;
 
-                    // send to phy layer handler
-                    radio_send_timeout(obj->radio, tx_msg.buffer, tx_msg.size, 2000);
-                    obj->fsm_state = WG_MAC_FSM_TX;
+                    // keep a copy of previously transmitted packet
+                    memcpy(&obj->retransmit.prev_packet, &tx_msg, sizeof(wg_mac_msg_t));
+
+                    // for the first attempt, we generate a unique seq id
+                    wg_mac_send_pri(obj, &tx_msg, true);
                 }
 
                 break;
             }
 
-            case WG_MAC_FSM_TX:
+            case WG_MAC_TX:
             {
+                // in tx state we are going to wait until tx is complete
                 // stay in tx state until tx is done
-                if (!xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(5000)))
+                if (!xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
                 {
-                    // fail to transmit, then enter TX_TIMEOUT STATE
-                    obj->fsm_state = WG_MAC_FSM_TX_TIMEOUT;
+                    // fail to transmit, then enter idle state
+                    obj->fsm_state = WG_MAC_IDLE;
+
+                    DRV_ASSERT(false);
+                }
+                else
+                {
+                    // if the packet transmitted is an ACK, then we don't need to wait for ack for the ack
+                    subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) obj->retransmit.prev_packet.buffer;
+                    if (cmd_packet->header.packet_type == SUBG_PACKET_V2_TYPE_CMD &&
+                        cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
+                    {
+                        obj->fsm_state = WG_MAC_IDLE;
+                    }
+                    else
+                    {
+                        // starts rx receive window
+                        radio_set_opmode_rx_timeout(obj->radio, 0);
+
+                        // starts rx timer
+                        xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+                        // setup done, then enter rx state
+                        obj->fsm_state = WG_MAC_RX;
+                    }
                 }
 
                 break;
             }
 
-            case WG_MAC_FSM_TX_DONE:
+            case WG_MAC_RX:
             {
-                // enter active receive mode for first receive window
-                radio_set_opmode_rx_timeout(obj->radio, 1000);
-
-                obj->fsm_state = WG_MAC_FSM_RX_IDLE;
-
-                break;
-            }
-
-            case WG_MAC_FSM_RX_DONE:
-            {
-                // read message transmit from interrupt
+                // wait for packets to arrive
                 wg_mac_msg_t rx_msg;
-                while (xQueueReceive(obj->rx_queue_pri, &rx_msg, 0))
+                if (xQueueReceive(obj->rx_queue_pri, &rx_msg, pdMS_TO_TICKS(100)))
                 {
-                    // filter the packet with wrong packet size
+                    // validate the packet lenght
                     if (rx_msg.size < SUBG_PACKET_V2_HEADER_SIZE)
                     {
-                        continue;
+                        break;
                     }
 
-                    // filter the packet with wrong protocol version
                     subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) rx_msg.buffer;
-                    if (header->protocol_version < SUBG_PACKET_V2_PROTOCOL_VER)
+
+                    // validate the protocol version
+                    if (header->protocol_version != SUBG_PACKET_V2_PROTOCOL_VER)
                     {
-                        continue;
+                        break;
                     }
 
-                    // filter the packet with wrong destination
+                    // validate the destination
                     if (header->dest_id8 != obj->device_id8)
                     {
-                        continue;
+                        break;
                     }
 
-                    // send filtered packet to upper layer
+                    // send filtered packet to upper layer (drop the packet if the upper layer failed to read from queue)
                     xQueueSend(obj->rx_queue, &rx_msg, 0);
 
-                    // do not ack the ack packet received
+                    // clear the retransmission if the receive packet is a command packet (any command packet will be
+                    // treated as the acknowledgement)
                     if (header->packet_type == SUBG_PACKET_V2_TYPE_CMD)
                     {
+                        xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+                        // enter idle state
+                        obj->fsm_state = WG_MAC_IDLE;
+
                         subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) rx_msg.buffer;
+
+                        // if the acknowledgement is purely an acknowledgement, then we don't want to ack the packet
                         if (cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
                         {
-                            continue;
+                            break;
                         }
                     }
 
-                    // ack the received packet (both command and data, except for ack packet)
-                    wg_mac_msg_t tx_msg;
-                    tx_msg.size = sizeof(subg_packet_v2_cmd_t);
-                    subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
+                    // ack the received packet
+                    {
+                        wg_mac_msg_t tx_msg;
+                        tx_msg.size = sizeof(subg_packet_v2_cmd_t);
+                        subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
 
-                    // build packet
-                    ack_packet->header.dest_id8 = header->src_id8;
-                    ack_packet->header.src_id8 = obj->device_id8;
-                    ack_packet->header.packet_type = (uint8_t) SUBG_PACKET_V2_TYPE_CMD;
-                    ack_packet->header.protocol_version = SUBG_PACKET_V2_PROTOCOL_VER;
+                        // build packet
+                        ack_packet->header.dest_id8 = header->src_id8;
+                        ack_packet->header.src_id8 = obj->device_id8;
+                        ack_packet->header.packet_type = (uint8_t) SUBG_PACKET_V2_TYPE_CMD;
+                        ack_packet->header.protocol_version = SUBG_PACKET_V2_PROTOCOL_VER;
 
-                    ack_packet->command = (uint8_t) SUBG_PACKET_V2_CMD_ACK;
-                    ack_packet->payload = header->seq_id;
+                        ack_packet->command = (uint8_t) SUBG_PACKET_V2_CMD_ACK;
+                        ack_packet->payload = header->seq_id;
 
-                    // transmit ack
-                    wg_mac_send_block(obj, &tx_msg);
+                        // transmit ack (we use a unique seqid for ack)
+                        wg_mac_send_pri(obj, &tx_msg, true);
+                    }
                 }
-
-                radio_set_opmode_sleep(obj->radio);
-
-                obj->fsm_state = WG_MAC_FSM_RX_IDLE;
-
-                break;
             }
-
-            case WG_MAC_FSM_RX_ERROR:
-            {
-                // enter rx mode
-                radio_set_opmode_sleep(obj->radio);
-                obj->fsm_state = WG_MAC_FSM_RX_IDLE;
-
-                break;
-            }
-
-            case WG_MAC_FSM_RX_TIMEOUT:
-            {
-                // enter rx mode
-                radio_set_opmode_sleep(obj->radio);
-                obj->fsm_state = WG_MAC_FSM_RX_IDLE;
-
-                break;
-            }
-
-            case WG_MAC_FSM_TX_TIMEOUT:
-            {
-                // enter rx mode
-                radio_set_opmode_sleep(obj->radio);
-                obj->fsm_state = WG_MAC_FSM_RX_IDLE;
-
-                break;
-            }
-
-            default:
-            {
-                DRV_ASSERT(false);
-                break;
-            }
-
         }
     }
 }
@@ -215,23 +222,24 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
     obj->device_id8 = device_id8;
     obj->local_seq_id = 0;
 
+    // setup retransmit
+    obj->retransmit.rx_window_timer = xTimerCreate("rx_timer", pdMS_TO_TICKS(1000), pdFALSE, obj, wg_mac_on_rx_window_timeout);
+    obj->retransmit.max_retries = WG_MAC_DEFAULT_MAX_RETRIES;
+
     // set radio to sleep default state
     radio_set_opmode_sleep(obj->radio);
 
     // register callback function
     radio_set_rx_done_handler(obj->radio, wg_mac_on_rx_done_isr, obj);
-    radio_set_rx_done_handler(obj->radio, wg_mac_on_tx_done_isr, obj);
-    radio_set_rx_error_handler(obj->radio, wg_mac_on_rx_error_isr, obj);
-    radio_set_rx_timeout_handler(obj->radio, wg_mac_on_rx_timeout_isr, obj);
+    radio_set_tx_done_handler(obj->radio, wg_mac_on_tx_done_isr, obj);
 
     // configure state machine
-    obj->fsm_state = WG_MAC_FSM_RX_IDLE;
+    obj->fsm_state = WG_MAC_IDLE;
     obj->tx_queue = xQueueCreate(4, sizeof(wg_mac_msg_t));
     obj->rx_queue_pri = xQueueCreate(4, sizeof(wg_mac_msg_t));
     obj->rx_queue = xQueueCreate(4, sizeof(wg_mac_msg_t));
 
     obj->fsm_tx_done = xSemaphoreCreateBinary();
-    obj->fsm_poll_event = xSemaphoreCreateBinary();
 
     xTaskCreate((void *) wg_mac_fsm_thread, "wg_mac", 500, obj, 3, &obj->fsm_thread_handler);
 
@@ -239,7 +247,6 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
     DRV_ASSERT(obj->rx_queue_pri);
     DRV_ASSERT(obj->rx_queue);
     DRV_ASSERT(obj->fsm_tx_done);
-    DRV_ASSERT(obj->fsm_poll_event);
 }
 
 bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
@@ -264,9 +271,6 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
             return false;
         }
     }
-
-    // if the packet is put to the queue then I should run the fsm as soon as possible
-    xSemaphoreGive(obj->fsm_poll_event);
 
     return true;
 }

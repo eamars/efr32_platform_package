@@ -18,7 +18,8 @@
 
 
 #define WG_MAC_MSG_BUFFER_SIZE 0xff
-#define WG_MAC_DEFAULT_TIMEOUT_MS 2000
+#define WG_MAC_DEFAULT_TX_TIMEOUT_MS 5000
+#define WG_MAC_DEFAULT_MAX_RETRIES 3
 
 
 /**
@@ -26,14 +27,9 @@
  */
 typedef enum
 {
-    WG_MAC_FSM_RX_IDLE,
-    WG_MAC_FSM_RX_DONE,
-    WG_MAC_FSM_TX,
-    WG_MAC_FSM_TX_DONE,
-
-    WG_MAC_FSM_RX_ERROR,
-    WG_MAC_FSM_RX_TIMEOUT,
-    WG_MAC_FSM_TX_TIMEOUT
+    WG_MAC_IDLE,
+    WG_MAC_TX,
+    WG_MAC_RX
 } wg_mac_fsm_state_t;
 
 
@@ -45,6 +41,14 @@ typedef struct
     uint8_t buffer[WG_MAC_MSG_BUFFER_SIZE - 1]; // 1 byte reserved for data alignment
     uint8_t size;
 } wg_mac_msg_t;
+
+typedef struct
+{
+    xTimerHandle rx_window_timer;
+    wg_mac_msg_t prev_packet;
+    uint8_t retry_counter;
+    uint8_t max_retries;
+} wg_mac_retransmit_t;
 
 
 typedef struct
@@ -63,12 +67,13 @@ typedef struct
     wg_mac_fsm_state_t fsm_state;
     TaskHandle_t fsm_thread_handler;
     SemaphoreHandle_t fsm_tx_done;
-    SemaphoreHandle_t fsm_poll_event;
 
     // link quality
     int16_t last_packet_rssi;
     int8_t last_packet_snr;
 
+    // retransmit
+    wg_mac_retransmit_t retransmit;
 } wg_mac_t;
 
 
@@ -87,7 +92,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8);
  */
 bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_send(obj, msg) \
-		wg_mac_send_timeout((obj), (msg), WG_MAC_DEFAULT_TIMEOUT_MS)
+		wg_mac_send_timeout((obj), (msg), 0)
 #define wg_mac_send_block(obj, msg) \
 		wg_mac_send_timeout((obj), (msg), portMAX_DELAY)
 
@@ -100,7 +105,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
  */
 bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_recv(obj, msg) \
-		wg_mac_recv_timeout((obj), (msg), WG_MAC_DEFAULT_TIMEOUT_MS)
+		wg_mac_recv_timeout((obj), (msg), 0)
 #define wg_mac_recv_block(obj, msg) \
 		wg_mac_recv_timeout((obj), (msg), portMAX_DELAY)
 
