@@ -47,11 +47,14 @@ static void lora_phy_on_rx_timeout_isr(lora_phy_t * obj)
 
 }
 
-static void lora_phy_send_pri(lora_phy_t * obj, lora_phy_msg_t * msg)
+static void lora_phy_send_pri(lora_phy_t * obj, lora_phy_msg_t * msg, bool generate_seqid)
 {
-    // give seq id
-    subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
-    header->seq_id = obj->local_seq_id++;
+    if  (generate_seqid)
+    {
+        // give seq id
+        subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
+        header->seq_id = obj->local_seq_id++;
+    }
 
     // send to phy layer handler
     radio_rfm9x_send(obj->radio, msg->buffer, msg->size);
@@ -80,7 +83,8 @@ static void lora_phy_on_rx_window_timeout(TimerHandle_t xTimer)
     }
     else
     {
-        lora_phy_send_pri(obj, &obj->retransmit.prev_packet);
+        // for the retransmission, we don't generate a different seqid
+        lora_phy_send_pri(obj, &obj->retransmit.prev_packet, false);
     }
 }
 
@@ -104,7 +108,8 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
                     // keep a copy of previously transmitted packet
                     memcpy(&obj->retransmit.prev_packet, &tx_msg, sizeof(lora_phy_msg_t));
 
-                    lora_phy_send_pri(obj, &tx_msg);
+                    // for the first attempt, we generate a unique seq id
+                    lora_phy_send_pri(obj, &tx_msg, true);
                 }
 
                 break;
@@ -208,8 +213,8 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
                         ack_packet->command = (uint8_t) SUBG_PACKET_V2_CMD_ACK;
                         ack_packet->payload = header->seq_id;
 
-                        // transmit ack
-                        lora_phy_send_pri(obj, &tx_msg);
+                        // transmit ack (we use a unique seqid for ack)
+                        lora_phy_send_pri(obj, &tx_msg, true);
                     }
                 }
             }
