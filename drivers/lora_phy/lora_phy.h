@@ -19,19 +19,16 @@
 #include "semphr.h"
 #include "timers.h"
 
+#define LORA_PHY_MAX_RETRIES 3
+
 /**
  * @brief Internal LoRa state machine properties
  */
 typedef enum
 {
-	LORA_PHY_FSM_RX_IDLE,
-	LORA_PHY_FSM_RX_DONE,
-	LORA_PHY_FSM_TX,
-	LORA_PHY_FSM_TX_DONE,
-
-	LORA_PHY_FSM_RX_ERROR,
-	LORA_PHY_FSM_RX_TIMEOUT,
-	LORA_PHY_FSM_TX_TIMEOUT
+    LORA_PHY_IDLE,
+    LORA_PHY_TX,
+    LORA_PHY_RX
 } lora_phy_fsm_state_t;
 
 
@@ -40,41 +37,41 @@ typedef enum
  */
 typedef struct
 {
-	uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE - 1]; // 1 byte reserved for data alignment
-	uint8_t size;
+    uint8_t buffer[RADIO_RFM9X_RW_BUFFER_SIZE - 1]; // 1 byte reserved for data alignment
+    uint8_t size;
 } lora_phy_msg_t;
 
 typedef struct
 {
-	bool is_prev_packet_acked;
-	lora_phy_msg_t prev_packet;
-	xTimerHandle retransmission_timer;
+    xTimerHandle rx_window_timer;
+    lora_phy_msg_t prev_packet;
+    uint8_t retry_counter;
+
 } lora_phy_retransmit_t;
 
 typedef struct
 {
-	// transceiver driver
-	radio_rfm9x_t * radio;
-	uint8_t device_id8;
-	uint8_t local_seq_id;
+    // transceiver driver
+    radio_rfm9x_t * radio;
+    uint8_t device_id8;
+    uint8_t local_seq_id;
 
-	// packet queue
-	QueueHandle_t tx_queue;
-	QueueHandle_t rx_queue_pri;
-	QueueHandle_t rx_queue;
+    // packet queue
+    QueueHandle_t tx_queue;
+    QueueHandle_t rx_queue_pri;
+    QueueHandle_t rx_queue;
 
-	// state machine
-	lora_phy_fsm_state_t fsm_state;
-	TaskHandle_t fsm_thread_handler;
-	SemaphoreHandle_t fsm_tx_done;
-	SemaphoreHandle_t fsm_poll_event;
+    // state machine
+    lora_phy_fsm_state_t fsm_state;
+    TaskHandle_t fsm_thread_handler;
+    SemaphoreHandle_t fsm_tx_done;
 
-	// link quality
-	int16_t last_packet_rssi;
-	int8_t last_packet_snr;
+    // link quality
+    int16_t last_packet_rssi;
+    int8_t last_packet_snr;
 
-	// retransmit
-	lora_phy_retransmit_t retransmit;
+    // retransmit
+    lora_phy_retransmit_t retransmit;
 } lora_phy_t;
 
 
@@ -93,9 +90,9 @@ void lora_phy_init(lora_phy_t * obj, radio_rfm9x_t * radio, uint8_t device_id8);
  */
 bool lora_phy_send_timeout(lora_phy_t * obj, lora_phy_msg_t * msg, uint32_t timeout_ms);
 #define lora_phy_send(obj, msg) \
-		lora_phy_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
+        lora_phy_send_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_TX_TIMEOUT)
 #define lora_phy_send_block(obj, msg) \
-		lora_phy_send_timeout((obj), (msg), portMAX_DELAY)
+        lora_phy_send_timeout((obj), (msg), portMAX_DELAY)
 
 /**
  * @brief Receive bytes from transceiver
@@ -106,9 +103,9 @@ bool lora_phy_send_timeout(lora_phy_t * obj, lora_phy_msg_t * msg, uint32_t time
  */
 bool lora_phy_recv_timeout(lora_phy_t * obj, lora_phy_msg_t * msg, uint32_t timeout_ms);
 #define lora_phy_recv(obj, msg) \
-		lora_phy_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
+        lora_phy_recv_timeout((obj), (msg), RADIO_RFM9X_DEFAULT_RX_TIMEOUT)
 #define lora_phy_recv_block(obj, msg) \
-		lora_phy_recv_timeout((obj), (msg), portMAX_DELAY)
+        lora_phy_recv_timeout((obj), (msg), portMAX_DELAY)
 
 #ifdef __cplusplus
 }
