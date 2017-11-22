@@ -20,6 +20,7 @@
 #define WG_MAC_MSG_BUFFER_SIZE 0xff
 #define WG_MAC_DEFAULT_TX_TIMEOUT_MS 5000
 #define WG_MAC_DEFAULT_MAX_RETRIES 3
+#define WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS 1000
 
 
 /**
@@ -55,6 +56,7 @@ typedef struct
 {
     // transceiver driver
     radio_t * radio;
+    uint32_t rx_window_timeout;
     uint8_t device_id8;
     uint8_t local_seq_id;
 

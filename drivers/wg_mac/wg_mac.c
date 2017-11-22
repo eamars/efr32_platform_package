@@ -131,6 +131,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                         radio_set_opmode_rx_timeout(obj->radio, 0);
 
                         // starts rx timer
+                        xTimerChangePeriod(obj->retransmit.rx_window_timer, obj->rx_window_timeout, portMAX_DELAY);
                         xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
 
                         // setup done, then enter rx state
@@ -219,11 +220,12 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
 
     // copy variables
     obj->radio = radio;
+    obj->rx_window_timeout = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS;
     obj->device_id8 = device_id8;
     obj->local_seq_id = 0;
 
     // setup retransmit
-    obj->retransmit.rx_window_timer = xTimerCreate("rx_timer", pdMS_TO_TICKS(1000), pdFALSE, obj, wg_mac_on_rx_window_timeout);
+    obj->retransmit.rx_window_timer = xTimerCreate("rx_timer", pdMS_TO_TICKS(obj->rx_window_timeout), pdFALSE, obj, wg_mac_on_rx_window_timeout);
     obj->retransmit.max_retries = WG_MAC_DEFAULT_MAX_RETRIES;
 
     // set radio to sleep default state
