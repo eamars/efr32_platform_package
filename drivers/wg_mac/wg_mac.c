@@ -40,7 +40,7 @@ static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
 
 static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_seqid)
 {
-    if  (generate_seqid)
+    if (generate_seqid)
     {
         // give seq id
         subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
