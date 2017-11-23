@@ -706,13 +706,13 @@ void radio_rfm9x_set_opmode_tx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms)
 		{
 			if (__IS_INTERRUPT())
 			{
-				xTimerChangePeriodFromISR(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), NULL);
-				xTimerStartFromISR(obj->rx_timeout_timer, NULL);
+				xTimerChangePeriodFromISR(obj->tx_timeout_timer, pdMS_TO_TICKS(timeout_ms), NULL);
+				xTimerStartFromISR(obj->tx_timeout_timer, NULL);
 			}
 			else
 			{
-				xTimerChangePeriod(obj->rx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
-				xTimerStart(obj->rx_timeout_timer, portMAX_DELAY);
+				xTimerChangePeriod(obj->tx_timeout_timer, pdMS_TO_TICKS(timeout_ms), portMAX_DELAY);
+				xTimerStart(obj->tx_timeout_timer, portMAX_DELAY);
 			}
 		}
 #endif
