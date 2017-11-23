@@ -254,6 +254,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
 bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
+    DRV_ASSERT(msg);
 
     // send message buffer to the queue
     if (timeout_ms == portMAX_DELAY)
@@ -262,7 +263,6 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
         {
             return false;
         }
-
     }
     else
     {
@@ -289,7 +289,6 @@ bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
         {
             return false;
         }
-
     }
     else
     {
