@@ -20,6 +20,7 @@ SET(ENABLED_DRIVERS
 		lorawan
 		lora_phy
 		wg_mac
+		wg_mac_ncp
         imu_fxos
 		battery_monitor
 		# simgbpr
