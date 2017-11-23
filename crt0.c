@@ -9,8 +9,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "irq.h"
-#include "application_header.h"
+#include "drivers/irq.h"
+#include "drivers/bootloader_api/application_header.h"
 
 #if USE_FREERTOS == 1
 #include "FreeRTOSConfig.h"
