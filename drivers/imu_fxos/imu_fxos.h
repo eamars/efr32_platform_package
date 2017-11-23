@@ -690,6 +690,7 @@ typedef struct
     int16_t z_origin;
     int16_t start_position;
     uint32_t vector;
+    int16_t vector_angle;
 
     int16_t current_compass; // The current angle
     int16_t current_heading; // The heading away from calibrated angle
@@ -748,6 +749,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj);
 
