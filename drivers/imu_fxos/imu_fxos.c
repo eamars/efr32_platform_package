@@ -653,7 +653,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
         temp_change = temperature_imu - obj->temp;
-        if (abs(temp_change) >= 3)
+        if ((abs(temp_change) >= 3) && (abs(temp_change) < 30))
         {
             interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
             GPIOINT_CallbackUnRegister(PIO_PIN(obj->int_2));
@@ -677,7 +677,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             }
             else
             {
-                obj->z_origin = obj->z_origin + temp_change * 3;
+                obj->z_origin = obj->z_origin + temp_change ;
             }
 
             FXOS8700CQ_Magnetic_Vector(obj);

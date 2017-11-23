@@ -124,4 +124,3 @@ uint32_t battery_monitor_read_mv(battery_monitor_t * obj)
 
 	return voltage_mv;
 }
-
