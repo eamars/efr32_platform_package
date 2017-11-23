@@ -22,6 +22,7 @@ typedef struct
 	uint32_t last_measured_voltage_mv;
 	TaskHandle_t battery_monitor_daemon_handler;
 	uint32_t measure_period_ms;
+    uint8_t bat_percentage;
 
 } battery_monitor_extended_t;
 
