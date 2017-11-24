@@ -375,7 +375,7 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
 
     // create book keeping thread (handles transceiver state)
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
-    xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 200, obj, 4, &obj->tx_queue_handler_thread);
+    xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 400, obj, 4, &obj->tx_queue_handler_thread);
 }
 
 bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
