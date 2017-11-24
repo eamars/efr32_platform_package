@@ -11,6 +11,7 @@
 #if USE_FREERTOS == 1
 
 #define WG_MAC_NCP_MAX_CLIENT_COUNT 16
+#define WG_MAC_NCP_QUEUE_LENGTH 4
 
 #include <stdint.h>
 
@@ -37,6 +38,8 @@ typedef struct
     wg_mac_msg_t prev_packet;
     bool prev_packet_acked;
     uint8_t retry_counter;
+    uint8_t tx_seqid;
+    uint8_t rx_seqid;
 
 } wg_mac_ncp_client_t;
 
@@ -47,6 +50,7 @@ typedef struct
     uint32_t ack_window_ms;
     uint8_t max_retries;
     bool forward_all_packets;
+    bool auto_ack;
 } wg_mac_ncp_config_t;
 
 typedef struct
@@ -62,13 +66,17 @@ typedef struct
     QueueHandle_t rx_queue_pri;
     QueueHandle_t rx_queue;
 
+    // queue set
+    QueueSetHandle_t queue_set_pri;
+
     SemaphoreHandle_t tx_done_signal;
 
     // bookkeeper timer
     TimerHandle_t bookkeeping_timer;
 
     // bookkeeping fsm
-    TaskHandle_t bookkeeping_thread;
+    TaskHandle_t state_machine_thread;
+    TaskHandle_t tx_queue_handler_thread;
 
     // config
     wg_mac_ncp_config_t config;
