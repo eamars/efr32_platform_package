@@ -560,9 +560,11 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     FXOS8700CQ_Caclculate_Vector(obj);
     FXOS8700CQ_Vector_Angle(obj);
-    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 )
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // esentialy debouncing wont let the state change constalty 
     {
-        if ((obj->vector_angle >= 1) && (interupt_1 == true))
+        // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
+        // this may also remove some false positives that are only there for a very short time
+        if (interupt_1 == true)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
             //halSetLed(BOARDLED1);
@@ -653,7 +655,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
         temp_change = temperature_imu - obj->temp;
-        if ((abs(temp_change) >= 3) && (abs(temp_change) < 30))
+        if ((abs(temp_change) >= 3) && (abs(temp_change) < 30)) // the less than 30 is because it should really never get here and i think it may on the odd ocaion of crossing 0 degrees it stuffs up some times
         {
             interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
             GPIOINT_CallbackUnRegister(PIO_PIN(obj->int_2));
@@ -671,6 +673,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 
             FXOS8700CQ_ConfigureAccelerometer(obj);
             FXOS8700CQ_ConfigureMagnetometer(obj);
+            // if the door is open the device tries to predict the change for the origin point this is dificult as the imu's have lsightly different changes due to temperature
+            // if the door is closed it resets the origin point this could cause an isue if the device keeps changeing temperature and is on the edge of its closed state each
+            // time it could theoreticaly get to be wide open while saying it is closed/ get a open state when the door is closed
             if (obj->door_state != IMU_EVENT_DOOR_OPEN)
             {
                 FXOS8700CQ_Set_Origin(obj);
@@ -679,7 +684,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 obj->z_origin = obj->z_origin + temp_change ;
             }
-
+            // change the orgin of the device depenant on temperature
             FXOS8700CQ_Magnetic_Vector(obj);
             FXOS8700CQ_ActiveMode(obj);
             delay_ms(1000);
@@ -762,7 +767,6 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
         {
             temp_vector = obj->vector;
         }
-        temp_vector = obj->vector;
         delay_ms(800);
     }
     obj->vector_threshold_open = (temp_vector +10)*1.5;
