@@ -394,7 +394,7 @@ bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t ti
     else
     {
         // wait for TX to get ready
-        if (xQueueSend(obj->tx_queue, &msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+        if (xQueueSend(obj->tx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
         {
             // timeout, indicating we failed to wait for transceiver to get ready
             return false;
