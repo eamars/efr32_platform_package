@@ -179,7 +179,7 @@ static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t 
 static void radio_efr32_set_opmode_rx_timeout_pri(radio_efr32_t * obj, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
-    
+
     if (obj->base.opmode != RADIO_OPMODE_RX)
     {
         DRV_ASSERT(RAIL_StartRx(obj->rail_handle, obj->channel, NULL) == RAIL_STATUS_NO_ERROR);
@@ -261,6 +261,9 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     // get rail handler
     radio_efr32_singleton_instance.rail_handle = RAIL_Init(&radio_efr32_singleton_instance.rail_cfg, NULL);
     DRV_ASSERT(radio_efr32_singleton_instance.rail_handle);
+
+    // calibrate the radio
+    RAIL_ConfigCal(radio_efr32_singleton_instance.rail_handle, RAIL_CAL_ALL);
 
     // configure available channels
     RAIL_ConfigChannels(radio_efr32_singleton_instance.rail_handle, channelConfigs[0], NULL);
