@@ -95,11 +95,11 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     // set information for retransmission
                     obj->retransmit.retry_counter = 0;
 
-                    // keep a copy of previously transmitted packet
-                    memcpy(&obj->retransmit.prev_packet, &tx_msg, sizeof(wg_mac_msg_t));
-
                     // for the first attempt, we generate a unique seq id
                     wg_mac_send_pri(obj, &tx_msg, true);
+
+                    // keep a copy of previously transmitted packet
+                    memcpy(&obj->retransmit.prev_packet, &tx_msg, sizeof(wg_mac_msg_t));
                 }
 
                 break;
