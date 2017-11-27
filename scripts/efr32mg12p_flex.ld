@@ -53,8 +53,6 @@ ENTRY(Reset_Handler)
 SECTIONS
 {
     /* FLASH segment */
-    . = ORIGIN(FLASH);
-
     .LOADER 0x0 :
     {
         KEEP(*(.tiny_loader*));
@@ -128,9 +126,8 @@ SECTIONS
     /* End of text */
     __etext = .;
 
-    /* Simulated ROM space, placed at lma and loaded to 0xfe000
-    Simulated EEPROM is not been used with current flex build yet */
-    .NVM_SIMEE 0xfe000 (NOLOAD):
+    /* Simulated ROM space is mapped to memory address 0xFE000 */
+    .NVM_SIMEE 0xFE000 (NOLOAD):
     {
         SIMEE$$Base = . ;
         __SIMEE__begin = . ;
@@ -155,12 +152,13 @@ SECTIONS
     {
         __data_start__ = .;
 
+        . = ALIGN(256);
+        KEEP(*(.dynamic_vectors))
+
+        . = ALIGN(4);
         __CSTACK__begin = . ;
         KEEP(*(.cstack .cstack.*));
         __CSTACK__end = . ;
-
-        . = ALIGN(256);
-        KEEP(*(.dynamic_vectors))
 
         . = ALIGN(4);
         *(.textrw .textrw*);
@@ -201,6 +199,7 @@ SECTIONS
         /* All data end */
         __data_end__ = .;
     } > RAM
+
     __load_start_data = LOADADDR(.data);
 
     __rom_end__ = __etext + SIZEOF(.data);
