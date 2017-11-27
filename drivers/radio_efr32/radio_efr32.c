@@ -85,8 +85,8 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 
             ((on_rx_done_handler_t) radio_efr32_singleton_instance.base.on_rx_done_cb.callback)(
                     radio_efr32_singleton_instance.base.on_rx_done_cb.args,
-                    received_data,
-                    packet_info.packetBytes,
+                    received_data + 1, // strip the packet lenght info
+                    packet_info.packetBytes - 1,
                     packet_details.rssi,
                     packet_details.lqi
             );
@@ -383,9 +383,12 @@ void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size,
     // set mode to idle preventing any unwanted error
     radio_efr32_set_opmode_idle_pri(obj);
 
+    // write size
+    obj->tx_buffer[0] = (uint8_t) size;
+
     // write buffer
-    memcpy(obj->tx_buffer, buffer, size);
-    RAIL_SetTxFifo(obj->rail_handle, obj->tx_buffer, size, size);
+    memcpy(obj->tx_buffer + 1, buffer, size);
+    RAIL_SetTxFifo(obj->rail_handle, obj->tx_buffer, size + 1, size + 1);
 
     // set to tx mode
     radio_efr32_set_opmode_tx_timeout_pri(obj, timeout_ms);
