@@ -105,3 +105,16 @@ void radio_send_timeout(radio_t * obj, void * buffer, uint16_t size, uint32_t ti
         DRV_ASSERT(false);
     }
 }
+
+void radio_recv_timeout(radio_t * obj, uint32_t timeout_ms)
+{
+    // execute internal recv function
+    if (obj->radio_recv_cb.callback)
+    {
+        ((radio_recv_timeout_t) obj->radio_recv_cb.callback)(obj->radio_recv_cb.args, timeout_ms);
+    }
+    else
+    {
+        DRV_ASSERT(false);
+    }
+}
