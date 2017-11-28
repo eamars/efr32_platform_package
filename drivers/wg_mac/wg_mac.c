@@ -128,7 +128,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     else
                     {
                         // starts rx receive window
-                        radio_set_opmode_rx_timeout(obj->radio, 0);
+                        radio_recv_timeout(obj->radio, 0);
 
                         // starts rx timer
                         xTimerChangePeriod(obj->retransmit.rx_window_timer, obj->rx_window_timeout, portMAX_DELAY);
