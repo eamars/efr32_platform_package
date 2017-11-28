@@ -49,44 +49,34 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
 
     if (events & RAIL_EVENT_RX_PACKET_RECEIVED)
     {
-        RAIL_RxPacketInfo_t packet_info;
-        RAIL_RxPacketDetails_t packet_details;
-        RAIL_RxPacketHandle_t packet_handle;
-
 #if USE_FREERTOS == 1
         // stop the rx timout timer
         xTimerStopFromISR(radio_efr32_singleton_instance.rx_timeout_timer, NULL);
 #endif
 
-        // get packet handle
-        packet_handle = RAIL_GetRxPacketInfo(rail_handle, RAIL_RX_PACKET_HANDLE_NEWEST, &packet_info);
+        uint16_t bytes_available = 0;
+        bytes_available = RAIL_GetRxFifoBytesAvailable(rail_handle);
 
-        // get packet details
+        uint8_t rx_buffer[bytes_available];
+        uint16_t actual_bytes_read = 0;
+        actual_bytes_read = RAIL_ReadRxFifo(rail_handle, rx_buffer, bytes_available);
+
+
+        // use alternative way to read bb
+        RAIL_RxPacketInfo_t packet_info;
+        RAIL_RxPacketDetails_t packet_details;
+        RAIL_RxPacketHandle_t packet_handle;
+
+        packet_handle = RAIL_GetRxPacketInfo(rail_handle, RAIL_RX_PACKET_HANDLE_OLDEST, &packet_info);
         RAIL_GetRxPacketDetails(rail_handle, packet_handle, &packet_details);
 
-        if (packet_info.packetStatus != RAIL_RX_PACKET_READY_SUCCESS && packet_info.packetStatus != RAIL_RX_PACKET_READY_CRC_ERROR)
-        {
-            // some non crc error case
-            DRV_ASSERT(false);
-            return;
-        }
-
-        // send data to callback function
+        // send to receive handler
         if (radio_efr32_singleton_instance.base.on_tx_done_cb.callback)
         {
-            // make a copy of buffer on current stack (avoid changes directly applied to the data buffer)
-            uint8_t received_data[0xff];
-            memcpy(received_data, packet_info.firstPortionData, packet_info.firstPortionBytes);
-            memcpy(
-                    received_data + packet_info.firstPortionBytes,
-                    packet_info.lastPortionData,
-                    packet_info.packetBytes - packet_info.firstPortionBytes // get bytes for second portion
-            );
-
             ((on_rx_done_handler_t) radio_efr32_singleton_instance.base.on_rx_done_cb.callback)(
                     radio_efr32_singleton_instance.base.on_rx_done_cb.args,
-                    received_data + 1, // strip the packet lenght info
-                    packet_info.packetBytes - 1,
+                    rx_buffer + 1, // strip the packet lenght info
+                    actual_bytes_read - 1,
                     packet_details.rssi,
                     packet_details.lqi
             );
@@ -268,6 +258,30 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     // configure available channels
     RAIL_ConfigChannels(radio_efr32_singleton_instance.rail_handle, channelConfigs[0], NULL);
 
+    // enable fifo mode
+    radio_efr32_singleton_instance.data_config.txSource = TX_PACKET_DATA;
+    radio_efr32_singleton_instance.data_config.rxSource = RX_PACKET_DATA;
+    radio_efr32_singleton_instance.data_config.txMethod = FIFO_MODE;
+    radio_efr32_singleton_instance.data_config.rxMethod = FIFO_MODE;
+    DRV_ASSERT(RAIL_ConfigData(
+            radio_efr32_singleton_instance.rail_handle,
+            &radio_efr32_singleton_instance.data_config) == RAIL_STATUS_NO_ERROR);
+
+    // set tx fifo
+    DRV_ASSERT(RAIL_SetTxFifo(
+            radio_efr32_singleton_instance.rail_handle,
+            radio_efr32_singleton_instance.tx_buffer,
+            0,
+            RADIO_EFR32_MAX_BUF_LEN) == RADIO_EFR32_MAX_BUF_LEN);
+
+    // set fifo threshold
+    DRV_ASSERT(RAIL_SetRxFifoThreshold(
+            radio_efr32_singleton_instance.rail_handle,
+            RADIO_EFR32_RX_FIFO_THRESHOLD) == RADIO_EFR32_RX_FIFO_THRESHOLD);
+    DRV_ASSERT(RAIL_SetTxFifoThreshold(
+            radio_efr32_singleton_instance.rail_handle,
+            RADIO_EFR32_TX_FIFO_THRESHOLD) == RADIO_EFR32_TX_FIFO_THRESHOLD);
+
     // configure callback events
     DRV_ASSERT(RAIL_ConfigEvents(
             radio_efr32_singleton_instance.rail_handle,
@@ -321,7 +335,6 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
             .success = RAIL_RF_STATE_RX,
             .error = RAIL_RF_STATE_RX
     };
-
     RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
     RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
 
@@ -347,6 +360,10 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     // register internal send callback function
     radio_efr32_singleton_instance.base.radio_send_cb.callback = radio_efr32_send_timeout;
     radio_efr32_singleton_instance.base.radio_send_cb.args = &radio_efr32_singleton_instance;
+
+    // register internal recv callbakc function
+    radio_efr32_singleton_instance.base.radio_recv_cb.callback = radio_efr32_recv_timeout;
+    radio_efr32_singleton_instance.base.radio_recv_cb.args = &radio_efr32_singleton_instance;
 
 #if USE_FREERTOS == 1
     // initialize timer
@@ -383,15 +400,33 @@ void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size,
     // set mode to idle preventing any unwanted error
     radio_efr32_set_opmode_idle_pri(obj);
 
+    // reset transmit buffer
+    RAIL_ResetFifo(obj->rail_handle, true, false);
+
     // write size
-    obj->tx_buffer[0] = (uint8_t) size;
+    uint8_t frame_length = (uint8_t) size;
+    DRV_ASSERT(RAIL_WriteTxFifo(obj->rail_handle, &frame_length, sizeof(frame_length), true) == sizeof(frame_length));
 
     // write buffer
-    memcpy(obj->tx_buffer + 1, buffer, size);
-    RAIL_SetTxFifo(obj->rail_handle, obj->tx_buffer, size + 1, size + 1);
+    DRV_ASSERT(RAIL_WriteTxFifo(obj->rail_handle, buffer, size, false) == size);
 
     // set to tx mode
     radio_efr32_set_opmode_tx_timeout_pri(obj, timeout_ms);
+}
+
+void radio_efr32_recv_timeout(radio_efr32_t * obj, uint32_t timeout_ms)
+{
+    DRV_ASSERT(obj);
+    DRV_ASSERT(obj->rail_handle);
+
+    // set mode to idle preventing any unwanted error
+    radio_efr32_set_opmode_idle_pri(obj);
+
+    // reset fifo to allow new packet arrived
+    RAIL_ResetFifo(obj->rail_handle, false, true);
+
+    // set to rx mode
+    radio_efr32_set_opmode_rx_timeout_pri(obj, timeout_ms);
 }
 
 

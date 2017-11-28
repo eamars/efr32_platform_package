@@ -21,7 +21,8 @@
 
 
 #define RADIO_EFR32_MAX_BUF_LEN 512
-#define RADIO_EFR32_FIFO_THRESHOLD 128
+#define RADIO_EFR32_RX_FIFO_THRESHOLD 128
+#define RADIO_EFR32_TX_FIFO_THRESHOLD 128
 
 typedef struct
 {
@@ -32,6 +33,9 @@ typedef struct
 
     // NOTE: the config need to be static since RAIL will keep referencing this value
     RAIL_Config_t rail_cfg;
+
+    // NOTE: the rail data config need to be static as the program might refer to this data structure later
+    RAIL_DataConfig_t data_config;
 
     uint8_t tx_buffer[RADIO_EFR32_MAX_BUF_LEN];
 
@@ -49,6 +53,7 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
 void radio_efr32_set_channel(radio_efr32_t * obj, uint8_t channel);
 
 void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
+void radio_efr32_recv_timeout(radio_efr32_t * obj, uint32_t timeout_ms);
 
 uint32_t radio_efr32_generate_random_number(radio_efr32_t * obj);
 
