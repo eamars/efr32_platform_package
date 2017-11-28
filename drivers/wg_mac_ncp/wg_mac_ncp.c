@@ -32,8 +32,8 @@ static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_
     rx_msg.size = (uint8_t) size;
     memcpy(rx_msg.buffer, msg, rx_msg.size);
 
-    // reset to rx to clear buffer
-    radio_set_opmode_rx_timeout(obj->radio, 0);
+    // enter rx state again
+    radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
     xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
@@ -108,55 +108,60 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, bool gen
     }
 }
 
-static void wg_mac_ncp_bookkeeping_handler_pri(TimerHandle_t xTimer)
+static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
 {
-    DRV_ASSERT(xTimer);
+    // initialize the task tick handler
+    portTickType xLastWakeTime;
 
-    // read object
-    wg_mac_ncp_t * obj = (wg_mac_ncp_t *) pvTimerGetTimerID(xTimer);
-
-    // increase internal timer
-    obj->sec_since_start += 1;
-
-    // remove the device from list if unseen for a certain amount of time
-    for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
+    xLastWakeTime = xTaskGetTickCount();
+    while (1)
     {
-        if (obj->clients[idx].is_valid)
+        // increase internal timer
+        obj->sec_since_start += 1;
+
+        // go through all valid clients
+        for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
         {
-            uint32_t unseen_period = obj->sec_since_start - obj->clients[idx].last_seen_sec;
-
-            // if the device not ack me yet
-            if (!obj->clients[idx].prev_packet_acked)
+            if (obj->clients[idx].is_valid)
             {
-                if (unseen_period > obj->config.ack_window_ms)
+                // remove the device from list if unseen for a certain amount of time
+                uint32_t unseen_period = obj->sec_since_start - obj->clients[idx].last_seen_sec;
+
+                // if the device not ack me yet
+                if (!obj->clients[idx].prev_packet_acked)
                 {
-                    obj->clients[idx].retry_counter += 1;
-
-                    // exceed the maximum retry threshold, then remove the device from list
-                    if (obj->clients[idx].retry_counter >= obj->config.max_retries)
+                    if (unseen_period > obj->config.ack_window_ms)
                     {
-                        // TODO: report to host that a device is unresponsive
+                        obj->clients[idx].retry_counter += 1;
 
-                        // mark the device as invalid
-                        obj->clients[idx].is_valid = false;
-                    }
-                    else
-                    {
-                        // retransmit the same packet
-                        wg_mac_ncp_send_pri(obj, &obj->clients[idx].prev_packet, false);
+                        // exceed the maximum retry threshold, then remove the device from list
+                        if (obj->clients[idx].retry_counter >= obj->config.max_retries)
+                        {
+                            // TODO: report to host that a device is unresponsive
+
+                            // mark the device as invalid
+                            obj->clients[idx].is_valid = false;
+                        }
+                        else
+                        {
+                            // retransmit the same packet
+                            wg_mac_ncp_send_pri(obj, &obj->clients[idx].prev_packet, false);
+                        }
                     }
                 }
-            }
 
-            // remove the device that failed to periodically report to host
-            if (unseen_period > obj->config.max_heartbeat_period_sec)
-            {
-                // TODO: report to host that a device is lost
+                // remove the device that failed to periodically report to host
+                if (unseen_period > obj->config.max_heartbeat_period_sec)
+                {
+                    // TODO: report to host that a device is lost
 
-                // mark the device as invalid
-                obj->clients[idx].is_valid = false;
+                    // mark the device as invalid
+                    obj->clients[idx].is_valid = false;
+                }
             }
         }
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(1000));
     }
 }
 
@@ -170,7 +175,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
             case WG_MAC_NCP_RX:
             {
                 // put the radio to rx state before entering sleep
-                radio_set_opmode_rx_timeout(obj->radio, 0);
+                radio_recv_timeout(obj->radio, 0);
 
                 // listen on both tx_queue_pri and rx_queue_pri
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->queue_set_pri, portMAX_DELAY);
@@ -365,15 +370,11 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
 
     obj->tx_done_signal = xSemaphoreCreateBinary();
 
-    // create book keeping timer (1sec interval)
-    obj->bookkeeping_timer = xTimerCreate("ncp_bk", pdMS_TO_TICKS(1000), pdTRUE, obj, wg_mac_ncp_bookkeeping_handler_pri);
-    xTimerStart(obj->bookkeeping_timer, portMAX_DELAY);
-
     // put radio to rx state
     obj->state = WG_MAC_NCP_RX;
-    radio_set_opmode_rx_timeout(obj->radio, 0);
 
     // create book keeping thread (handles transceiver state)
+    xTaskCreate((void *) wg_mac_ncp_client_bookkeeping_thread, "ncp_b", 400, obj, 4, &obj->client_bookkeeping_thread);
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
     xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 400, obj, 4, &obj->tx_queue_handler_thread);
 }

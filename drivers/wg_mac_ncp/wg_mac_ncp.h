@@ -75,6 +75,7 @@ typedef struct
     TimerHandle_t bookkeeping_timer;
 
     // bookkeeping fsm
+    TaskHandle_t client_bookkeeping_thread;
     TaskHandle_t state_machine_thread;
     TaskHandle_t tx_queue_handler_thread;
 
