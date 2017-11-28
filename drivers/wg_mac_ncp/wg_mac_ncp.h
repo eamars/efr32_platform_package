@@ -86,6 +86,11 @@ typedef struct
     wg_mac_ncp_client_t clients[WG_MAC_NCP_MAX_CLIENT_COUNT];
 } wg_mac_ncp_t;
 
+/**
+ * @brief Default configuration for NCP
+ */
+extern const wg_mac_ncp_config_t wg_mac_ncp_default_config;
+
 #endif // USE_FREERTOS == 1
 
 
