@@ -11,11 +11,11 @@
 #include "drv_debug.h"
 #include "subg_packet_v2.h"
 #include "irq.h"
+#include "yield.h"
 
-
-static const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
+const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .local_eui64 = 0,
-        .max_heartbeat_period_sec = 3600,
+        .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
         .ack_window_ms = 5000,
         .max_retries = 3,
         .forward_all_packets = true,
@@ -89,6 +89,7 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, bool gen
         else
         {
             // TODO: Notify the host that the host is attemping to send data to an unknown host
+            DEBUG_PRINT("NCP: attempting to transmit to an unknown client [%d]\r\n", header->dest_id8);
             header->seq_id = 0;
 
             DRV_ASSERT(false);
@@ -138,6 +139,7 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                         if (obj->clients[idx].retry_counter >= obj->config.max_retries)
                         {
                             // TODO: report to host that a device is unresponsive
+                            DEBUG_PRINT("NCP: a client [0x%08llx] failed to ACK, removed from device list\r\n", obj->clients[idx].device_eui64);
 
                             // mark the device as invalid
                             obj->clients[idx].is_valid = false;
@@ -154,6 +156,7 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                 if (unseen_period > obj->config.max_heartbeat_period_sec)
                 {
                     // TODO: report to host that a device is lost
+                    DEBUG_PRINT("NCP: a client [0x%08llx] is lost, removed from list\r\n", obj->clients[idx].device_eui64);
 
                     // mark the device as invalid
                     obj->clients[idx].is_valid = false;
@@ -209,17 +212,18 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         break;
                     }
 
-                    // validate the destination
-                    if (!obj->config.forward_all_packets)
-                    {
-                        if (header->dest_id8 != obj->config.local_eui64)
-                        {
-                            break;
-                        }
-                    }
+                    // TODO: accept beacon signal before validating the destination
 
-                    // TODO: Send the packet to host
-                    xQueueSend(obj->rx_queue, &msg, 0);
+                    // validate the destination
+                    // when forward_all_packet option is enabled, the destination of the packet will be ignored
+                    if (header->dest_id8 != obj->config.local_eui64)
+                    {
+                        if (obj->config.forward_all_packets)
+                        {
+                            xQueueSend(obj->rx_queue, &msg, 0);
+                        }
+                        break;
+                    }
 
                     // update the client info
                     wg_mac_ncp_client_t * client = wg_mac_ncp_find_client(obj, header->src_id8);
@@ -237,13 +241,46 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         else
                         {
                             // setup a new client
+                            memset(client, 0x0, sizeof(wg_mac_ncp_client_t));
+
                             client->is_valid = true;
                             client->device_eui64 = header->src_id8;
                             client->prev_packet_acked = true;
                             client->tx_seqid = 0;
+                            client->rx_seqid = (uint8_t) (header->seq_id - 1);
                             client->retry_counter = 0;
+
+                            // TODO: report the host that a new device joint the network
+                            DEBUG_PRINT("NCP: a new device [0x%08llx] joint\r\n", client->device_eui64);
                         }
                     }
+
+                    // compare the sequence id of the newly received packet
+                    uint8_t seqid_diff = header->seq_id - client->rx_seqid;
+
+                    YIELD(
+                        if (seqid_diff == 0)
+                        {
+                            // TODO: repeated packet, this is likely caused by retransmission from the client
+                            // we are not going to report the packet to the upper layer
+                            DEBUG_PRINT("NCP: receive repeated packet with seqid [0x%x] from [0x%08llx], message won't deliver to upper layer\r\n",
+                                        client->rx_seqid, client->device_eui64);
+
+                            break;
+                        }
+                        else if (seqid_diff > 1)
+                        {
+                            // have some missing packet however we don't care that much
+                            DEBUG_PRINT("NCP: have [%d] packet missing from [0x%08llx]\r\n", seqid_diff, client->device_eui64);
+                        }
+                        else // diff == 1
+                        {
+                            // no missing packet
+                        }
+
+                        // TODO: Send the packet to host
+                        xQueueSend(obj->rx_queue, &msg, 0);
+                    );
 
                     // set general attribute for the client
                     client->last_seen_sec = obj->sec_since_start;
@@ -258,8 +295,6 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         {
                             client->prev_packet_acked = true;
                         }
-
-
                     }
                     else
                     {
