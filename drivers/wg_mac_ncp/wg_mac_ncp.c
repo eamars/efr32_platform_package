@@ -24,7 +24,7 @@ const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t snr)
 {
-    wg_mac_msg_t rx_msg;
+    wg_mac_ncp_msg_t rx_msg;
 
     DRV_ASSERT(size <= 0xff);
 
@@ -73,30 +73,42 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_available_client_slot(wg_mac_ncp_t * obj)
     return NULL;
 }
 
-static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, bool generate_seqid)
+static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool first_attempt)
 {
-    // generate sequence id, if requested
-    if (generate_seqid)
+    // look for the destination
+    subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
+    wg_mac_ncp_client_t * client = wg_mac_ncp_find_client(obj, header->dest_id8);
+
+    if (!client)
     {
-        subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
+        // TODO: Notify the host that the host is attemping to send data to an unknown host
+        DEBUG_PRINT("NCP: attempting to transmit to an unknown client [%d]\r\n", header->dest_id8);
 
-        // look for the destination
-        wg_mac_ncp_client_t * client = wg_mac_ncp_find_client(obj, header->dest_id8);
-        if (client)
-        {
-            header->seq_id = obj->clients->tx_seqid++;
-        }
-        else
-        {
-            // TODO: Notify the host that the host is attemping to send data to an unknown host
-            DEBUG_PRINT("NCP: attempting to transmit to an unknown client [%d]\r\n", header->dest_id8);
-            header->seq_id = 0;
+        DRV_ASSERT(false);
+        return;
+    }
 
-            DRV_ASSERT(false);
-        }
+    // generate sequence id, if requested
+    if (first_attempt)
+    {
+        // assign
+        header->seq_id = obj->clients->tx_seqid++;
+
+        // set id to local host
+        header->src_id8 = (uint8_t) obj->config.local_eui64;
+
+        // make a copy of previously transmitted packet
+        memcpy(&client->prev_packet, msg, sizeof(wg_mac_ncp_msg_t));
     }
 
     // TODO: If attempt to send a host that is not yet acked, then the packet should be piggybacked
+    if (!client->prev_packet_acked)
+    {
+        DRV_ASSERT(false);
+    }
+
+    // indicate whether packet need ack
+    client->prev_packet_acked = !msg->requires_ack;
 
     // send to the queue
     if (__IS_INTERRUPT())
@@ -183,7 +195,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                 // listen on both tx_queue_pri and rx_queue_pri
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->queue_set_pri, portMAX_DELAY);
 
-                wg_mac_msg_t msg;
+                wg_mac_ncp_msg_t msg;
 
                 // read from queue
                 xQueueReceive(queue, &msg, 0);
@@ -291,6 +303,8 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                     {
                         // map to a command packet
                         subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) msg.buffer;
+
+                        // TODO: Only a dedicated ACK packet will clear the ACK on host
                         if (cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
                         {
                             client->prev_packet_acked = true;
@@ -307,7 +321,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         // ack the packet
                         if (obj->config.auto_ack)
                         {
-                            wg_mac_msg_t tx_msg;
+                            wg_mac_ncp_msg_t tx_msg;
                             tx_msg.size = sizeof(subg_packet_v2_cmd_t);
                             subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
 
@@ -333,7 +347,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
             }
             case WG_MAC_NCP_TX:
             {
-                if (!xSemaphoreTake(obj->tx_done_signal, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
+                if (!xSemaphoreTake(obj->tx_done_signal, pdMS_TO_TICKS(5000)))
                 {
                     // failed to transmit
                     obj->state = WG_MAC_NCP_RX;
@@ -356,7 +370,7 @@ static void wg_mac_ncp_tx_queue_handler_thread(wg_mac_ncp_t * obj)
     // wait on tx_queue
     while (1)
     {
-        wg_mac_msg_t tx_msg;
+        wg_mac_ncp_msg_t tx_msg;
         if (xQueueReceive(obj->tx_queue, &tx_msg, portMAX_DELAY))
         {
             // for the message with first transmission, we always generate a seqid
@@ -393,10 +407,10 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     radio_set_tx_done_handler(obj->radio, wg_mac_ncp_on_tx_done_handler, obj);
 
     // create queue
-    obj->tx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_msg_t));
-    obj->tx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_msg_t));
-    obj->rx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_msg_t));
-    obj->rx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_msg_t));
+    obj->tx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
+    obj->tx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
+    obj->rx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
+    obj->rx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
 
     // create queue set
     obj->queue_set_pri = xQueueCreateSet(WG_MAC_NCP_QUEUE_LENGTH * 2);
@@ -414,7 +428,7 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 400, obj, 4, &obj->tx_queue_handler_thread);
 }
 
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
@@ -441,7 +455,7 @@ bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t ti
 }
 
 
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);

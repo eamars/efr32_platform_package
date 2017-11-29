@@ -38,13 +38,19 @@ static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
     xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 }
 
-static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_seqid)
+static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool first_attempt)
 {
-    if (generate_seqid)
+    if (first_attempt)
     {
         // give seq id
         subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
         header->seq_id = obj->local_seq_id++;
+
+        // assign local src id
+        header->src_id8 = obj->device_id8;
+
+        // keep a copy of previously transmitted packet
+        memcpy(&obj->retransmit.prev_packet, msg, sizeof(wg_mac_msg_t));
     }
 
     // send to phy layer handler
@@ -97,9 +103,6 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
                     // for the first attempt, we generate a unique seq id
                     wg_mac_send_pri(obj, &tx_msg, true);
-
-                    // keep a copy of previously transmitted packet
-                    memcpy(&obj->retransmit.prev_packet, &tx_msg, sizeof(wg_mac_msg_t));
                 }
 
                 break;

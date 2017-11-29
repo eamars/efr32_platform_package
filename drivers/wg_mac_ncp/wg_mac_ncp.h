@@ -10,13 +10,13 @@
 
 #if USE_FREERTOS == 1
 
+#define WG_MAC_NCP_MSG_BUFFER_SIZE 256
 #define WG_MAC_NCP_MAX_CLIENT_COUNT 16
 #define WG_MAC_NCP_QUEUE_LENGTH 4
 
 #include <stdint.h>
 
 #include "radio_template.h"
-#include "wg_mac.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
@@ -31,11 +31,18 @@ typedef enum
 
 typedef struct
 {
+    uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
+    uint16_t size;
+    bool requires_ack;
+} wg_mac_ncp_msg_t;
+
+typedef struct
+{
     bool is_valid;
     uint64_t device_eui64;
     uint32_t last_seen_sec;
 
-    wg_mac_msg_t prev_packet;
+    wg_mac_ncp_msg_t prev_packet;
     bool prev_packet_acked;
     uint8_t retry_counter;
     uint8_t tx_seqid;
@@ -100,8 +107,8 @@ extern "C" {
 
 
 void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config);
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
 
 #ifdef __cplusplus
 }
