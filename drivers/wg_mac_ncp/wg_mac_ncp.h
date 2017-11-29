@@ -41,6 +41,7 @@ typedef struct
     bool is_valid;
     uint64_t device_eui64;
     uint32_t last_seen_sec;
+    uint32_t next_retry_time_sec;
 
     wg_mac_ncp_msg_t prev_packet;
     bool prev_packet_acked;
@@ -54,7 +55,7 @@ typedef struct
 {
     uint64_t local_eui64;
     uint32_t max_heartbeat_period_sec;
-    uint32_t ack_window_ms;
+    uint32_t ack_window_sec;
     uint8_t max_retries;
     bool forward_all_packets;
     bool auto_ack;

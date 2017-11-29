@@ -16,7 +16,7 @@
 const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .local_eui64 = 0,
         .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
-        .ack_window_ms = 5000,
+        .ack_window_sec = 2,
         .max_retries = 3,
         .forward_all_packets = true,
         .auto_ack = true
@@ -99,16 +99,20 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
 
         // make a copy of previously transmitted packet
         memcpy(&client->prev_packet, msg, sizeof(wg_mac_ncp_msg_t));
+
+        // indicating the first attempt
+        client->retry_counter = 1;
     }
 
-    // TODO: If attempt to send a host that is not yet acked, then the packet should be piggybacked
-    if (!client->prev_packet_acked)
+    // for every packet that requires the ack, we calculate the next retransmission time
+    if (msg->requires_ack)
     {
-        DRV_ASSERT(false);
-    }
+        // the next retransmission time is calculated by: current time + retry_counter * ack_window
+        client->next_retry_time_sec =
+                obj->sec_since_start + client->retry_counter * obj->config.ack_window_sec;
 
-    // indicate whether packet need ack
-    client->prev_packet_acked = !msg->requires_ack;
+        client->prev_packet_acked = false;
+    }
 
     // send to the queue
     if (__IS_INTERRUPT())
@@ -137,24 +141,25 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
         {
             if (obj->clients[idx].is_valid)
             {
-                // remove the device from list if unseen for a certain amount of time
-                uint32_t unseen_period = obj->sec_since_start - obj->clients[idx].last_seen_sec;
-
-                // if the device not ack me yet
+                // if the device didn't ack me yet
                 if (!obj->clients[idx].prev_packet_acked)
                 {
-                    if (unseen_period > obj->config.ack_window_ms)
+                    // retransmit if it's the time to retransmit
+                    if (obj->sec_since_start > obj->clients[idx].next_retry_time_sec)
                     {
                         obj->clients[idx].retry_counter += 1;
 
                         // exceed the maximum retry threshold, then remove the device from list
-                        if (obj->clients[idx].retry_counter >= obj->config.max_retries)
+                        if (obj->clients[idx].retry_counter > obj->config.max_retries)
                         {
                             // TODO: report to host that a device is unresponsive
                             DEBUG_PRINT("NCP: a client [0x%08llx] failed to ACK, removed from device list\r\n", obj->clients[idx].device_eui64);
 
                             // mark the device as invalid
                             obj->clients[idx].is_valid = false;
+
+                            // no further checking of the client
+                            continue;
                         }
                         else
                         {
@@ -162,15 +167,14 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                             wg_mac_ncp_send_pri(obj, &obj->clients[idx].prev_packet, false);
                         }
                     }
+
                 }
 
-                // remove the device that failed to periodically report to host
-                if (unseen_period > obj->config.max_heartbeat_period_sec)
-                {
-                    // TODO: report to host that a device is lost
-                    DEBUG_PRINT("NCP: a client [0x%08llx] is lost, removed from list\r\n", obj->clients[idx].device_eui64);
+                // remove the device from list if unseen for a certain amount of time
+                uint32_t unseen_period_sec = obj->sec_since_start - obj->clients[idx].last_seen_sec;
 
-                    // mark the device as invalid
+                if (unseen_period_sec > obj->config.max_heartbeat_period_sec)
+                {
                     obj->clients[idx].is_valid = false;
                 }
             }
@@ -307,7 +311,11 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         // TODO: Only a dedicated ACK packet will clear the ACK on host
                         if (cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
                         {
+                            // indicate the packet is acked
                             client->prev_packet_acked = true;
+
+                            // reset the retry counter
+                            client->retry_counter = 0;
                         }
                     }
                     else
@@ -323,6 +331,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                         {
                             wg_mac_ncp_msg_t tx_msg;
                             tx_msg.size = sizeof(subg_packet_v2_cmd_t);
+                            tx_msg.requires_ack = false;
                             subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
 
                             // build packet
