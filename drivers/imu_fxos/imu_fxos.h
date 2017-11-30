@@ -672,6 +672,16 @@ typedef enum
    IMU_EVENT_DOOR_CLOSE = 1,
 } imu_event_t;
 
+typedef struct __attribute__((packed))
+{
+    int16_t x_origin;
+    int16_t y_origin;
+    int16_t z_origin;
+    uint16_t vector_threshold_closed;
+    uint16_t vector_threshold_open;
+    float tmp_coef;
+    uint8_t checksum;
+} imu_origin_t;
 
 typedef struct
 {
@@ -685,9 +695,6 @@ typedef struct
     bool initialized;
 	imu_event_t door_state;
     bool calibrated;
-    int16_t x_origin;
-    int16_t y_origin;
-    int16_t z_origin;
     int16_t start_position;
     uint32_t vector;
     int16_t vector_angle;
@@ -700,14 +707,11 @@ typedef struct
     uint32_t last_call;
     TaskHandle_t ImuTempHandler;
     int8_t temp;
-    float scaler;
 
     TaskHandle_t ImuCalHandler;
-    uint16_t vector_threshold_closed;
-    uint16_t vector_threshold_open;
 
     rawdata_t old_magdata;
-
+    imu_origin_t origin;
 
 
 } imu_FXOS8700CQ_t;
