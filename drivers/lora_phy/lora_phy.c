@@ -119,7 +119,7 @@ static void lora_phy_fsm_thread(lora_phy_t * obj)
                     // fail to transmit, then enter idle state
                     obj->fsm_state = LORA_PHY_IDLE;
 
-                    DRV_ASSERT(false);
+                    //DRV_ASSERT(false);
                 }
                 else
                 {
