@@ -699,11 +699,14 @@ typedef struct
     imu_event_t last_event;
     uint32_t last_call;
     TaskHandle_t ImuTempHandler;
-    int16_t temp;
+    int8_t temp;
+    float scaler;
 
     TaskHandle_t ImuCalHandler;
     uint16_t vector_threshold_closed;
     uint16_t vector_threshold_open;
+
+    rawdata_t old_magdata;
 
 
 
@@ -747,6 +750,7 @@ void       FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj);
 int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temperature, int16_t z_average);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t * obj);

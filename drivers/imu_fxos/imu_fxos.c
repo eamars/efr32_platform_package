@@ -35,6 +35,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
 
+
     // do not reinitialize the imu driver
     if (obj->initialized)
     {
@@ -53,6 +54,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     obj->current_compass = 0;
     obj->current_heading = 0;
+    obj->scaler = 2; //inital geuss for scaling factor of the imu z direction with temperature
 
 	// initialize door state and calibrate state
 	obj->calibrated = false;
@@ -88,6 +90,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     FXOS8700CQ_Init_Interupt(obj);
     FXOS8700CQ_ActiveMode(obj);
+
+    FXOS8700CQ_PollMagnetometer(obj,&obj->old_magdata);
+    obj->temp = FXOS8700CQ_GetTemperature(obj);
 
 
 }
@@ -202,7 +207,7 @@ uint8_t FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data
     uint8_t i = 0;
     char raw[6] = {0};
     //loop through to insure that there are no zerod values from a mishap either efr or imu side or in the twi line.
-    for (i=0;i<=10;i++)
+    for (i = 0; i <= 10; i++)
     {
         FXOS8700CQ_ReadByteArray(obj, M_OUT_X_MSB, raw, 6);
         mag_data->x = (raw[0] << 8) | raw[1];           // Return 16-bit, 2's complement magnetometer data
@@ -521,7 +526,7 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
 
 
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
-    obj->temp = FXOS8700CQ_GetTemperature(obj);
+
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
     FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector ena bleld,procs wake up,interupt on pin 2 enlabeled
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
@@ -560,7 +565,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     FXOS8700CQ_Caclculate_Vector(obj);
     FXOS8700CQ_Vector_Angle(obj);
-    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // esentialy debouncing wont let the state change constalty 
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // esentialy debouncing wont let the state change constalty
     {
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
         // this may also remove some false positives that are only there for a very short time
@@ -646,20 +651,50 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 {
 	// initialize the task tick handler
 	portTickType xLastWakeTime;
-    int16_t temperature_imu;
-    int16_t temp_change;
+    int8_t temperature_imu = 0;
+    int8_t temp_change = 0;
+
+    uint16_t z_count = 0;
+    int32_t z_total = 0;
+    float z_average = 0;
+
+    rawdata_t mag_raw;
+
+
     bool interrupt_check;
 	// get last execution time
 	xLastWakeTime = xTaskGetTickCount();
 	while (1)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
+
         temp_change = temperature_imu - obj->temp;
-        if ((abs(temp_change) >= 3) && (abs(temp_change) < 30)) // the less than 30 is because it should really never get here and i think it may on the odd ocaion of crossing 0 degrees it stuffs up some times
+        if (z_count <= 20)
         {
+            FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+            z_total += mag_raw.z;
+            z_count ++;
+        }
+
+
+        if ((abs(temp_change) >= 1) && (abs(temp_change) < 10)) // the less than 10 is because it should really never get here and i think it may on the odd ocaion of crossing 0 degrees it stuffs up some times
+        {
+            z_average = ((float)z_total)/((float)z_count);
+            z_total = 0;
+            z_count = 0;
+
             interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
             GPIOINT_CallbackUnRegister(PIO_PIN(obj->int_2));
 
+            if (obj->door_state == IMU_EVENT_DOOR_CLOSE)
+            {
+                FXOS8700CQ_Cal_Scaling(obj,temp_change, (int16_t)z_average);
+                FXOS8700CQ_Set_Origin(obj);
+            }
+            else
+            {
+                obj->z_origin = obj->z_origin + (obj->scaler*temp_change) ; // when this is set and open the device sets the threshold to the open threshold as it is larger and will allow for some temperature leway to get closed.
+            }
 
 
             FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
@@ -676,26 +711,32 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             // if the door is open the device tries to predict the change for the origin point this is dificult as the imu's have lsightly different changes due to temperature
             // if the door is closed it resets the origin point this could cause an isue if the device keeps changeing temperature and is on the edge of its closed state each
             // time it could theoreticaly get to be wide open while saying it is closed/ get a open state when the door is closed
-            if (obj->door_state != IMU_EVENT_DOOR_OPEN)
-            {
-                FXOS8700CQ_Set_Origin(obj);
-            }
-            else
-            {
-                obj->z_origin = obj->z_origin + temp_change ;
-            }
+            while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
             // change the orgin of the device depenant on temperature
             FXOS8700CQ_Magnetic_Vector(obj);
             FXOS8700CQ_ActiveMode(obj);
             delay_ms(1000);
             GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
+            // checks if the interupt line has been changed and if it has go to the intterupt handler
             if (interrupt_check !=(bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2)))
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
+            obj->temp = temperature_imu;
         }
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(20000));
 	}
+}
+
+void FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temp_change, int16_t z_average)
+{
+    float new_scaler;
+
+    new_scaler = (float)((z_average - obj->old_magdata.z) /(float)temp_change);
+    obj->scaler = ((obj->scaler * 4 ) + new_scaler) / 5.0;
+
+    obj->old_magdata.z = z_average;
+
 }
 
 /**
@@ -760,7 +801,8 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     uint32_t temp_vector = 0;
     uint8_t i = 0;
     //Finds the current vector  and adds 5 then a  scaling factor to get the open and closed threshold constants.
-    for (i =0;i <= 5; i++)
+    FXOS8700CQ_Set_Origin(obj);
+    for (i =0;i <= 2; i++)
     {
         FXOS8700CQ_Caclculate_Vector(obj);
         if (temp_vector < obj->vector)
@@ -769,7 +811,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
         }
         delay_ms(800);
     }
-    obj->vector_threshold_open = (temp_vector +10)*1.5;
+    obj->vector_threshold_open = (temp_vector +10)*2;
     obj->vector_threshold_closed = (temp_vector + 10)*1.2;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->calibrated = true;
