@@ -694,7 +694,6 @@ typedef struct
     pio_t enable;
     bool initialized;
 	imu_event_t door_state;
-    bool calibrated;
     int16_t start_position;
     uint32_t vector;
     int16_t vector_angle;

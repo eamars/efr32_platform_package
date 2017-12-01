@@ -59,7 +59,6 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->origin.tmp_coef = 2; //inital geuss for scaling factor of the imu z direction with temperature
 
 	// initialize door state and calibrate state
-	obj->calibrated = false;
 	obj->door_state = IMU_EVENT_DOOR_CLOSE;
 
     //intalise que
@@ -84,12 +83,15 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     FXOS8700CQ_ConfigureAccelerometer(obj);
     FXOS8700CQ_ConfigureMagnetometer(obj);
     //sets inital thresholds (quite leaneant thesholds)
-    obj->origin.vector_threshold_open = 55;
-    obj->origin.vector_threshold_closed = 40;
+
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     FXOS8700CQ_Init_Interupt(obj);
     FXOS8700CQ_ActiveMode(obj);
+    if (obj->origin.checksum != true)
+    {
+        FXOS8700CQ_Calibrate(obj);
+    }
 
 
 }
@@ -560,8 +562,6 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     bool interupt_1 = 0;
     uint8_t Vector_Threshold[2] = {0};
     interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-    FXOS8700CQ_Caclculate_Vector(obj);
-    FXOS8700CQ_Vector_Angle(obj);
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // esentialy debouncing wont let the state change constalty
     {
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
@@ -588,7 +588,6 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
         if (obj->door_state != obj->last_event)
         {
             FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
-            FXOS8700CQ_Door_State_Poll(obj);
 
 
             xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
@@ -666,7 +665,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
 
         temp_change = temperature_imu - obj->temp;
-        if (z_count <= 20)
+        if ((z_count <= 20) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
         {
             FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
             z_total += mag_raw.z;
@@ -674,7 +673,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
         }
 
 
-        if ((abs(temp_change) >= 1) && (abs(temp_change) < 10)) // the less than 10 is because it should really never get here and i think it may on the odd ocaion of crossing 0 degrees it stuffs up some times
+        if ((abs(temp_change) >= 1) && (abs(temp_change) < 10)) // the less than 20 is because it should really never get here and i think it may on the odd ocaion of crossing 0 degrees it stuffs up some times
         {
             z_average = ((float)z_total)/((float)z_count);
             z_total = 0;
@@ -812,7 +811,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     obj->origin.vector_threshold_closed = (temp_vector + 10)*1.2;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
-    obj->calibrated = true;
+    obj->origin.checksum = true;
 
 }
 
