@@ -10,5 +10,5 @@ FILE (GLOB SRC *.c)
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency and build order
-#ADD_DEPENDENCIES(${LIB_NAME} emlib spidrv delay)
-#TARGET_LINK_LIBRARIES(${LIB_NAME} emlib spidrv delay)
+ADD_DEPENDENCIES(${LIB_NAME} delay)
+TARGET_LINK_LIBRARIES(${LIB_NAME} delay)

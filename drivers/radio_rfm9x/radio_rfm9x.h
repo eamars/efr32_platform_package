@@ -5,7 +5,10 @@
 #ifndef RADIO_RFM9X_H_
 #define RADIO_RFM9X_H_
 
+#include <stdint.h>
+#include <stdbool.h>
 
+#include "radio_template.h"
 #include "spidrv.h"
 #include "pio_defs.h"
 #include "radio_rfm9x_regs.h"
@@ -41,8 +44,8 @@
  */
 typedef enum
 {
-	RADIO_RFM9X_MODEM_FSK = 0,
-	RADIO_RFM9X_MODEM_LORA = 1
+    RADIO_RFM9X_MODEM_FSK = 0,
+    RADIO_RFM9X_MODEM_LORA = 1
 } radio_rfm9x_modem_t;
 
 
@@ -51,16 +54,16 @@ typedef enum
  */
 typedef enum
 {
-	RADIO_RFM9X_BW_7K8 = 0x0,
-	RADIO_RFM9X_BW_10K4 = 0x1,
-	RADIO_RFM9X_BW_15K6 = 0x2,
-	RADIO_RFM9X_BW_20K8 = 0x3,
-	RADIO_RFM9X_BW_32K25 = 0x4,
-	RADIO_RFM9X_BW_41K7 = 0x5,
-	RADIO_RFM9X_BW_62K5 = 0x6,
-	RADIO_RFM9X_BW_125K = 0x7,
-	RADIO_RFM9X_BW_250K = 0x8,
-	RADIO_RFM9X_BW_500K = 0x9
+    RADIO_RFM9X_BW_7K8 = 0x0,
+    RADIO_RFM9X_BW_10K4 = 0x1,
+    RADIO_RFM9X_BW_15K6 = 0x2,
+    RADIO_RFM9X_BW_20K8 = 0x3,
+    RADIO_RFM9X_BW_32K25 = 0x4,
+    RADIO_RFM9X_BW_41K7 = 0x5,
+    RADIO_RFM9X_BW_62K5 = 0x6,
+    RADIO_RFM9X_BW_125K = 0x7,
+    RADIO_RFM9X_BW_250K = 0x8,
+    RADIO_RFM9X_BW_500K = 0x9
 } radio_rfm9x_bw_t;
 
 
@@ -69,10 +72,10 @@ typedef enum
  */
 typedef enum
 {
-	RADIO_RFM9X_CR_4_5 = 1,
-	RADIO_RFM9X_CR_4_6 = 2,
-	RADIO_RFM9X_CR_4_7 = 3,
-	RADIO_RFM9X_CR_4_8 = 4
+    RADIO_RFM9X_CR_4_5 = 1,
+    RADIO_RFM9X_CR_4_6 = 2,
+    RADIO_RFM9X_CR_4_7 = 3,
+    RADIO_RFM9X_CR_4_8 = 4
 } radio_rfm9x_cr_t;
 
 
@@ -81,31 +84,15 @@ typedef enum
  */
 typedef enum
 {
-	// expressed in the power of 2
-	RADIO_RFM9X_SF_64 = 6,
-	RADIO_RFM9X_SF_128 = 7,
-	RADIO_RFM9X_SF_256 = 8,
-	RADIO_RFM9X_SF_512 = 9,
-	RADIO_RFM9X_SF_1024 = 10,
-	RADIO_RFM9X_SF_2048 = 11,
-	RADIO_RFM9X_SF_4096 = 12
+    // expressed in the power of 2
+    RADIO_RFM9X_SF_64 = 6,
+    RADIO_RFM9X_SF_128 = 7,
+    RADIO_RFM9X_SF_256 = 8,
+    RADIO_RFM9X_SF_512 = 9,
+    RADIO_RFM9X_SF_1024 = 10,
+    RADIO_RFM9X_SF_2048 = 11,
+    RADIO_RFM9X_SF_4096 = 12
 } radio_rfm9x_sf_t;
-
-
-/**
- * @brief Radio operation mode
- */
-typedef enum
-{
-	RADIO_RFM9X_OP_SLEEP = RH_RF95_MODE_SLEEP,
-	RADIO_RFM9X_OP_STDBY = RH_RF95_MODE_STDBY,
-	RADIO_RFM9X_OP_FSTX = RH_RF95_MODE_FSTX,
-	RADIO_RFM9X_OP_TX = RH_RF95_MODE_TX,
-	RADIO_RFM9X_OP_FSRX = RH_RF95_MODE_FSRX,
-	RADIO_RFM9X_OP_RX = RH_RF95_MODE_RXCONTINUOUS,
-	RADIO_RFM9X_OP_RXSINGLE = RH_RF95_MODE_RXSINGLE,
-	RADIO_RFM9X_OP_CAD = RH_RF95_MODE_CAD
-} radio_rfm9x_op_t;
 
 
 /**
@@ -113,12 +100,12 @@ typedef enum
  */
 typedef struct
 {
-	void * callback_function;
-	void * args;
+    void * callback_function;
+    void * args;
 } radio_rfm9x_callback_t;
 
 
-typedef void (*on_rx_done_isr_handler)(void * msg, uint16_t size, int16_t rssi, int8_t snr, void * args) ;
+typedef void (*on_rx_done_isr_handler)(void * args, void * msg, uint16_t size, int16_t rssi, int8_t snr) ;
 typedef void (*on_tx_done_isr_handler)(void * args);
 typedef void (*on_rx_error_isr_handler)(void * args);
 typedef void (*on_rx_timeout_isr_handler)(void * args);
@@ -131,46 +118,37 @@ typedef void (*on_tx_timeout_handler)(void * args);
  */
 typedef struct
 {
-	// hardware pins
-	pio_t rst;
-	pio_t miso;
-	pio_t mosi;
-	pio_t clk;
-	pio_t cs;
-	pio_t dio0;
+    radio_t base;
 
-	// SPI driver
-	SPIDRV_HandleData_t spi_handle_data;
+    // hardware pins
+    pio_t rst;
+    pio_t miso;
+    pio_t mosi;
+    pio_t clk;
+    pio_t cs;
+    pio_t dio0;
 
-	// radio status
-	radio_rfm9x_op_t radio_op_state;
+    // SPI driver
+    SPIDRV_HandleData_t spi_handle_data;
 
-	struct
-	{
-		uint32_t frequency;
-		radio_rfm9x_modem_t modem;
-		int8_t tx_power;
-		uint16_t preamble_length;
-		radio_rfm9x_bw_t bandwidth;
-		radio_rfm9x_cr_t coding_rate;
-		radio_rfm9x_sf_t spreading_factor;
-		bool crc_enable;
-		bool implicit_header;
-		bool is_public_network;
-		uint8_t max_payload_length;
-
-	} config;
-
-	// handlers
-	radio_rfm9x_callback_t on_rx_done_isr;
-	radio_rfm9x_callback_t on_tx_done_isr;
-	radio_rfm9x_callback_t on_rx_error_isr;
-	radio_rfm9x_callback_t on_rx_timeout_isr;
+    struct
+    {
+        uint32_t frequency;
+        radio_rfm9x_modem_t modem;
+        int8_t tx_power;
+        uint16_t preamble_length;
+        radio_rfm9x_bw_t bandwidth;
+        radio_rfm9x_cr_t coding_rate;
+        radio_rfm9x_sf_t spreading_factor;
+        bool crc_enable;
+        bool implicit_header;
+        bool is_public_network;
+        uint8_t max_payload_length;
+    } config;
 
 #if USE_FREERTOS == 1
-	radio_rfm9x_callback_t on_tx_timeout_handler;
-	xTimerHandle rx_timeout_timer;
-	xTimerHandle tx_timeout_timer;
+    xTimerHandle rx_timeout_timer;
+    xTimerHandle tx_timeout_timer;
 #endif
 
 } radio_rfm9x_t;
@@ -224,7 +202,7 @@ void radio_rfm9x_set_channel(radio_rfm9x_t * obj, uint32_t freq);
  */
 void radio_rfm9x_set_tx_power_use_rfo(radio_rfm9x_t * obj, int8_t power_dbm, bool use_rfo);
 #define radio_rfm9x_set_tx_power(obj, power_dbm) \
-		radio_rfm9x_set_tx_power_use_rfo((obj), (power_dbm), false)
+        radio_rfm9x_set_tx_power_use_rfo((obj), (power_dbm), false)
 
 /**
  * @brief Configure modem mode
@@ -288,17 +266,16 @@ void radio_rfm9x_set_lna(radio_rfm9x_t * obj, uint8_t lna_gain, bool boost_on);
  * @param obj the transceiver object
  * @param buffer data
  * @param size the length of data
+ * @param timeout_ms timeout in ms
  */
-void radio_rfm9x_send(radio_rfm9x_t * obj, void * buffer, uint8_t size);
+void radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t size, uint32_t timeout_ms);
 
 /**
- * @brief Toggle the transceiver mode to stand by
- *
- * Note: low power, ready to switch states, passive data sensing is not available
- *
- * @param obj the transciever
+ * @brief Enter the data receiving mode for certain amount of time
+ * @param obj the transceiver object
+ * @param timeout_ms timeout in ms
  */
-void radio_rfm9x_set_opmode_stdby(radio_rfm9x_t * obj);
+void radio_rfm9x_recv_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms);
 
 /**
  * @brief Set public network access
@@ -332,63 +309,6 @@ uint32_t radio_rfm9x_get_time_on_air(radio_rfm9x_t * obj, radio_rfm9x_modem_t mo
  * @param max_length the maximum packet length
  */
 void radio_rfm9x_set_max_payload_length(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem, uint8_t max_length);
-
-/**
- * @brief Toggle the transceiver mode to Tx (Transmit)
- * @param obj the transceiver object
- * @param timeout_ms timeout in ms indicating when tx should be expired and return to default state (stdby)
- */
-void radio_rfm9x_set_opmode_tx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms);
-#define radio_rfm9x_set_opmode_tx(obj) \
-		radio_rfm9x_set_opmode_tx_timeout((obj), (0))
-
-/**
- * @brief Toggle the transceiver mode to Rx (active continuous receive)
- * @param obj the transceiver object
- * @param timeout_ms timeout in ms indicating when rx should be expired and return to default state (stdby)
- */
-void radio_rfm9x_set_opmode_rx_timeout(radio_rfm9x_t * obj, uint32_t timeout_ms);
-#define radio_rfm9x_set_opmode_rx(obj) \
-		radio_rfm9x_set_opmode_rx_timeout((obj), (0))
-
-/**
- * @brief Toggle the transceiver mode to Sleep (low power mode)
- * @param obj the transceiver
- */
-void radio_rfm9x_set_opmode_sleep(radio_rfm9x_t * obj);
-
-
-static inline void radio_rfm9x_set_rx_done_isr_callback(radio_rfm9x_t * obj, on_rx_done_isr_handler callback_function, void * args)
-{
-	obj->on_rx_done_isr.callback_function = callback_function;
-	obj->on_rx_done_isr.args = args;
-}
-
-static inline void radio_rfm9x_set_tx_done_isr_callback(radio_rfm9x_t * obj, on_tx_done_isr_handler callback_function, void * args)
-{
-	obj->on_tx_done_isr.callback_function = callback_function;
-	obj->on_tx_done_isr.args = args;
-}
-
-static inline void radio_rfm9x_set_rx_error_isr_callback(radio_rfm9x_t * obj, on_rx_error_isr_handler callback_function, void * args)
-{
-	obj->on_rx_error_isr.callback_function = callback_function;
-	obj->on_rx_error_isr.args = args;
-}
-
-static inline void radio_rfm9x_set_rx_timeout_isr_callback(radio_rfm9x_t * obj, on_rx_timeout_isr_handler callback_function, void * args)
-{
-	obj->on_rx_timeout_isr.callback_function = callback_function;
-	obj->on_rx_timeout_isr.args = args;
-}
-
-#if USE_FREERTOS == 1
-static inline void radio_rfm9x_set_tx_timeout_handler_callback(radio_rfm9x_t * obj, on_tx_timeout_handler callback_function, void * args)
-{
-	obj->on_tx_timeout_handler.callback_function = callback_function;
-	obj->on_tx_timeout_handler.args = args;
-}
-#endif
 
 
 #ifdef __cplusplus

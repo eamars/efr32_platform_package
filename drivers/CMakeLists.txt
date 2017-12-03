@@ -17,8 +17,8 @@ SET(ENABLED_DRIVERS
 		radio_template
 		radio_rfm9x
 		radio_efr32
-		lorawan
-		lora_phy
+		# lorawan
+		# lora_phy
 		wg_mac
 		wg_mac_ncp
         imu_fxos
