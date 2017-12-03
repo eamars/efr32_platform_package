@@ -382,6 +382,9 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
             &radio_efr32_singleton_instance,
             radio_efr32_on_timer_timeout
     );
+
+    DRV_ASSERT(radio_efr32_singleton_instance.rx_timeout_timer);
+    DRV_ASSERT(radio_efr32_singleton_instance.tx_timeout_timer);
 #endif
 
     return &radio_efr32_singleton_instance;
