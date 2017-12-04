@@ -822,6 +822,38 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
     // reset internal variable
     memset(&obj->config, 0x0, sizeof(obj->config));
 
+    // configure default callbacks
+    obj->base.radio_set_opmode_idle_cb.callback = radio_rfm9x_set_opmode_stdby_pri;
+    obj->base.radio_set_opmode_idle_cb.args = obj;
+
+    obj->base.radio_set_opmode_sleep_cb.callback = radio_rfm9x_set_opmode_sleep_pri;
+    obj->base.radio_set_opmode_sleep_cb.args = obj;
+
+    obj->base.radio_set_opmode_rx_timeout_cb.callback = radio_rfm9x_set_opmode_rx_timeout_pri;
+    obj->base.radio_set_opmode_rx_timeout_cb.args = obj;
+
+    obj->base.radio_set_opmode_tx_timeout_cb.callback = radio_rfm9x_set_opmode_tx_timeout_pri;
+    obj->base.radio_set_opmode_tx_timeout_cb.args = obj;
+
+    // register send/recv handlers
+    obj->base.radio_send_cb.callback = radio_rfm9x_send_timeout;
+    obj->base.radio_send_cb.args = obj;
+
+    obj->base.radio_recv_cb.callback = radio_rfm9x_recv_timeout;
+    obj->base.radio_recv_cb.args = obj;
+
+#if USE_FREERTOS == 1
+    // initialize timer
+    obj->rx_timeout_timer = xTimerCreate("rfm_rx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+    obj->tx_timeout_timer = xTimerCreate("rfm_tx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
+
+    DRV_ASSERT(obj->rx_timeout_timer);
+    DRV_ASSERT(obj->tx_timeout_timer);
+#endif
+
+    /**
+     * @brief Configure radio module
+     */
     // find spi peripheral functions
     DRV_ASSERT(find_pin_function(spi_miso_map, obj->miso, (void **) &usart_base, &miso_loc));
     DRV_ASSERT(find_pin_function(spi_mosi_map, obj->mosi, NULL, &mosi_loc));
@@ -858,30 +890,6 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
                       true /* raising edge */, false /* falling edge */, true /* enable now */
     );
 
-    // configure default callbacks
-    obj->base.radio_set_opmode_idle_cb.callback = radio_rfm9x_set_opmode_stdby_pri;
-    obj->base.radio_set_opmode_idle_cb.args = obj;
-
-    obj->base.radio_set_opmode_sleep_cb.callback = radio_rfm9x_set_opmode_sleep_pri;
-    obj->base.radio_set_opmode_sleep_cb.args = obj;
-
-    obj->base.radio_set_opmode_rx_timeout_cb.callback = radio_rfm9x_set_opmode_rx_timeout_pri;
-    obj->base.radio_set_opmode_rx_timeout_cb.args = obj;
-
-    obj->base.radio_set_opmode_tx_timeout_cb.callback = radio_rfm9x_set_opmode_tx_timeout_pri;
-    obj->base.radio_set_opmode_tx_timeout_cb.args = obj;
-
-    // register send/recv handlers
-    obj->base.radio_send_cb.callback = radio_rfm9x_send_timeout;
-    obj->base.radio_send_cb.args = obj;
-
-    obj->base.radio_recv_cb.callback = radio_rfm9x_recv_timeout;
-    obj->base.radio_recv_cb.args = obj;
-
-    /**
-     * @brief Configure radio module
-     */
-
     // perform hard reset
     radio_rfm9x_hard_reset(obj);
 
@@ -900,17 +908,8 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
     // set public network
     radio_rfm9x_set_public_network(obj, true);
 
-    // set stdby mode
+    // set stdby mode as default state after initialization
     radio_rfm9x_set_opmode_stdby_pri(obj);
-
-#if USE_FREERTOS == 1
-    // initialize timer
-    obj->rx_timeout_timer = xTimerCreate("rfm_rx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
-    obj->tx_timeout_timer = xTimerCreate("rfm_tx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
-
-    DRV_ASSERT(obj->rx_timeout_timer);
-    DRV_ASSERT(obj->tx_timeout_timer);
-#endif
 }
 
 
