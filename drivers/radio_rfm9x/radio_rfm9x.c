@@ -884,7 +884,6 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
     GPIO_PinModeSet(PIO_PORT(obj->dio0), PIO_PIN(obj->dio0), gpioModeInput, 0);
 
     // configure port interrupt
-    GPIOINT_Init();
     GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->dio0), (GPIOINT_IrqCallbackPtrWithArgs_t) radio_rfm9x_dio0_isr_pri, (void *) obj);
     GPIO_ExtIntConfig(PIO_PORT(obj->dio0), PIO_PIN(obj->dio0), PIO_PIN(obj->dio0),
                       true /* raising edge */, false /* falling edge */, true /* enable now */
