@@ -228,7 +228,14 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
     obj->local_seq_id = 0;
 
     // setup retransmit
-    obj->retransmit.rx_window_timer = xTimerCreate("rx_timer", pdMS_TO_TICKS(obj->rx_window_timeout), pdFALSE, obj, wg_mac_on_rx_window_timeout);
+    obj->retransmit.rx_window_timer = xTimerCreate(
+            "rx_timer",
+            pdMS_TO_TICKS(obj->rx_window_timeout),
+            pdFALSE,
+            obj,
+            wg_mac_on_rx_window_timeout
+    );
+
     obj->retransmit.max_retries = WG_MAC_DEFAULT_MAX_RETRIES;
 
     // set radio to sleep default state
