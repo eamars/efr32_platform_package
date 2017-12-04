@@ -862,6 +862,26 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
                       true /* raising edge */, false /* falling edge */, true /* enable now */
     );
 
+    // configure default callbacks
+    obj->base.radio_set_opmode_idle_cb.callback = radio_rfm9x_set_opmode_stdby_pri;
+    obj->base.radio_set_opmode_idle_cb.args = obj;
+
+    obj->base.radio_set_opmode_sleep_cb.callback = radio_rfm9x_set_opmode_sleep_pri;
+    obj->base.radio_set_opmode_sleep_cb.args = obj;
+
+    obj->base.radio_set_opmode_rx_timeout_cb.callback = radio_rfm9x_set_opmode_rx_timeout_pri;
+    obj->base.radio_set_opmode_rx_timeout_cb.args = obj;
+
+    obj->base.radio_set_opmode_tx_timeout_cb.callback = radio_rfm9x_set_opmode_tx_timeout_pri;
+    obj->base.radio_set_opmode_tx_timeout_cb.args = obj;
+
+    // register send/recv handlers
+    obj->base.radio_send_cb.callback = radio_rfm9x_send_timeout;
+    obj->base.radio_send_cb.args = obj;
+
+    obj->base.radio_recv_cb.callback = radio_rfm9x_recv_timeout;
+    obj->base.radio_recv_cb.args = obj;
+
     /**
      * @brief Configure radio module
      */
@@ -884,26 +904,6 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
     // set stdby mode
     radio_rfm9x_set_opmode_stdby_pri(obj);
 
-    // configure default callbacks
-    obj->base.radio_set_opmode_idle_cb.callback = radio_rfm9x_set_opmode_stdby_pri;
-    obj->base.radio_set_opmode_idle_cb.args = obj;
-
-    obj->base.radio_set_opmode_sleep_cb.callback = radio_rfm9x_set_opmode_sleep_pri;
-    obj->base.radio_set_opmode_sleep_cb.args = obj;
-
-    obj->base.radio_set_opmode_rx_timeout_cb.callback = radio_rfm9x_set_opmode_rx_timeout_pri;
-    obj->base.radio_set_opmode_rx_timeout_cb.args = obj;
-
-    obj->base.radio_set_opmode_tx_timeout_cb.callback = radio_rfm9x_set_opmode_tx_timeout_pri;
-    obj->base.radio_set_opmode_tx_timeout_cb.args = obj;
-
-    // register internal callback functions
-    obj->base.radio_send_cb.callback = radio_rfm9x_send_timeout;
-    obj->base.radio_send_cb.args = obj;
-
-    obj->base.radio_recv_cb.callback = radio_rfm9x_recv_timeout;
-    obj->base.radio_recv_cb.args = obj;
-
 #if USE_FREERTOS == 1
     // initialize timer
     obj->rx_timeout_timer = xTimerCreate("rfm_rx_t", pdMS_TO_TICKS(1), pdFALSE, obj, radio_rfm9x_on_timer_timeout);
@@ -921,7 +921,7 @@ void radio_rfm9x_send_timeout(radio_rfm9x_t * obj, void * buffer, uint8_t size, 
     DRV_ASSERT(buffer);
     DRV_ASSERT(size);
 
-    // put the radio to idle state
+    // put the radio to idle state to allow fifo access
     radio_rfm9x_set_opmode_stdby_pri(obj);
 
     // set fifo pointer
