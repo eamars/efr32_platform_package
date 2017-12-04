@@ -25,8 +25,8 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
     obj->last_packet_rssi = (int16_t) rssi;
     obj->last_packet_snr = (int8_t) snr;
 
-    // reset to rx to clear buffer
-    radio_set_opmode_rx_timeout(obj->radio, 0);
+    // continue receive packet unless specified
+    radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
     xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
@@ -34,7 +34,7 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
 
 static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
 {
-    // indicate the Tx is ready
+    // notify the Tx is complete
     xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 }
 
