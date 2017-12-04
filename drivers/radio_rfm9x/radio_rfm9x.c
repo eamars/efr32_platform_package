@@ -609,10 +609,6 @@ static void radio_rfm9x_set_opmode_rx_timeout_pri(radio_rfm9x_t * obj, uint32_t 
 
     if (obj->base.opmode != RADIO_OPMODE_RX)
     {
-        // reset fifo pointer
-        radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0F_FIFO_RX_BASE_ADDR, 0x00);
-        radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
-
         // set opmode and interrupt source
         radio_rfm9x_set_opmode_pri(obj, RH_RF95_MODE_RXCONTINUOUS);
         radio_rfm9x_reg_modify_pri(obj, RH_RF95_REG_40_DIO_MAPPING1, 0x00 << 6, 0xC0); // interrupt on rx done
@@ -900,6 +896,9 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
     // reset fifo pointer
     radio_rfm9x_reg_write_pri(obj, RH_RF95_REG_0D_FIFO_ADDR_PTR, 0x00);
+
+    // set public network
+    radio_rfm9x_set_public_network(obj, true);
 
     // set stdby mode
     radio_rfm9x_set_opmode_stdby_pri(obj);
