@@ -350,6 +350,8 @@ void radio_rfm9x_hard_reset(radio_rfm9x_t * obj)
 {
     DRV_ASSERT(obj);
 
+    // TODO: check if delay module is initialized
+
     // hold reset line low for 100us
     GPIO_PinOutClear(PIO_PORT(obj->rst), PIO_PIN(obj->rst));
     delay_us(100);
@@ -885,8 +887,8 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
     // configure port interrupt
     GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->dio0), (GPIOINT_IrqCallbackPtrWithArgs_t) radio_rfm9x_dio0_isr_pri, (void *) obj);
-    GPIO_ExtIntConfig(PIO_PORT(obj->dio0), PIO_PIN(obj->dio0), PIO_PIN(obj->dio0),
-                      true /* raising edge */, false /* falling edge */, true /* enable now */
+    GPIO_IntConfig(PIO_PORT(obj->dio0), PIO_PIN(obj->dio0),
+                   true /* raising edge */, false /* falling edge */, true /* enable now */
     );
 
     // perform hard reset
