@@ -21,6 +21,7 @@ SET(ENABLED_DRIVERS
 		# lora_phy
 		wg_mac
 		wg_mac_ncp
+		ncp_spi
         imu_fxos
 		battery_monitor
 		# simgbpr
@@ -45,10 +46,11 @@ FOREACH(MODULE ${ENABLED_DRIVERS})
 	ADD_SUBDIRECTORY("${MODULE}")
 ENDFOREACH(MODULE)
 
-# create library
-ADD_LIBRARY(${LIB_NAME}
-		"drivers.c"
-		)
+# Collect all source file
+FILE (GLOB SRC *.c)
+
+# build library
+ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency between libraries
 ADD_DEPENDENCIES(${LIB_NAME} ${ENABLED_DRIVERS})
