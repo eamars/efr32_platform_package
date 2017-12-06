@@ -17,7 +17,7 @@
 
 #define PA_RAMP                                   (10)
 #define PA_2P4_LOWPOWER                           (0)
-#define PA_DEFAULT_POWER                          (252)
+#define PA_DEFAULT_POWER                          (RAIL_TX_POWER_LEVEL_SUBGIG_MAX)
 #define PA_DCDC_VOLTAGE                           (1800)
 #define PA_VBAT_VOLTAGE                           (1800)
 
