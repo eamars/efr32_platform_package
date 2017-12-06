@@ -5,6 +5,8 @@
  * @file ncp_spi.c
  */
 
+#if USE_FREERTOS == 1
+
 #include "ncp_spi.h"
 #include "pio_defs.h"
 #include "drv_debug.h"
@@ -35,21 +37,69 @@ static inline void interrupt_out_clear(ncp_spi_t * obj)
     GPIO_PinOutClear(PIO_PORT(obj->interrupt_out), PIO_PIN(obj->interrupt_out));
 }
 
+static void transfer_done_singleton(SPIDRV_Handle_t handle, Ecode_t transferStatus, int itemsTransferred)
+{
+
+}
+
 static void cs_isr_pri(uint8_t pin, ncp_spi_t * obj)
 {
+    // ignore falling edge interrupt where the host just started transmitting data
     if (is_cs_asserted_pri(obj))
     {
         return;
     }
 
-    // rising edge
-    if (obj->state == NCP_SPI_STATE_RESPONSE)
-    {
-        SPIDRV_AbortTransfer(&obj->spi_handle_data);
-    }
+    // start a DMA request to transfer data from spi to local buffer
+    SPIDRV_SReceive(&obj->spi_handle_data, obj->buffer, NCP_SPI_RX_BUFFER_SIZE, NULL, NCP_SPI_TIMEOUT);
 
-    // reset to idle state
-    obj->state = NCP_SPI_STATE_IDLE;
+    // on rising edge, indicate the thread data is about ready to read
+    xSemaphoreGiveFromISR(obj->spi_data_received, NULL);
+}
+
+
+
+static void slave_data_receive_thread(ncp_spi_t * obj)
+{
+    while (1)
+    {
+        // indefinitely block on semaphore
+        if (xSemaphoreTake(obj->spi_data_received, portMAX_DELAY))
+        {
+            int item_transfered = 0, item_remaining = 0;
+            SPIDRV_GetTransferStatus(&obj->spi_handle_data, &item_transfered, &item_remaining);
+
+            // if any data is received
+            if (item_transfered > 1)
+            {
+                DEBUG_PRINT("Transfered: %d, Remaining: %d\r\n\r\n", item_transfered, item_remaining);
+                switch (obj->buffer[0])
+                {
+                    case NCP_SPI_FRAME_PROTO_VER:
+                    {
+                        DEBUG_PRINT("FRAME_PROTOCOL_VER requested\r\n\r\n");
+                        // abort current transmission
+                        SPIDRV_AbortTransfer(&obj->spi_handle_data);
+
+                        // check for frame terminator
+                        if (obj->buffer[1] == NCP_SPI_FRAME_TERMINATOR)
+                        {
+                            // set transmit buffer
+                            obj->buffer[0] = NCP_SPI_VERSION;
+                            obj->buffer[1] = NCP_SPI_FRAME_TERMINATOR;
+
+                            // transfer the bytes
+                            SPIDRV_STransmit(&obj->spi_handle_data, obj->buffer, 2, NULL, NCP_SPI_TIMEOUT);
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+
+            }
+        }
+    }
 }
 
 void ncp_spi_init(ncp_spi_t * obj,pio_t miso, pio_t mosi, pio_t clk, pio_t cs, pio_t interrupt_out)
@@ -65,6 +115,12 @@ void ncp_spi_init(ncp_spi_t * obj,pio_t miso, pio_t mosi, pio_t clk, pio_t cs, p
 
     // set default state
     obj->state = NCP_SPI_STATE_IDLE;
+
+    // create semaphore that indicates the data is ready
+    obj->spi_data_received = xSemaphoreCreateBinary();
+
+    // create thread that handles receive data from the interrupt handler
+    xTaskCreate((void *) slave_data_receive_thread, "spi_slave_t", 300, obj, 3, &obj->data_recv_thread_handler);
 
     // configure spi
     SPIDRV_Init_t spi_init_data;
@@ -123,3 +179,4 @@ void ncp_spi_init(ncp_spi_t * obj,pio_t miso, pio_t mosi, pio_t clk, pio_t cs, p
 }
 
 
+#endif // USE_FREERTOS == 1

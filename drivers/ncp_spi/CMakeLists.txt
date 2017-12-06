@@ -9,4 +9,7 @@ FILE (GLOB SRC *.c)
 # build library
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
+# add dependency and build order
+# ADD_DEPENDENCIES(${LIB_NAME} delay)
+TARGET_LINK_LIBRARIES(${LIB_NAME} drivers)
 
