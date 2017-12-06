@@ -32,6 +32,8 @@ static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_
     // copy data
     rx_msg.size = (uint8_t) size;
     memcpy(rx_msg.buffer, msg, rx_msg.size);
+    rx_msg.rssi = rssi;
+    rx_msg.snr = snr;
 
     // enter rx state again
     radio_recv_timeout(obj->radio, 0);
@@ -281,7 +283,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                             // TODO: repeated packet, this is likely caused by retransmission from the client
                             // we are not going to report the packet to the upper layer
                             DEBUG_PRINT("NCP: receive repeated packet with seqid [0x%x] from [0x%08llx], message won't deliver to upper layer\r\n",
-                                        client->rx_seqid, client->device_eui64);
+                                        header->seq_id, client->device_eui64);
 
                             break;
                         }

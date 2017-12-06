@@ -33,6 +33,8 @@ typedef struct
 {
     uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
     uint16_t size;
+    int32_t rssi;
+    int32_t snr;
     bool requires_ack;
 } wg_mac_ncp_msg_t;
 
