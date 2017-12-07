@@ -54,16 +54,18 @@ static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool first_attem
         subg_mac_header_t * header = (subg_mac_header_t *) msg->buffer;
         header->seqid = obj->local_seq_id++;
 
-        // give src id
+        // give src id and dest id
         if (!obj->link_state.is_network_joined)
         {
             // if the device is not joining the network, then use local eui64 mask with 0xFF
             header->src_id = (uint8_t) (obj->config.local_eui64 & 0xff);
+            header->dest_id = SUBG_MAC_BROADCAST_ADDR_ID;
         }
         else
         {
             // otherwise use the allocated id
             header->src_id = obj->link_state.allocated_id;
+            header->dest_id = obj->link_state.uplink_dest_id;
         }
 
         // keep a copy of previously transmitted packet
@@ -426,7 +428,7 @@ void wg_mac_join_network(wg_mac_t * obj)
 
     join_request->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
     join_request->cmd_header.mac_header.src_id = 0; // src id is managed by driver
-    join_request->cmd_header.mac_header.dest_id = SUBG_MAC_BROADCAST_ADDR_ID;
+    join_request->cmd_header.mac_header.dest_id = 0;
     join_request->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
     join_request->cmd_header.mac_header.seqid = 0; // seqid is controlled by the driver
     join_request->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_REQ;
