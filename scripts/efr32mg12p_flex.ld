@@ -156,9 +156,12 @@ SECTIONS
         KEEP(*(.dynamic_vectors))
 
         . = ALIGN(4);
+
+        /* CSTACK is used by Silab's
         __CSTACK__begin = . ;
         KEEP(*(.cstack .cstack.*));
         __CSTACK__end = . ;
+        */
 
         . = ALIGN(4);
         *(.textrw .textrw*);
@@ -216,17 +219,22 @@ SECTIONS
 
     .heap :
     {
-        __HeapBase = .;
+        __HEAP__begin = .;
         __end__ = .;
         end = __end__;
         _end = __end__;
         KEEP(*(.heap*))
-        __HeapLimit = .;
+        __HEAP_end = .;
     } > RAM
+
+    __CSTACK__begin = .;
+    __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
 
     /* Set stack top to end of RAM, and stack limit move down by
     * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
+
+
 
     /* Check if FLASH usage exceeds FLASH size */
     ASSERT( (LENGTH(FLASH) - 0x4) > (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
