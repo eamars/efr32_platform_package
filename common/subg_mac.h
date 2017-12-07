@@ -115,6 +115,7 @@ typedef union
         subg_mac_header_t mac_header;
         uint8_t data_type;
         uint16_t payload_length;
+        uint8_t payload_start_place_holder; // this byte do not count in the header size since this byte shares the first byte with the payload
     };
 } subg_mac_data_header_t;
 
