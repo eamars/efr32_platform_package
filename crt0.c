@@ -278,19 +278,19 @@ void Reset_Handler (void)
     // disable system irq
     __disable_irq();
 
-    // copy initialized data
+    // copy initialized data (.data)
     for (register uint32_t *pSrc = &__load_start_data, *pDest = &__data_start__; pDest < &__data_end__; )
     {
         *pDest++ = *pSrc++;
     }
 
-    // copy uninitialized data
+    // copy uninitialized data (.bss)
     for (register uint32_t *pDest = &__bss_start__; pDest < &__bss_end__; )
     {
         *pDest++ = 0x0UL;
     }
 
-    // fill CSTACK with magic numbers
+    // fill CSTACK with magic numbers (from .heap_end to __StackTop)
     for (register uint32_t *cstack = &__CSTACK__begin; cstack < &__CSTACK__end; )
     {
         *cstack++ = STACK_FILL_VALUE;
