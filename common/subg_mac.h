@@ -131,4 +131,4 @@ typedef union
 } subg_mac_routing_header_t;
 
 
-#endif SUBG_MAC_H_
+#endif // SUBG_MAC_H_
