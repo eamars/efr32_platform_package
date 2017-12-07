@@ -97,17 +97,16 @@ typedef struct
     wg_mac_ncp_client_t clients[WG_MAC_NCP_MAX_CLIENT_COUNT];
 } wg_mac_ncp_t;
 
-/**
- * @brief Default configuration for NCP
- */
-extern const wg_mac_ncp_config_t wg_mac_ncp_default_config;
-
-#endif // USE_FREERTOS == 1
-
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/**
+ * @brief Default configuration for NCP
+ */
+extern const wg_mac_ncp_config_t wg_mac_ncp_default_config;
 
 
 void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config);
@@ -118,5 +117,6 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
 }
 #endif
 
+#endif // USE_FREERTOS == 1
 
 #endif // WG_MAC_NCP_H_

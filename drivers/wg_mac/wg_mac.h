@@ -39,25 +39,35 @@ typedef enum
  */
 typedef struct
 {
-    uint8_t buffer[WG_MAC_MSG_BUFFER_SIZE - 1]; // 1 byte reserved for data alignment
-    uint8_t size;
+    uint8_t buffer[WG_MAC_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
+    uint16_t size;
+    int32_t rssi;
+    int32_t snr;
 } wg_mac_msg_t;
 
 typedef struct
 {
-    xTimerHandle rx_window_timer;
-    wg_mac_msg_t prev_packet;
-    uint8_t retry_counter;
-    uint8_t max_retries;
-} wg_mac_retransmit_t;
+    uint64_t local_eui64;
+    uint32_t rx_window_timeout_ms;
+    uint32_t tx_timeout_ms;
+    uint8_t max_retransmit;
+    bool forwared_all_packets;
+} wg_mac_config_t;
+
+typedef enum
+{
+    WG_MAC_NO_ERROR,
+    WG_MAC_UNKNOWN_ERROR,
+    WG_MAC_INVALID_PACKET_LENGTH,
+} wg_mac_error_code_t;
 
 
 typedef struct
 {
     // transceiver driver
     radio_t * radio;
-    uint32_t rx_window_timeout;
-    uint8_t device_id8;
+
+    // transmit seqid (local copy, maintained by driver)
     uint8_t local_seq_id;
 
     // packet queue
@@ -70,12 +80,24 @@ typedef struct
     TaskHandle_t fsm_thread_handler;
     SemaphoreHandle_t fsm_tx_done;
 
-    // link quality
-    int16_t last_packet_rssi;
-    int8_t last_packet_snr;
+    // configuration
+    wg_mac_config_t config;
+
+    // link state
+    struct
+    {
+        bool is_network_joined;
+        uint8_t allocated_id;
+        uint8_t uplink_dest_id;
+    } link_state;
 
     // retransmit
-    wg_mac_retransmit_t retransmit;
+    struct
+    {
+        xTimerHandle rx_window_timer;
+        wg_mac_msg_t prev_packet;
+        uint8_t retry_counter;
+    } retransmit;
 } wg_mac_t;
 
 
@@ -83,7 +105,14 @@ typedef struct
 extern "C" {
 #endif
 
-void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8);
+/**
+ * @brief Default configuration for wg_mac module
+ */
+extern const wg_mac_config_t wg_mac_default_config;
+
+void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config);
+
+void wg_mac_join_network(wg_mac_t * obj);
 
 /**
  * @brief Send bytes to transceiver

@@ -9,7 +9,15 @@
 #if USE_FREERTOS == 1
 
 #include "wg_mac.h"
-#include "subg_packet_v2.h"
+#include "subg_mac.h"
+
+const wg_mac_config_t wg_mac_default_config = {
+        .local_eui64 = 0,
+        .rx_window_timeout_ms = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS,
+        .tx_timeout_ms = WG_MAC_DEFAULT_TX_TIMEOUT_MS,
+        .max_retransmit = WG_MAC_DEFAULT_MAX_RETRIES,
+        .forwared_all_packets = false
+};
 
 static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int32_t rssi, int32_t snr)
 {
@@ -22,10 +30,10 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
     memcpy(rx_msg.buffer, msg, rx_msg.size);
 
     // copy rssi and snr
-    obj->last_packet_rssi = (int16_t) rssi;
-    obj->last_packet_snr = (int8_t) snr;
+    rx_msg.rssi = rssi;
+    rx_msg.snr = snr;
 
-    // continue receive packet unless specified
+    // continue receive packet unless interrupted
     radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
@@ -43,11 +51,20 @@ static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool first_attem
     if (first_attempt)
     {
         // give seq id
-        subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) msg->buffer;
-        header->seq_id = obj->local_seq_id++;
+        subg_mac_header_t * header = (subg_mac_header_t *) msg->buffer;
+        header->seqid = obj->local_seq_id++;
 
-        // assign local src id
-        header->src_id8 = obj->device_id8;
+        // give src id
+        if (!obj->link_state.is_network_joined)
+        {
+            // if the device is not joining the network, then use local eui64 mask with 0xFF
+            header->src_id = (uint8_t) (obj->config.local_eui64 & 0xff);
+        }
+        else
+        {
+            // otherwise use the allocated id
+            header->src_id = obj->link_state.allocated_id;
+        }
 
         // keep a copy of previously transmitted packet
         memcpy(&obj->retransmit.prev_packet, msg, sizeof(wg_mac_msg_t));
@@ -72,7 +89,7 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
     // we can bypass the idle state to transmit packet
     obj->retransmit.retry_counter += 1;
 
-    if (obj->retransmit.retry_counter >= obj->retransmit.max_retries)
+    if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
     {
         // reset to idle state
         obj->fsm_state = WG_MAC_IDLE;
@@ -83,6 +100,130 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
         wg_mac_send_pri(obj, &obj->retransmit.prev_packet, false);
     }
 }
+
+
+static void send_ack_packet(wg_mac_t * obj, uint8_t seqid_to_ack)
+{
+    wg_mac_msg_t tx_msg;
+
+    tx_msg.size = sizeof(subg_mac_cmd_ack_t);
+
+    // map subg_mac_cmd_ack_t to tx_msg
+    subg_mac_cmd_ack_t * ack_packet = (subg_mac_cmd_ack_t *) tx_msg.buffer;
+
+    ack_packet->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+    ack_packet->cmd_header.mac_header.src_id = 0;
+    ack_packet->cmd_header.mac_header.dest_id = obj->link_state.uplink_dest_id;
+    ack_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
+    ack_packet->cmd_header.mac_header.seqid = 0;
+    ack_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_ACK;
+    ack_packet->ack_seqid = seqid_to_ack;
+    ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
+
+    wg_mac_send_pri(obj, &tx_msg, true);
+}
+
+
+static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_msg_t * msg)
+{
+    // if the message is smaller than a command packet, then quit
+    if (msg->size < sizeof(subg_mac_cmd_header_t))
+        return WG_MAC_INVALID_PACKET_LENGTH;
+
+    bool clear_pending = false;
+    bool send_ack = false;
+
+    // map command header packet to the msg
+    subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) msg->buffer;
+
+    switch (cmd_header->cmd_type)
+    {
+        case SUBG_MAC_PACKET_CMD_ACK:
+        {
+            if (msg->size < sizeof(subg_mac_cmd_ack_t))
+                return WG_MAC_INVALID_PACKET_LENGTH;
+
+            subg_mac_cmd_ack_t * ack_packet = (subg_mac_cmd_ack_t *) msg->buffer;
+
+            switch(ack_packet->ack_type)
+            {
+                case SUBG_MAC_PACKET_CMD_ACK_CONFIRM:
+                case SUBG_MAC_PACKET_CMD_ACK_REACHABLE:
+                case SUBG_MAC_PACKET_CMD_ACK_UNREACHABLE:
+                {
+                    // TODO: Check seqid of acked packet
+                    clear_pending = true;
+                    send_ack = false;
+                    break;
+                }
+                default:
+                    break;
+            }
+
+            break;
+        }
+        case SUBG_MAC_PACKET_CMD_JOIN_REQ:
+        {
+            // the client shouldn't receive the join request message, skip
+            break;
+        }
+        case SUBG_MAC_PACKET_CMD_JOIN_RESP:
+        {
+            if (msg->size < sizeof(subg_mac_cmd_join_resp_t))
+            {
+                return WG_MAC_INVALID_PACKET_LENGTH;
+            }
+
+            subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
+
+            // the hub send me an allocated id!
+            obj->link_state.is_network_joined = true;
+            obj->link_state.allocated_id = response_packet->allocated_device_id;
+            obj->link_state.uplink_dest_id = response_packet->uplink_dest_id;
+
+            // clear the pending packet and send ack back
+            clear_pending = true;
+            send_ack = true;
+        }
+        default:
+            break;
+    }
+
+    if (clear_pending)
+    {
+        xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+        obj->fsm_state = WG_MAC_IDLE;
+    }
+
+    if (send_ack)
+    {
+        send_ack_packet(obj, cmd_header->mac_header.seqid);
+    }
+
+    return WG_MAC_NO_ERROR;
+}
+
+static wg_mac_error_code_t process_data_packet(wg_mac_t * obj, wg_mac_msg_t * msg)
+{
+    if (msg->size < sizeof(subg_mac_data_header_t))
+        return WG_MAC_INVALID_PACKET_LENGTH;
+
+    subg_mac_data_header_t * data_header = (subg_mac_data_header_t *) msg->buffer;
+
+    // send data to upper layer
+    xQueueSend(obj->rx_queue, msg, 0);
+
+    // if data requires ack, then send one
+    if (data_header->data_type == SUBG_MAC_PACKET_DATA_CONFIRM)
+    {
+        send_ack_packet(obj, data_header->mac_header.seqid);
+    }
+
+    return WG_MAC_NO_ERROR;
+}
+
+
 
 static void wg_mac_fsm_thread(wg_mac_t * obj)
 {
@@ -121,25 +262,36 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 }
                 else
                 {
-                    // if the packet transmitted is an ACK, then we don't need to wait for ack for the ack
-                    subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) obj->retransmit.prev_packet.buffer;
-                    if (cmd_packet->header.packet_type == SUBG_PACKET_V2_TYPE_CMD &&
-                        cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
+                    // if previously doesn't require ack or the previous packet is an ack, we are not expecting an ack
+                    subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
+                    if (header->packet_type == SUBG_MAC_PACKET_CMD)
                     {
-                        obj->fsm_state = WG_MAC_IDLE;
+                        subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) obj->retransmit.prev_packet.buffer;
+                        if (cmd_header->cmd_type == SUBG_MAC_PACKET_CMD_ACK)
+                        {
+                            obj->fsm_state = WG_MAC_IDLE;
+                            break;
+                        }
                     }
-                    else
+                    else if (header->packet_type == SUBG_MAC_PACKET_DATA)
                     {
-                        // starts rx receive window
-                        radio_recv_timeout(obj->radio, 0);
-
-                        // starts rx timer
-                        xTimerChangePeriod(obj->retransmit.rx_window_timer, obj->rx_window_timeout, portMAX_DELAY);
-                        xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
-
-                        // setup done, then enter rx state
-                        obj->fsm_state = WG_MAC_RX;
+                        subg_mac_data_header_t * data_header = (subg_mac_data_header_t *) obj->retransmit.prev_packet.buffer;
+                        if (data_header->data_type == SUBG_MAC_PACKET_DATA_UNCONFIRM)
+                        {
+                            obj->fsm_state = WG_MAC_IDLE;
+                            break;
+                        }
                     }
+
+                    // for other packet that requires an ACK, open the receive window and waiting for ack packet
+                    // starts rx receive window
+                    radio_recv_timeout(obj->radio, 0);
+
+                    // starts rx timer
+                    xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+                    // setup done, then enter rx state
+                    obj->fsm_state = WG_MAC_RX;
                 }
 
                 break;
@@ -152,63 +304,52 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 if (xQueueReceive(obj->rx_queue_pri, &rx_msg, pdMS_TO_TICKS(100)))
                 {
                     // validate the packet lenght
-                    if (rx_msg.size < SUBG_PACKET_V2_HEADER_SIZE)
+                    if (rx_msg.size < SUBG_MAC_HEADER_SIZE)
                     {
                         break;
                     }
 
-                    subg_packet_v2_header_t * header = (subg_packet_v2_header_t *) rx_msg.buffer;
+                    subg_mac_header_t * header = (subg_mac_header_t *) rx_msg.buffer;
 
-                    // validate the protocol version
-                    if (header->protocol_version != SUBG_PACKET_V2_PROTOCOL_VER)
+                    // validate the magic byte
+                    if (header->magic_byte != SUBG_MAC_MAGIC_BYTE)
                     {
                         break;
                     }
 
-                    // validate the destination
-                    if (header->dest_id8 != obj->device_id8)
+                    // validate the destination, based on current link state
+                    if (!obj->link_state.is_network_joined)
                     {
-                        break;
+                        // if not joined, the destination will be local eui64 masked with 0xff
+                        if (header->dest_id != (uint8_t) (obj->config.local_eui64 * 0xff))
+                        {
+                            break;
+                        }
                     }
-
-                    // send filtered packet to upper layer (drop the packet if the upper layer failed to read from queue)
-                    xQueueSend(obj->rx_queue, &rx_msg, 0);
-
-                    // clear the retransmission if the receive packet is a command packet (any command packet will be
-                    // treated as the acknowledgement)
-                    if (header->packet_type == SUBG_PACKET_V2_TYPE_CMD)
+                    else
                     {
-                        xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
-
-                        // enter idle state
-                        obj->fsm_state = WG_MAC_IDLE;
-
-                        subg_packet_v2_cmd_t * cmd_packet = (subg_packet_v2_cmd_t *) rx_msg.buffer;
-
-                        // if the acknowledgement is purely an acknowledgement, then we don't want to ack the packet
-                        if (cmd_packet->command == SUBG_PACKET_V2_CMD_ACK)
+                        // if the network is joined, the destination will be allocated id
+                        if (header->dest_id != obj->link_state.allocated_id)
                         {
                             break;
                         }
                     }
 
-                    // ack the received packet
+                    // process packet
+                    switch (header->packet_type)
                     {
-                        wg_mac_msg_t tx_msg;
-                        tx_msg.size = sizeof(subg_packet_v2_cmd_t);
-                        subg_packet_v2_cmd_t * ack_packet = (subg_packet_v2_cmd_t *) tx_msg.buffer;
-
-                        // build packet
-                        ack_packet->header.dest_id8 = header->src_id8;
-                        ack_packet->header.src_id8 = obj->device_id8;
-                        ack_packet->header.packet_type = (uint8_t) SUBG_PACKET_V2_TYPE_CMD;
-                        ack_packet->header.protocol_version = SUBG_PACKET_V2_PROTOCOL_VER;
-
-                        ack_packet->command = (uint8_t) SUBG_PACKET_V2_CMD_ACK;
-                        ack_packet->payload = header->seq_id;
-
-                        // transmit ack (we use a unique seqid for ack)
-                        wg_mac_send_pri(obj, &tx_msg, true);
+                        case SUBG_MAC_PACKET_CMD:
+                        {
+                            process_cmd_packet(obj, &rx_msg);
+                            break;
+                        }
+                        case SUBG_MAC_PACKET_DATA:
+                        {
+                            process_data_packet(obj, &rx_msg);
+                            break;
+                        }
+                        default:
+                            break;
                     }
                 }
             }
@@ -216,27 +357,35 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
     }
 }
 
-void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
+void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(radio);
 
     // copy variables
     obj->radio = radio;
-    obj->rx_window_timeout = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS;
-    obj->device_id8 = device_id8;
     obj->local_seq_id = 0;
 
+    // if the user didn't supply the config, then use default copy
+    if (config)
+        memcpy(&obj->config, config, sizeof(wg_mac_config_t));
+    else
+        memcpy(&obj->config, &wg_mac_default_config, sizeof(wg_mac_config_t));
+
+    // initialize the link state
+    obj->link_state.is_network_joined = false;
+    obj->link_state.allocated_id = 0;
+    obj->link_state.uplink_dest_id = 0;
+
     // setup retransmit
+    obj->retransmit.retry_counter = 0;
     obj->retransmit.rx_window_timer = xTimerCreate(
             "rx_timer",
-            pdMS_TO_TICKS(obj->rx_window_timeout),
+            pdMS_TO_TICKS(obj-config->rx_window_timeout_ms),
             pdFALSE,
             obj,
             wg_mac_on_rx_window_timeout
     );
-
-    obj->retransmit.max_retries = WG_MAC_DEFAULT_MAX_RETRIES;
 
     // set radio to sleep default state
     radio_set_opmode_sleep(obj->radio);
@@ -260,6 +409,31 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, uint8_t device_id8)
     DRV_ASSERT(obj->rx_queue);
     DRV_ASSERT(obj->fsm_tx_done);
 }
+
+
+void wg_mac_join_network(wg_mac_t * obj)
+{
+    DRV_ASSERT(obj);
+
+    // form a join request packet
+    wg_mac_msg_t tx_msg;
+    subg_mac_cmd_join_req_t * join_request = (subg_mac_cmd_join_req_t *) tx_msg.buffer;
+
+    // set the packet length
+    tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_REQ_SIZE;
+
+    join_request->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+    join_request->cmd_header.mac_header.src_id = 0; // src id is managed by driver
+    join_request->cmd_header.mac_header.dest_id = SUBG_MAC_BROADCAST_ADDR_ID;
+    join_request->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
+    join_request->cmd_header.mac_header.seqid = 0; // seqid is controlled by the driver
+    join_request->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_REQ;
+    join_request->eui64 = obj->config.local_eui64;
+
+    // send to local transmit queue
+    wg_mac_send_timeout(obj, &tx_msg, portMAX_DELAY);
+}
+
 
 bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
 {
