@@ -288,6 +288,8 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     radio_recv_timeout(obj->radio, 0);
 
                     // starts rx timer
+                    xTimerChangePeriod(obj->retransmit.rx_window_timer, pdMS_TO_TICKS(obj->config.rx_window_timeout_ms),
+                                       portMAX_DELAY);
                     xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
 
                     // setup done, then enter rx state
