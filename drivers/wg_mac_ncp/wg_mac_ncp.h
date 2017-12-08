@@ -29,18 +29,27 @@ typedef enum
     WG_MAC_NCP_TX
 } wg_mac_ncp_state;
 
+typedef enum
+{
+    WG_MAC_NCP_NO_ERROR,
+    WG_MAC_NCP_UNKNOWN_ERROR,
+    WG_MAC_NCP_INVALID_PACKET_LENGTH,
+    WG_MAC_NCP_NO_CLIENT_SLOT_AVAILABLE,
+    WG_MAC_NCP_NO_CLIENT_FOUND,
+} wg_mac_ncp_error_code_t;
+
 typedef struct
 {
     uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
     uint16_t size;
     int32_t rssi;
     int32_t snr;
-    bool requires_ack;
 } wg_mac_ncp_msg_t;
 
 typedef struct
 {
     bool is_valid;
+    uint8_t short_id;
     uint64_t device_eui64;
     uint32_t last_seen_sec;
     uint32_t next_retry_time_sec;
