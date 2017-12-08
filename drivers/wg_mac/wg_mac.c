@@ -325,7 +325,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     if (!obj->link_state.is_network_joined)
                     {
                         // if not joined, the destination will be local eui64 masked with 0xff
-                        if (header->dest_id != (uint8_t) (obj->config.local_eui64 * 0xff))
+                        if (header->dest_id != (uint8_t) (obj->config.local_eui64 & 0xff))
                         {
                             break;
                         }
