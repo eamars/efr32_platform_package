@@ -70,7 +70,6 @@ typedef struct
     uint8_t max_retries;
     bool forward_all_packets;
     bool auto_ack;
-    bool enable_beacon;
 } wg_mac_ncp_config_t;
 
 typedef struct

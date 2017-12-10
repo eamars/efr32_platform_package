@@ -21,7 +21,6 @@ const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .max_retries = 3,
         .forward_all_packets = true,
         .auto_ack = true,
-        .enable_beacon = false
 };
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t snr)
