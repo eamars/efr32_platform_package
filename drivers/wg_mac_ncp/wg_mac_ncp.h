@@ -116,10 +116,39 @@ extern "C" {
  */
 extern const wg_mac_ncp_config_t wg_mac_ncp_default_config;
 
-
+/**
+ * @brief Initialize WG_MAC Network Co-Processor stack
+ * @param obj the NCP object
+ * @param radio the abstract radio object
+ * @param config the setings. If NULL is passed the network stack will use default configuration instead @see wg_mac_ncp_default_config
+ */
 void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config);
+
+/**
+ * @brief Send bytes to transceiver
+ * @param obj the NCP object
+ * @param msg the message, contains destination address
+ * @param timeout_ms timeout when waiting for place in queue
+ * @return if the timeout is triggered
+ */
 bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
+#define wg_mac_ncp_send(obj, msg) \
+        wg_mac_ncp_send_timeout((obj), (msg), 0)
+#define wg_mac_ncp_send_block(obj, msg) \
+        wg_mac_ncp_send_timeout((obj), (msg), portMAX_DELAY)
+
+/**
+ * @brief Read a packet from receive queue
+ * @param obj the NCP object
+ * @param msg the message, contains source address
+ * @param timeout_ms timeout when waiting to read from queue
+ * @return if the timeout is triggered
+ */
 bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
+#define wg_mac_ncp_recv(obj, msg) \
+        wg_mac_ncp_recv_timeout((obj), (msg), 0)
+#define wg_mac_ncp(obj, msg) \
+        wg_mac_ncp_recv_timeout((obj), (msg), portMAX_DELAY)
 
 #ifdef __cplusplus
 }

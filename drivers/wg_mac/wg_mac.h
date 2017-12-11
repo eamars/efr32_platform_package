@@ -110,8 +110,18 @@ extern "C" {
  */
 extern const wg_mac_config_t wg_mac_default_config;
 
+/**
+ * @brief Initialize WG_MAC client network stack
+ * @param obj the network stack object
+ * @param radio the abstract radio object
+ * @param config the settings. If NULL is passed the network stack will use default configuration instead @see wg_mac_default_config
+ */
 void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config);
 
+/**
+ * @brief Send join network request
+ * @param obj the network stack object
+ */
 void wg_mac_join_network(wg_mac_t * obj);
 
 /**
