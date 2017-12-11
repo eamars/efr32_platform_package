@@ -4,7 +4,7 @@
  * @date 7/Dec/2017
  * @file subg_mac.h
  *
- * For more information, visit:v
+ * For more information, visit:
  * @see https://docs.google.com/a/wirelessguard.co.nz/document/d/16_lXap3jrpjHero1t4Y5XJ2KB_WJ8xmIGJc0uXTiyAY/edit?usp=sharing
  */
 
