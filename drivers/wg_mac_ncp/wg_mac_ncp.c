@@ -355,7 +355,7 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
         }
 
         // TODO: Send the packet to host
-        xQueueSend(obj->rx_queue, &msg, 0);
+        xQueueSend(obj->rx_queue, msg, 0);
     );
 
     // set the general attribute for the client
@@ -608,9 +608,9 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     obj->state = WG_MAC_NCP_RX;
 
     // create book keeping thread (handles transceiver state)
-    xTaskCreate((void *) wg_mac_ncp_client_bookkeeping_thread, "ncp_b", 400, obj, 4, &obj->client_bookkeeping_thread);
+    xTaskCreate((void *) wg_mac_ncp_client_bookkeeping_thread, "ncp_b", 500, obj, 4, &obj->client_bookkeeping_thread);
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
-    xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 400, obj, 4, &obj->tx_queue_handler_thread);
+    xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 500, obj, 4, &obj->tx_queue_handler_thread);
 }
 
 bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms)
@@ -648,22 +648,22 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
     // allow user to wait forever
     if (timeout_ms == portMAX_DELAY)
     {
-        if (xQueueReceive(obj->rx_queue, msg, portMAX_DELAY) == pdFALSE)
+        if (xQueueReceive(obj->rx_queue, msg, portMAX_DELAY))
         {
-            return false;
+            return true;
         }
     }
     else
     {
         // attempt to read from queue
-        if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+        if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)))
         {
-            // timeout, nothing is received in rx queue
-            return false;
+            return true;
         }
     }
 
-    return true;
+    // timeout, nothing is received in rx queue
+    return false;
 }
 
 
