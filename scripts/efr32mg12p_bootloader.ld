@@ -12,9 +12,10 @@
 
 MEMORY
 {
-  FLASH (rx) : ORIGIN = 0x0FE10000, LENGTH = 32K
-  RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
+    FLASH (rx) : ORIGIN = 0x0FE10000, LENGTH = 32K
+    RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
 }
+
 
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.
@@ -53,182 +54,224 @@ ENTRY(Reset_Handler)
 SECTIONS
 {
     /* FLASH segment */
-    . = ORIGIN(FLASH);
-
     .LOADER ORIGIN(FLASH) + 0x0 :
-	{
-	    KEEP(*(.tiny_loader*));
-		KEEP(*(.loader*));
-	} > FLASH
+    {
+        KEEP(*(.tiny_loader*));
+        KEEP(*(.loader*));
+    } > FLASH
 
-	.VECTORS ORIGIN(FLASH) + 0x100 :
+    .VECTORS ORIGIN(FLASH) + 0x100 :
     {
         __AAT__begin = . ;
         KEEP(*(.aat));
         __AAT__end = . ;
     } > FLASH
 
-  .text :
-  {
-    __end__ = .;
+    .text :
+    {
+        __TEXT__begin = .;
+        __end__ = .;
 
-    *(.text*)
+        . = ALIGN(4);
+        *(.textrw_init .textrw_init*)
 
-    KEEP(*(.init))
-    KEEP(*(.fini))
+        . = ALIGN(4);
+        *(.text*)
 
-    /* .ctors */
-    *crtbegin.o(.ctors)
-    *crtbegin?.o(.ctors)
-    *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
-    *(SORT(.ctors.*))
-    *(.ctors)
+        . = ALIGN(4);
+        KEEP(*(.init))
 
-    /* .dtors */
-    *crtbegin.o(.dtors)
-    *crtbegin?.o(.dtors)
-    *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
-    *(SORT(.dtors.*))
-    *(.dtors)
+        . = ALIGN(4);
+        KEEP(*(.fini))
 
-    *(.rodata*)
+        /* .ctors */
+        . = ALIGN(4);
+        *crtbegin.o(.ctors)
+        *crtbegin?.o(.ctors)
+        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .ctors)
+        *(SORT(.ctors.*))
+        *(.ctors)
 
-    KEEP(*(.eh_frame*))
-  } > FLASH
+        /* .dtors */
+        . = ALIGN(4);
+        *crtbegin.o(.dtors)
+        *crtbegin?.o(.dtors)
+        *(EXCLUDE_FILE(*crtend?.o *crtend.o) .dtors)
+        *(SORT(.dtors.*))
+        *(.dtors)
 
-  .ARM.extab :
-  {
-    *(.ARM.extab* .gnu.linkonce.armextab.*)
-  } > FLASH
+        /* global constants */
+        . = ALIGN(4);
+        *(.rodata*)
 
-  __exidx_start = .;
-  .ARM.exidx :
-  {
-    *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-  } > FLASH
-  __exidx_end = .;
+        . = ALIGN(4);
+        *(.data_init*)
 
-  /* To copy multiple ROM to RAM sections,
-   * uncomment .copy.table section and,
-   * define __STARTUP_COPY_MULTIPLE in startup_ARMCMx.S */
-  /*
-  .copy.table :
-  {
-    . = ALIGN(4);
-    __copy_table_start__ = .;
-    LONG (__etext)
-    LONG (__data_start__)
-    LONG (__data_end__ - __data_start__)
-    LONG (__etext2)
-    LONG (__data2_start__)
-    LONG (__data2_end__ - __data2_start__)
-    __copy_table_end__ = .;
-  } > FLASH
-  */
+        . = ALIGN(4);
+        KEEP(*(.eh_frame*))
+        __TEXT__end = .;
+    } > FLASH
 
-  /* To clear multiple BSS sections,
-   * uncomment .zero.table section and,
-   * define __STARTUP_CLEAR_BSS_MULTIPLE in startup_ARMCMx.S */
-  /*
-  .zero.table :
-  {
-    . = ALIGN(4);
-    __zero_table_start__ = .;
-    LONG (__bss_start__)
-    LONG (__bss_end__ - __bss_start__)
-    LONG (__bss2_start__)
-    LONG (__bss2_end__ - __bss2_start__)
-    __zero_table_end__ = .;
-  } > FLASH
-  */
+    .ARM.extab :
+    {
+        *(.ARM.extab* .gnu.linkonce.armextab.*)
+    } > FLASH
 
-  __etext = .;
+    __exidx_start = .;
+    .ARM.exidx :
+    {
+        *(.ARM.exidx* .gnu.linkonce.armexidx.*)
+    } > FLASH
+    __exidx_end = .;
 
-  .crashinfo :
-  {
-    __CRASHINFO__begin = . ;
-    . += 256;
-    __CRASHINFO__end = . ;
-  } > RAM
+    /* End of text */
+    __etext = .;
 
-  .data : AT (__etext)
-  {
-    __data_start__ = .;
+    /* Simulated ROM space is mapped to memory address 0xFE000 */
+    .NVM_SIMEE 0xFE000 (NOLOAD):
+    {
+        SIMEE$$Base = . ;
+        __SIMEE__begin = . ;
+        *(SIMEE);
+        KEEP(*(.simee));
+        __SIMEE__end = . ;
+        SIMEE$$Limit = . ;
+    } > FLASH
 
-    . = ALIGN(256);
-    KEEP(*(.dynamic_vectors));
+    /* RAM segment */
+    .RESETINFO ORIGIN(RAM) (NOLOAD) :
+    {
+        RESETINFO$$Base = ORIGIN(RAM) ;
+        __RESETINFO__begin = ORIGIN(RAM) ;
+        *(RESETINFO);
+        KEEP(*(.resetinfo));
+        __RESETINFO__end = __RESETINFO__begin +  SIZEOF( .RESETINFO ) ;
+        RESETINFO$$Limit = RESETINFO$$Base +  SIZEOF( .RESETINFO ) ;
+    } > RAM
 
-    *(.data*)
-    . = ALIGN (4);
-    *(.ram)
+    .data ORIGIN(RAM) + 0x100 : AT(__etext)
+    {
+        __data_start__ = .;
 
-    . = ALIGN(4);
-    /* preinit data */
-    PROVIDE_HIDDEN (__preinit_array_start = .);
-    KEEP(*(.preinit_array))
-    PROVIDE_HIDDEN (__preinit_array_end = .);
+        . = ALIGN(256);
+        KEEP(*(.dynamic_vectors))
 
-    . = ALIGN(4);
-    /* init data */
-    PROVIDE_HIDDEN (__init_array_start = .);
-    KEEP(*(SORT(.init_array.*)))
-    KEEP(*(.init_array))
-    PROVIDE_HIDDEN (__init_array_end = .);
+        . = ALIGN(4);
 
-    . = ALIGN(4);
-    /* finit data */
-    PROVIDE_HIDDEN (__fini_array_start = .);
-    KEEP(*(SORT(.fini_array.*)))
-    KEEP(*(.fini_array))
-    PROVIDE_HIDDEN (__fini_array_end = .);
+        /* CSTACK is used by Silab's
+        __CSTACK__begin = . ;
+        KEEP(*(.cstack .cstack.*));
+        __CSTACK__end = . ;
+        */
 
-    KEEP(*(.jcr*))
-    . = ALIGN(4);
-    /* All data end */
-    __data_end__ = .;
+        . = ALIGN(4);
+        *(.textrw .textrw*);
 
-  } > RAM
+        . = ALIGN (4);
+        *(.data*)
 
-  __rom_end__ = __etext + SIZEOF(.data);
+        . = ALIGN (4);
+        *(.ram)
 
-  .bss :
-  {
-    . = ALIGN(4);
-    __bss_start__ = .;
-    *(.bss*)
-    *(COMMON)
-    . = ALIGN(4);
-    __bss_end__ = .;
+        . = ALIGN(4);
+        /* preinit data */
+        PROVIDE_HIDDEN (__preinit_array_start = .);
+        KEEP(*(.preinit_array))
+        PROVIDE_HIDDEN (__preinit_array_end = .);
 
-    __end__ = .;
-    end = __end__;
-    _end = __end__;
-  } > RAM
+        . = ALIGN(4);
+        /* init data */
+        PROVIDE_HIDDEN (__init_array_start = .);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        PROVIDE_HIDDEN (__init_array_end = .);
 
-  .heap (COPY):
-  {
-    __HeapBase = .;
-    KEEP(*(.heap*))
-    __HeapLimit = .;
-  } > RAM
+        . = ALIGN(4);
+        /* finit data */
+        PROVIDE_HIDDEN (__fini_array_start = .);
+        KEEP(*(SORT(.fini_array.*)))
+        KEEP(*(.fini_array))
+        PROVIDE_HIDDEN (__fini_array_end = .);
 
-  /* .stack_dummy section doesn't contains any symbols. It is only
-   * used for linker to calculate size of stack sections, and assign
-   * values to stack symbols later */
-  .stack_dummy (COPY):
-  {
-    KEEP(*(.stack*))
-  } > RAM
+        . = ALIGN(4);
+        KEEP(*(.jcr*))
 
-  /* Set stack top to end of RAM, and stack limit move down by
-   * size of stack_dummy section */
-  __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-  __StackLimit = __StackTop - SIZEOF(.stack_dummy);
-  PROVIDE(__stack = __StackTop);
+        . = ALIGN(4);
+        *(DLIB_PERTHREAD_INITIALIZED_DATA);
+        *(DLIB_PERTHREAD_ZERO_DATA);
 
-  /* Check if data + heap + stack exceeds RAM limit */
-  ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+        /* All data end */
+        __data_end__ = .;
+    } > RAM
 
-  /* Check if FLASH usage exceeds FLASH size */
-  ASSERT( (LENGTH(FLASH) - 0x4) >= (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
+    __load_start_data = LOADADDR(.data);
+
+    __rom_end__ = __etext + SIZEOF(.data);
+
+    .bss :
+    {
+        . = ALIGN(4);
+        __bss_start__ = .;
+        *(.bss*)
+        *(COMMON)
+        . = ALIGN(4);
+        __bss_end__ = .;
+    } > RAM
+
+    .heap :
+    {
+        __HEAP__begin = .;
+        __end__ = .;
+        end = __end__;
+        _end = __end__;
+        KEEP(*(.heap*))
+        __HEAP_end = .;
+    } > RAM
+
+    __CSTACK__begin = .;
+    __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
+
+    /* Set stack top to end of RAM, and stack limit move down by
+    * size of stack_dummy section */
+    __StackTop = ORIGIN(RAM) + LENGTH(RAM);
+
+
+
+    /* Check if FLASH usage exceeds FLASH size */
+    ASSERT( (LENGTH(FLASH) - 0x4) > (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
+
+    /* Stabs debugging sections.  */
+    .stab          0 : { *(.stab) }
+    .stabstr       0 : { *(.stabstr) }
+    .stab.excl     0 : { *(.stab.excl) }
+    .stab.exclstr  0 : { *(.stab.exclstr) }
+    .stab.index    0 : { *(.stab.index) }
+    .stab.indexstr 0 : { *(.stab.indexstr) }
+    .comment       0 : { *(.comment) }
+
+    /* DWARF debug sections.
+     Symbols in the DWARF debugging sections are relative to the beginning
+     of the section so we begin them at 0.  */
+    /* DWARF 1 */
+    .debug          0 : { *(.debug) }
+    .line           0 : { *(.line) }
+    /* GNU DWARF 1 extensions */
+    .debug_srcinfo  0 : { *(.debug_srcinfo) }
+    .debug_sfnames  0 : { *(.debug_sfnames) }
+    /* DWARF 1.1 and DWARF 2 */
+    .debug_aranges  0 : { *(.debug_aranges) }
+    .debug_pubnames 0 : { *(.debug_pubnames) }
+    /* DWARF 2 */
+    .debug_info     0 : { *(.debug_info .gnu.linkonce.wi.*) }
+    .debug_abbrev   0 : { *(.debug_abbrev) }
+    .debug_line     0 : { *(.debug_line) }
+    .debug_frame    0 : { *(.debug_frame) }
+    .debug_str      0 : { *(.debug_str) }
+    .debug_loc      0 : { *(.debug_loc) }
+    .debug_macinfo  0 : { *(.debug_macinfo) }
+    /* SGI/MIPS DWARF 2 extensions */
+    .debug_weaknames 0 : { *(.debug_weaknames) }
+    .debug_funcnames 0 : { *(.debug_funcnames) }
+    .debug_typenames 0 : { *(.debug_typenames) }
+    .debug_varnames  0 : { *(.debug_varnames) }
 }

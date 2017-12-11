@@ -5,6 +5,8 @@
  * @file wg_mac_ncp.h
  */
 
+#if USE_FREERTOS == 1
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -663,3 +665,6 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
 
     return true;
 }
+
+
+#endif // #if USE_FREERTOS == 1
