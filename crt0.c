@@ -208,7 +208,7 @@ irq_handler_t dynamic_vector_table[] =
  * that jump to normal loader at latter location can be considered as an better choice.
  */
 void loader(void);
-__attribute__ ((section(".tiny_loader"))) __attribute__ ((naked))
+__attribute__ ((section(".tiny_loader"))) __attribute__ ((naked)) __attribute__ ((optimize("-O0")))
 void tiny_loader(void)
 {
 #if USE_TINY_LOADER == 1
@@ -286,31 +286,32 @@ void Reset_Handler (void)
     __disable_irq();
 
     // copy initialized data (.data)
-    for (register uint32_t *pSrc = &__load_start_data, *pDest = &__data_start__; pDest < &__data_end__; )
+    for (register uint32_t *pSrc = &__load_start_data, *pDest = &__data_start__; pDest < &__data_end__;)
     {
         *pDest++ = *pSrc++;
     }
 
     // copy uninitialized data (.bss)
-    for (register uint32_t *pDest = &__bss_start__; pDest < &__bss_end__; )
+    for (register uint32_t *pDest = &__bss_start__; pDest < &__bss_end__;)
     {
         *pDest++ = 0x0UL;
     }
 
     // fill CSTACK with magic numbers (from .heap_end to __StackTop)
-    for (register uint32_t *cstack = &__CSTACK__begin; cstack < &__CSTACK__end; )
+    for (register uint32_t *cstack = &__CSTACK__begin; cstack < &__CSTACK__end;)
     {
         *cstack++ = STACK_FILL_VALUE;
     }
 
     // remap the exception table into SRAM to allow dynamic vector relocation.
-    SCB->VTOR = ((uint32_t) ((ExtendedApplicationHeaderTable_t *) &__AAT__begin)->basic_application_header_table.vector_table)
-                & SCB_VTOR_TBLOFF_Msk;
+    SCB->VTOR =
+            ((uint32_t) ((ExtendedApplicationHeaderTable_t *) &__AAT__begin)->basic_application_header_table.vector_table)
+            & SCB_VTOR_TBLOFF_Msk;
 
     // initialize stack pointer
     {
-        register volatile uint32_t * sp __asm ("sp");
-        sp = (uint32_t *) *((ExtendedApplicationHeaderTable_t *) &__AAT__begin)->basic_application_header_table.vector_table ;
+        register volatile uint32_t *sp __asm ("sp");
+        sp = (uint32_t *) *((ExtendedApplicationHeaderTable_t *) &__AAT__begin)->basic_application_header_table.vector_table;
     }
 
     /**
@@ -318,7 +319,7 @@ void Reset_Handler (void)
      */
 
     // Initialise C library.
-    __libc_init_array ();
+    __libc_init_array();
 
     // configure priority for CORE interrupts
     NVIC_SetPriority(NonMaskableInt_IRQn, 0);
@@ -410,6 +411,7 @@ void Reset_Handler (void)
 }
 
 
+__attribute__ ((optimize("-O0")))
 void Default_Handler(void)
 {
     // TODO: error message should be written to a protected region in the SRAM to avoid any stack corruption
