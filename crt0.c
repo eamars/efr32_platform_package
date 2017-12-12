@@ -211,9 +211,16 @@ void loader(void);
 __attribute__ ((section(".tiny_loader"))) __attribute__ ((naked))
 void tiny_loader(void)
 {
+#if USE_TINY_LOADER == 1
     __ASM volatile (
         "bl loader\n"
     );
+#else
+    while (1)
+    {
+
+    }
+#endif // USE_TINY_LOADER == 1
 }
 
 /**
