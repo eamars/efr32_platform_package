@@ -225,16 +225,12 @@ SECTIONS
     {
         __CSTACK__begin = . ;
         KEEP(*(.cstack .cstack.*));
-        __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
+        __CSTACK__end = . ;
     } > RAM
-
-
 
     /* Set stack top to end of RAM, and stack limit move down by
     * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-
-
 
     /* Check if FLASH usage exceeds FLASH size */
     ASSERT( (LENGTH(FLASH) - 0x4) > (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
