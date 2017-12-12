@@ -98,6 +98,20 @@ typedef union
     };
 } UFSR_t;
 
+typedef union
+{
+    uint32_t HFSR;
+
+    struct __attribute__((packed))
+    {
+        uint32_t RESERVED0          : 1;
+        uint32_t VECTTBL            : 1;
+        uint32_t RESERVED1          : 28;
+        uint32_t FORCED             : 1;
+        uint32_t DEBUGEVT           : 1;
+    };
+} HFSR_t;
+
 /**
  * @brief Prototype for ISR handlers
  */
