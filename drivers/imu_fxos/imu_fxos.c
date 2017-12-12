@@ -647,9 +647,10 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	portTickType xLastWakeTime;
     int8_t temperature_imu = 0;
     int8_t temp_change = 0;
-    int8_t last_tmp_change = 0;
 
-    int16_t z_max = 0;
+    uint16_t z_count = 0;
+    int32_t z_total = 0;
+    float z_average = 0;
 
     rawdata_t mag_raw;
 
@@ -660,11 +661,13 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	while (1)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
-        FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+
         temp_change = temperature_imu - obj->temp;
-        if ((z_max < mag_raw.z) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
+        if ((z_count <= 20) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
         {
-            z_max = mag_raw.z;
+            FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+            z_total += mag_raw.z;
+            z_count ++;
         }
 
 
@@ -678,10 +681,8 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             //when the door is open the device will either use the inital guess or the calcualted value of the temperautre coeffcient.
             if (obj->door_state == IMU_EVENT_DOOR_CLOSE)
             {
-                if (abs(last_tmp_change + temp_change)>= 2)
-                {
-                    FXOS8700CQ_Cal_Scaling(obj,temp_change, z_max);
-                }
+                z_average = ((float)z_total)/((float)z_count);
+                FXOS8700CQ_Cal_Scaling(obj,temp_change, (int16_t)z_average);
                 FXOS8700CQ_Set_Origin(obj);
             }
             else
@@ -709,10 +710,10 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
-            // Sets the temp to old temp and resets the z max.
+            // Sets the temp to old temp and resets the z count/ total.
             obj->temp = temperature_imu;
-            last_tmp_change = temp_change;
-            z_max = 0;
+            z_total = 0;
+            z_count = 0;
         }
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(20000));
 	}
