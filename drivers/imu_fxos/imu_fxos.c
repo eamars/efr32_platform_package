@@ -7,14 +7,12 @@
 
 #if USE_FREERTOS == 1
 
-#include <unistd.h>
 #include <math.h>
 #include <stdlib.h>
 #include "imu_fxos.h"
 #include "drv_debug.h"
 #include "delay.h"
 #include "gpiointerrupt.h"
-#include "led.h"
 #include "bits.h"
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -649,9 +647,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	portTickType xLastWakeTime;
     int8_t temperature_imu = 0;
     int8_t temp_change = 0;
-    int8_t last_tmp_change = 0;
+    int8_t last_temp_change = 0;
 
-    int16_t z_max = 0;
+    int16_t max_z = 0;
 
     rawdata_t mag_raw;
 
@@ -662,11 +660,13 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	while (1)
 	{
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
-        FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+
         temp_change = temperature_imu - obj->temp;
-        if ((z_max < mag_raw.z) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
+        FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+
+        if ((max_z < mag_raw.z) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
         {
-            z_max = mag_raw.z;
+            max_z = mag_raw.z;
         }
 
 
@@ -680,9 +680,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             //when the door is open the device will either use the inital guess or the calcualted value of the temperautre coeffcient.
             if (obj->door_state == IMU_EVENT_DOOR_CLOSE)
             {
-                if (abs(last_tmp_change + temp_change)>= 2)
+                if (abs(temp_change + last_temp_change) >= 2 )
                 {
-                    FXOS8700CQ_Cal_Scaling(obj,temp_change, z_max);
+                    FXOS8700CQ_Cal_Scaling(obj,temp_change, max_z);
                 }
                 FXOS8700CQ_Set_Origin(obj);
             }
@@ -711,10 +711,10 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
-            // Sets the temp to old temp and resets the z max.
+            // Sets the temp to old temp and resets the z count/ total.
             obj->temp = temperature_imu;
-            last_tmp_change = temp_change;
-            z_max = 0;
+            last_temp_change = temp_change;
+            max_z = 0;
         }
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(20000));
 	}
@@ -804,8 +804,8 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
         }
         delay_ms(800);
     }
-    obj->origin.vector_threshold_open = (temp_vector * 2) + 30;
-    obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 20;
+    obj->origin.vector_threshold_open = (temp_vector * 2) + 40;
+    obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
     obj->origin.checksum = true;
