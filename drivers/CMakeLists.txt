@@ -21,7 +21,7 @@ SET(ENABLED_DRIVERS
 		# lora_phy
 		wg_mac
 		wg_mac_ncp
-		ncp_spi
+		# ncp_spi
         imu_fxos
 		battery_monitor
 		# simgbpr

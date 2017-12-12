@@ -156,14 +156,6 @@ SECTIONS
         KEEP(*(.dynamic_vectors))
 
         . = ALIGN(4);
-
-        /* CSTACK is used by Silab's
-        __CSTACK__begin = . ;
-        KEEP(*(.cstack .cstack.*));
-        __CSTACK__end = . ;
-        */
-
-        . = ALIGN(4);
         *(.textrw .textrw*);
 
         . = ALIGN (4);
@@ -219,6 +211,7 @@ SECTIONS
 
     .heap :
     {
+        . = ALIGN(4);
         __HEAP__begin = .;
         __end__ = .;
         end = __end__;
@@ -227,8 +220,15 @@ SECTIONS
         __HEAP_end = .;
     } > RAM
 
-    __CSTACK__begin = .;
-    __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
+    /* CSTACK is used by Silab's */
+    .cstack :
+    {
+        __CSTACK__begin = . ;
+        KEEP(*(.cstack .cstack.*));
+        __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
+    } > RAM
+
+
 
     /* Set stack top to end of RAM, and stack limit move down by
     * size of stack_dummy section */
