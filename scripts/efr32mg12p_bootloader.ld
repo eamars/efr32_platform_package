@@ -228,8 +228,13 @@ SECTIONS
         __HEAP_end = .;
     } > RAM
 
-    __CSTACK__begin = .;
-    __CSTACK__end = ORIGIN(RAM) + LENGTH(RAM);
+    /* CSTACK is used by Silab's */
+    .cstack :
+    {
+        __CSTACK__begin = . ;
+        KEEP(*(.cstack .cstack.*));
+        __CSTACK__end = . ;
+    } > RAM
 
     /* Set stack top to end of RAM, and stack limit move down by
     * size of stack_dummy section */
