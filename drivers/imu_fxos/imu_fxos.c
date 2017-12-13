@@ -711,7 +711,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
-            // Sets the temp to old temp and resets the z count/ total.
+            // Sets the temp to old temp and resets the z max and remembers the last emp change and temperature.
             obj->temp = temperature_imu;
             last_temp_change = temp_change;
             max_z = 0;
@@ -720,14 +720,21 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	}
 }
 
-void FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temp_change, int16_t z_average)
+/**
+ * finds the temperature scaling factor and used very simple smoothing to make sure to outlandish valeus are achived. starts off with a gues of 3
+ * every thing in this is made to be a float as it was having problems with it befor.
+ * @param obj         imu object
+ * @param temp_change the change in temperatue since the device last updated the z value
+ * @param max_z   largest value of z found in each section of the temperature graph
+ */
+void FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temp_change, int16_t max_z)
 {
     float new_scaler;
 
-    new_scaler = (float)((z_average - obj->old_magdata.z) /(float)temp_change);
+    new_scaler = (float)((max_z - obj->old_magdata.z) /(float)temp_change);
     obj->origin.tmp_coef = ((obj->origin.tmp_coef * 29.0 ) + new_scaler) /30.0;
 
-    obj->old_magdata.z = z_average;
+    obj->old_magdata.z = max_z;
 
 }
 
