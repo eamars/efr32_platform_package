@@ -154,6 +154,9 @@ ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_
         UARTDRV_Count_t bytes_sent, bytes_remaining;
         UARTDRV_GetTransmitStatus(&obj->handle_data, (void *) &buffer, &bytes_sent, &bytes_remaining);
 
+        // abort any ongoing transmission
+        UARTDRV_Abort(&obj->handle_data, uartdrvAbortTransmit);
+
         transmitted = (ssize_t) bytes_sent;
     }
 
@@ -181,6 +184,9 @@ ssize_t serial_read_timeout(serial_t * obj, void * buffer, size_t size, uint32_t
         // check bytes received
         UARTDRV_Count_t bytes_received, bytes_remaining;
         UARTDRV_GetReceiveStatus(&obj->handle_data, (void *) &buffer, &bytes_received, &bytes_remaining);
+
+        // abort any ongoing transmission
+        UARTDRV_Abort(&obj->handle_data, uartdrvAbortReceive);
 
         received = (ssize_t) bytes_received;
     }
