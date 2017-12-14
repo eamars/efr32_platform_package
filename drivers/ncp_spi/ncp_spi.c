@@ -12,10 +12,10 @@
 #include "drv_debug.h"
 #include "gpiointerrupt.h"
 
-extern const pio_map_t spi_mosi_map[];
-extern const pio_map_t spi_miso_map[];
-extern const pio_map_t spi_clk_map[];
-extern const pio_map_t spi_cs_map[];
+extern const pio_map_t usart_tx_map[];
+extern const pio_map_t usart_rx_map[];
+extern const pio_map_t usart_clk_map[];
+extern const pio_map_t usart_cs_map[];
 
 static inline bool is_cs_asserted_pri(ncp_spi_t * obj)
 {
@@ -128,10 +128,10 @@ void ncp_spi_init(ncp_spi_t * obj,pio_t miso, pio_t mosi, pio_t clk, pio_t cs, p
 
     // find spi periperhal functions
     uint32_t mosi_loc, miso_loc, clk_loc, cs_loc;
-    DRV_ASSERT(find_pin_function(spi_mosi_map, obj->spi_slave_pin.mosi, (void **) &usart_base, &mosi_loc));
-    DRV_ASSERT(find_pin_function(spi_miso_map, obj->spi_slave_pin.miso, NULL, &miso_loc));
-    DRV_ASSERT(find_pin_function(spi_clk_map, obj->spi_slave_pin.clk, NULL, &clk_loc));
-    DRV_ASSERT(find_pin_function(spi_cs_map, obj->spi_slave_pin.cs, NULL, &cs_loc));
+    DRV_ASSERT(find_pin_function(usart_tx_map, obj->spi_slave_pin.mosi, (void **) &usart_base, &mosi_loc));
+    DRV_ASSERT(find_pin_function(usart_rx_map, obj->spi_slave_pin.miso, NULL, &miso_loc));
+    DRV_ASSERT(find_pin_function(usart_clk_map, obj->spi_slave_pin.clk, NULL, &clk_loc));
+    DRV_ASSERT(find_pin_function(usart_cs_map, obj->spi_slave_pin.cs, NULL, &cs_loc));
 
     // reset spi status
     SPIDRV_DeInit(&obj->spi_handle_data);

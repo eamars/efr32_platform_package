@@ -19,6 +19,7 @@ SET(ENABLED_DRIVERS
 		radio_efr32
 		# lorawan
 		# lora_phy
+		serial
 		wg_mac
 		wg_mac_ncp
 		# ncp_spi

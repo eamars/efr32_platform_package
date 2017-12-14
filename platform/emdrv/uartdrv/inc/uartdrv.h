@@ -260,6 +260,7 @@ typedef struct UARTDRV_HandleData{
   bool                       hasTransmitted;    // Whether the handle has transmitted data
   UARTDRV_FlowControlType_t  fcType;            // Flow control mode
   UARTDRV_UartType_t         type;              // Type of UART
+  void * parent;                                // Add by Ran Bao on 14/Dec/2017
   /// @endcond
 } UARTDRV_HandleData_t;
 
