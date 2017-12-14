@@ -17,6 +17,8 @@
 #include "queue.h"
 #include "task.h"
 
+
+#define FXOS8700CQ_ADDRESS    0x1E
 #define M_THRESHOLD           20
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
