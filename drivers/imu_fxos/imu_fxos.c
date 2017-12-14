@@ -9,7 +9,10 @@
 
 #include <math.h>
 #include <stdlib.h>
+
 #include "imu_fxos.h"
+#include "imu_fxos_regs.h"
+
 #include "drv_debug.h"
 #include "delay.h"
 #include "gpiointerrupt.h"
@@ -26,9 +29,10 @@
  * @param  enable     enable pin for the load switch on the imu
  * @param  int_1      immu interupt pin 1
  * @param  int_2      imu interupt pin 2
+ * @param  address    I2C slave address, depending on hardware configuration
  * @return            if already intalised will not redinalise the
  */
-void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2)
+void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address)
 {
     uint16_t i = 0;
     // sanity check for pointers
@@ -51,6 +55,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // assigng interupt pins
     obj->int_1 = int_1;
     obj->int_2 = int_2;
+
+    // assign hardware slave address
+    obj->i2c_slave_addr = address;
 
     obj->current_compass = 0;
     obj->current_heading = 0;
@@ -829,14 +836,14 @@ void FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value
 {
     uint8_t ret = 0;
     //I2C_WriteByteRegister(reg,value);           //Write value to register
-    ret = i2cdrv_master_write_iaddr(obj->i2c_device, FXOS8700CQ_ADDRESS, internal_addr, &value, 1);
+    ret = i2cdrv_master_write_iaddr(obj->i2c_device, obj->i2c_slave_addr, internal_addr, &value, 1);
 }
 
 void FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, uint8_t* buffer, char length)
 {
     uint8_t ret = 0;
     //I2C_WriteByteArray(reg,buffer,length);          //Write values to register
-    ret = i2cdrv_master_write_iaddr(obj->i2c_device, FXOS8700CQ_ADDRESS, internal_addr, buffer, length);
+    ret = i2cdrv_master_write_iaddr(obj->i2c_device, obj->i2c_slave_addr, internal_addr, buffer, length);
 
 }
 
@@ -845,7 +852,7 @@ char FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr)
     uint8_t ret = 0;
     char buffer = 0;
     //return I2C_ReadByteRegister(reg);       //Read register current value
-    ret = i2cdrv_master_write_read(obj->i2c_device, FXOS8700CQ_ADDRESS, &internal_addr, 1, &buffer, 1);
+    ret = i2cdrv_master_write_read(obj->i2c_device, obj->i2c_slave_addr, &internal_addr, 1, &buffer, 1);
     return buffer;
 }
 
@@ -853,7 +860,7 @@ void FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *
 {
     uint8_t ret = 0;
     //I2C_ReadByteArray(reg,buffer,length);   //Read values starting from the reg address
-    ret = i2cdrv_master_write_read(obj->i2c_device, FXOS8700CQ_ADDRESS, &internal_addr, 1, buffer, length);
+    ret = i2cdrv_master_write_read(obj->i2c_device, obj->i2c_slave_addr, &internal_addr, 1, buffer, length);
 }
 
 #endif // USE_FREERTOS == 1
