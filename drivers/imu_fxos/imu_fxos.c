@@ -654,10 +654,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	portTickType xLastWakeTime;
     int8_t temperature_imu = 0;
     int8_t temp_change = 0;
+    int8_t last_temp_change = 0;
 
-    uint16_t z_count = 0;
-    int32_t z_total = 0;
-    float z_average = 0;
+    int16_t max_z = 0;
 
     rawdata_t mag_raw;
 
@@ -670,11 +669,11 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
         temperature_imu = FXOS8700CQ_GetTemperature(obj);
 
         temp_change = temperature_imu - obj->temp;
-        if ((z_count <= 20) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
+        FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
+
+        if ((max_z < mag_raw.z) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
         {
-            FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
-            z_total += mag_raw.z;
-            z_count ++;
+            max_z = mag_raw.z;
         }
 
 
@@ -688,8 +687,10 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             //when the door is open the device will either use the inital guess or the calcualted value of the temperautre coeffcient.
             if (obj->door_state == IMU_EVENT_DOOR_CLOSE)
             {
-                z_average = ((float)z_total)/((float)z_count);
-                FXOS8700CQ_Cal_Scaling(obj,temp_change, (int16_t)z_average);
+                if (abs(temp_change + last_temp_change) >= 2 )
+                {
+                    FXOS8700CQ_Cal_Scaling(obj,temp_change, max_z);
+                }
                 FXOS8700CQ_Set_Origin(obj);
             }
             else
@@ -717,23 +718,30 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
-            // Sets the temp to old temp and resets the z count/ total.
+            // Sets the temp to old temp and resets the z max and remembers the last emp change and temperature.
             obj->temp = temperature_imu;
-            z_total = 0;
-            z_count = 0;
+            last_temp_change = temp_change;
+            max_z = 0;
         }
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(20000));
 	}
 }
 
-void FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temp_change, int16_t z_average)
+/**
+ * finds the temperature scaling factor and used very simple smoothing to make sure to outlandish valeus are achived. starts off with a gues of 3
+ * every thing in this is made to be a float as it was having problems with it befor.
+ * @param obj         imu object
+ * @param temp_change the change in temperatue since the device last updated the z value
+ * @param max_z   largest value of z found in each section of the temperature graph
+ */
+void FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temp_change, int16_t max_z)
 {
     float new_scaler;
 
-    new_scaler = (float)((z_average - obj->old_magdata.z) /(float)temp_change);
+    new_scaler = (float)((max_z - obj->old_magdata.z) /(float)temp_change);
     obj->origin.tmp_coef = ((obj->origin.tmp_coef * 29.0 ) + new_scaler) /30.0;
 
-    obj->old_magdata.z = z_average;
+    obj->old_magdata.z = max_z;
 
 }
 
@@ -810,8 +818,8 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
         }
         delay_ms(800);
     }
-    obj->origin.vector_threshold_open = (temp_vector * 2) + 30;
-    obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 20;
+    obj->origin.vector_threshold_open = (temp_vector * 2) + 40;
+    obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
     obj->origin.checksum = true;
