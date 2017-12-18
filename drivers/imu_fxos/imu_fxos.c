@@ -5,6 +5,17 @@
  * @date Oct, 2017
  */
 
+/**
+ * Code will set thresholds ont he imu to use interupt line 2 on the imu. the mmicro controller uses purly weather this line is high to decice if the door is open
+ * an advancement on this would be to use the acceleromiter or some other sort of signal alnasis of the vecto value/ indivicual values to decied if the door is open
+ *
+ * The device will calibrate on the first start if the device has not yet been calibrated or when a calibrate call is made. In the future values such as the temperature coeffcient will be
+ * remembered by the micro controller eeprom even when the device is reset this way it can get an idea of its compoents.
+ *
+ * THe tempertarue task happens every 20s and will change stuff if the temperature has changed. read more on this at the tempeartuer adjustment task.
+ */
+
+
 #if USE_FREERTOS == 1
 
 #include <math.h>
@@ -699,7 +710,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             }
 
 
-            FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
+            FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete. // for some raeson resseting the deviec made it more predicatable in the x and y axis during a temp change
             delay_ms(2);                                        //Wait at least 1ms after issuing a reset before attempting communications
             FXOS8700CQ_StandbyMode(obj);
 
