@@ -57,7 +57,7 @@ typedef struct
     pio_t interrupt_out;
 
     // spi driver handler
-    SPIDRV_HandleData_t spi_handle_data;
+    SPIDRV_HandleData_t handle_data;
 
     // internal state
     ncp_spi_state_t state;
@@ -70,7 +70,7 @@ typedef struct
 
 } ncp_spi_t;
 
-void ncp_spi_init(ncp_spi_t * obj,pio_t miso, pio_t mosi, pio_t clk, pio_t cs, pio_t interrupt_out);
+void ncp_spi_init(ncp_spi_t * obj, pio_t miso, pio_t mosi, pio_t clk, pio_t cs, pio_t interrupt_out);
 
 #endif // USE_FREERTOS == 1
 
