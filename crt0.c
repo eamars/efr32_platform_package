@@ -11,10 +11,14 @@
 
 #include "drivers/irq.h"
 #include "drivers/bootloader_api/application_header.h"
+#include "drivers/reset_info.h"
 
 #if USE_FREERTOS == 1
 #include "FreeRTOSConfig.h"
 #endif
+
+// dummy reset info for memory overflow check
+VAR_AT_SEGMENT(volatile reset_info_t reset_info_static, ".resetinfo");
 
 /** Symbols defined by linker script.  These are all VMAs except those
     with a _load__ suffix which are LMAs.  */
