@@ -39,7 +39,7 @@ static inline void interrupt_out_clear(ncp_spi_t * obj)
 
 static void transfer_done_singleton(SPIDRV_Handle_t handle, Ecode_t transferStatus, int itemsTransferred)
 {
-
+    // TODO: inject void * to SPIDRV_Handle_t to store the object
 }
 
 static void cs_isr_pri(uint8_t pin, ncp_spi_t * obj)
