@@ -135,6 +135,8 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
 
 ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_t timeout)
 {
+    DRV_ASSERT(obj);
+
     ssize_t transmitted = 0;
     uint32_t block_ticks = 0;
 
@@ -166,6 +168,8 @@ ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_
 
 ssize_t serial_read_timeout(serial_t * obj, void * buffer, size_t size, uint32_t timeout)
 {
+    DRV_ASSERT(obj);
+
     ssize_t received = 0;
     uint32_t block_ticks = 0;
 
