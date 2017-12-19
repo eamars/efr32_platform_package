@@ -35,6 +35,9 @@ void system_reset(uint16_t reset_reason)
     reset_info_ptr->reset_reason = reset_reason;
     reset_info_ptr->reset_signature = RESET_INFO_SIGNATURE_VALID;
 
+    // break here if debugger is attached
+    debug_breakpoint();
+
     // disable global interrupts
     __disable_irq();
 
@@ -131,9 +134,6 @@ void assert_failed(const char * file, uint32_t line)
 
     // dump call stack
     backtrace();
-
-    // break if debugger is connected
-    debug_breakpoint();
 
     // reset the device
     system_reset(RESET_CRASH_ASSERT);

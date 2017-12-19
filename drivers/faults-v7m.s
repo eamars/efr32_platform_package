@@ -71,9 +71,6 @@ fault:
         // do initial fault diagnose
         bl.w system_crash_handler
 
-        // break here if debugger is attached
-        bl.w debug_breakpoint
-
         // reset the device with corresponding reset reason (stored in R0)
         bl.w system_reset
 
