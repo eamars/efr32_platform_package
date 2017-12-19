@@ -784,6 +784,7 @@ void radio_rfm9x_set_max_payload_length(radio_rfm9x_t * obj, radio_rfm9x_modem_t
         case RADIO_RFM9X_MODEM_FSK:
         {
             DRV_ASSERT(false);
+            break;
         }
         default:
             DRV_ASSERT(false);
