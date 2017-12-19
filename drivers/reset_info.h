@@ -13,7 +13,9 @@
 #include <stdint.h>
 #include "bits.h"
 
-#define ASSERT_FILE_NAME_LENGTH (16)
+#define RESET_INFO_SIGNATURE_VALID 0xF01Fu
+
+#define ASSERT_FILE_NAME_LENGTH (32)
 #define BACKTRACE_MAX_DEPTH (10)
 
 typedef union
@@ -38,18 +40,6 @@ typedef union
         uint32_t NMIPENDSET         : 1; // 31
     };
 } ICSR_t;
-
-typedef union
-{
-    uint32_t CFSR;
-
-    struct __attribute__((packed))
-    {
-        uint32_t MMFSR              : 8; // 7:0
-        uint32_t BFSR               : 8; // 15:8
-        uint32_t UFSR               : 16; // 31:16
-    };
-} CFSR_t;
 
 typedef union
 {
@@ -101,6 +91,19 @@ typedef union
         uint16_t                    : 6;
     };
 } UFSR_t;
+
+typedef union
+{
+    uint32_t CFSR;
+
+    struct __attribute__((packed))
+    {
+        uint32_t MMFSR              : 8; // 7:0
+        uint32_t BFSR               : 8; // 15:8
+        uint32_t UFSR               : 16; // 31:16
+    };
+} CFSR_t;
+
 
 typedef union
 {
@@ -196,6 +199,11 @@ typedef struct __attribute__((packed))
     uint16_t reset_reason;
     uint16_t reset_signature;
 
+    /**
+     * @brief Core general propose registers
+     *
+     * Note: when fault isr occurred, only R0, R1, R2, R3, R12, LR, PC, XPSR and SP value is reliable
+     */
     struct __attribute__((packed))
     {
         uint32_t R0;
@@ -219,21 +227,27 @@ typedef struct __attribute__((packed))
         XPSR_t XPSR;
     } core_registers;
 
-    // scb
+    /**
+     * @brief System Control Block
+     *
+     * Contains key runtime registers
+     */
     struct __attribute__((packed))
     {
         ICSR_t icsr;
         SHCSR_t shcsr;
         CFSR_t cfsr;
-        MMSR_t mmsr;
-        BFSR_t bfsr;
-        UFSR_t ufsr;
         HFSR_t hfsr;
         MMAR_t mmar;
         BFAR_t bfar;
         AFSR_t afsr;
     } scb_info;
 
+    /**
+     * @brief Assert information
+     *
+     * Note: Valid only if RESET_CRASH_ASSERT is set in reset_reason
+     */
     struct __attribute__((packed))
     {
         const char * assert_filename_path_ptr;
@@ -241,6 +255,11 @@ typedef struct __attribute__((packed))
         char assert_filename[ASSERT_FILE_NAME_LENGTH];
     } assert_info;
 
+    /**
+     * @brief Function call stack
+     *
+     * Note: no reliable function call before the fault interrupt for current version
+     */
     uint32_t ip_stack[BACKTRACE_MAX_DEPTH];
 
 } reset_info_t;

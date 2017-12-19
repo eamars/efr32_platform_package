@@ -48,7 +48,7 @@ FOREACH(MODULE ${ENABLED_DRIVERS})
 ENDFOREACH(MODULE)
 
 # Collect all source file
-FILE (GLOB SRC *.c)
+FILE (GLOB SRC *.c *.s)
 
 # build library
 ADD_LIBRARY (${LIB_NAME} ${SRC})

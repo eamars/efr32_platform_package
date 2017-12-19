@@ -12,14 +12,18 @@ typedef struct
 {
     uint32_t max_depth;
     uint32_t current_depth;
-    uint32_t * ip_stack;
+    uint32_t * ip_stack; // pointer to an array of addresses (represented as pointers to allow GDB to find original function name & offsets)
     uint32_t * code_stack;
 } unwind_ctrl_t;
 
 // assert
-void assert_efr32(const char * file, uint32_t line);
+void assert_failed(const char * file, uint32_t line);
 
-void backtrace(unwind_ctrl_t * ctrl);
+void backtrace(void);
+void reset_info_clear(void);
+uint16_t system_crash_handler(void);
+void system_reset(uint16_t reset_reason);
+void stack_reg_dump(uint32_t * stack_addr);
 
 #ifndef DRV_ASSERT
 #define DRV_ASSERT(x) {} while (1)

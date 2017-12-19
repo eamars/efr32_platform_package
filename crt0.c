@@ -9,16 +9,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "drivers/irq.h"
 #include "drivers/bootloader_api/application_header.h"
-#include "drivers/reset_info.h"
+#include "irq.h"
+#include "reset_info.h"
+#include "sys.h"
 
 #if USE_FREERTOS == 1
 #include "FreeRTOSConfig.h"
 #endif
 
 // dummy reset info for memory overflow check
-VAR_AT_SEGMENT(volatile reset_info_t reset_info_static, ".resetinfo");
+VAR_AT_SEGMENT(NO_STRIPPING volatile reset_info_t reset_info_static, ".resetinfo");
 
 /** Symbols defined by linker script.  These are all VMAs except those
     with a _load__ suffix which are LMAs.  */
@@ -43,7 +44,6 @@ void Default_Handler(void);                          /* Default empty handler */
 void Reset_Handler(void);                            /* Reset Handler */
 extern void fault(void);
 extern int main (void);
-extern void _exit (int status);
 extern void __libc_init_array (void);
 
 
@@ -414,16 +414,11 @@ void Reset_Handler (void)
     }
 }
 
-
-__attribute__ ((optimize("-O0")))
+__attribute__((naked))
 void Default_Handler(void)
 {
-    // TODO: error message should be written to a protected region in the SRAM to avoid any stack corruption
-    ICSR_t icsr;
-    int32_t active_irq = 0;
-
-    icsr.ICSR = SCB->ICSR;
-    active_irq = icsr.VECTACTIVE - 16;
-
-    _exit(-1);
+    asm volatile
+    (
+        "b.w fault\n\t"
+    );
 }
