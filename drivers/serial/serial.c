@@ -4,6 +4,7 @@
  * @date 14/Dec/2017
  * @file serial/serial.c
  */
+#if USE_FREERTOS == 1
 
 #include "serial.h"
 #include "drv_debug.h"
@@ -207,3 +208,5 @@ ssize_t serial_write_non_blocking(serial_t * obj, void * buffer, size_t size)
 {
     return serial_write_timeout(obj, buffer, size, 0);
 }
+
+#endif // #if USE_FREERTOS == 1
