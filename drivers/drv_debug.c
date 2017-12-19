@@ -3,19 +3,19 @@
  */
 #include <string.h>
 #include <stdint.h>
+#include <unwind.h>
 
 #include "em_device.h"
 #include "drv_debug.h"
-#include "btl_reset_info.h"
 #include "em_wdog.h"
+#include "em_dbg.h"
 #include "bits.h"
 #include "reset_info.h"
-#include "unwind.h"
 #include "micro/micro.h"
 
 #define IRQ_TO_VECT_NUM(x) ((x) + 16)
 
-enum
+typedef enum
 {
     REG_R0 = 0,
     REG_R1,
@@ -132,6 +132,9 @@ void assert_failed(const char * file, uint32_t line)
     // dump call stack
     backtrace();
 
+    // break if debugger is connected
+    debug_breakpoint();
+
     // reset the device
     system_reset(RESET_CRASH_ASSERT);
 }
@@ -232,4 +235,14 @@ void stack_reg_dump(uint32_t * stack_addr)
     reset_info_ptr->core_registers.PC = *(stack_addr + REG_PC);
     reset_info_ptr->core_registers.XPSR.XPSR = *(stack_addr + REG_PSR);
     reset_info_ptr->core_registers.SP = (uint32_t) (stack_addr + REG_PREV_SP);
+}
+
+void debug_breakpoint(void)
+{
+    // give user a chance to break here if debugger is attached
+    if (DBG_Connected())
+    {
+        asm volatile ("bkpt #0");
+    }
+
 }

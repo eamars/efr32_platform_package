@@ -11,6 +11,7 @@
         __IMPORT__ system_crash_handler
         __IMPORT__ system_reset
         __IMPORT__ stack_reg_dump
+        __IMPORT__ debug_breakpoint
 
 // define the values the link register can have on entering an exception
 __EQU__(EXC_RETURN_HANDLER_MSP, 0xFFFFFFF1)
@@ -69,6 +70,9 @@ fault:
 
         // do initial fault diagnose
         bl.w system_crash_handler
+
+        // break here if debugger is attached
+        bl.w debug_breakpoint
 
         // reset the device with corresponding reset reason (stored in R0)
         bl.w system_reset
