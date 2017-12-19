@@ -55,6 +55,7 @@ __EQU__(CRASH_STACK_SIZE, 64)
         __CODE__
         __THUMB__
         __EXPORT__ fault
+        __WEAK__ fault
 fault:
         // disable interrupts
         cpsid   i
