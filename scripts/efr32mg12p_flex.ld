@@ -53,13 +53,13 @@ ENTRY(Reset_Handler)
 SECTIONS
 {
     /* FLASH segment */
-    .LOADER 0x0 :
+    .LOADER ORIGIN(FLASH) + 0x0 :
     {
         KEEP(*(.tiny_loader*));
         KEEP(*(.loader*));
     } > FLASH
 
-    .VECTORS 0x100 :
+    .VECTORS ORIGIN(FLASH) + 0x100 :
     {
         __AAT__begin = . ;
         KEEP(*(.aat));
