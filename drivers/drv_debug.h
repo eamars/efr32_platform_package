@@ -23,7 +23,7 @@ void backtrace(void);
 void reset_info_clear(void);
 uint16_t system_crash_handler(void);
 void system_reset(uint16_t reset_reason);
-void stack_reg_dump(uint32_t * stack_addr);
+void stack_reg_dump(const uint32_t * stack_addr);
 void debug_breakpoint(void);
 
 #ifndef DRV_ASSERT

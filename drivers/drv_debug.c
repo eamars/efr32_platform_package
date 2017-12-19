@@ -189,9 +189,8 @@ uint16_t system_crash_handler(void)
         }
         case IRQ_TO_VECT_NUM(UsageFault_IRQn):
         {
-            // Usage can be assertion error
-            if (reset_reason == RESET_FAULT_UNKNOWN)
-                reset_reason = RESET_FAULT_USAGE;
+            // TODO: Usage can be assertion error
+            reset_reason = RESET_FAULT_USAGE;
 
             break;
         }
@@ -221,11 +220,11 @@ void reset_info_clear(void)
     memset(&__RESETINFO__begin, 0x0, sizeof(reset_info_t));
 }
 
-void stack_reg_dump(uint32_t * stack_addr)
+void stack_reg_dump(const uint32_t * stack_addr)
 {
     reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
 
-    // fetch auto stacked register value before interrupt
+    // fetch auto stacked register value before interrupt on stack
     reset_info_ptr->core_registers.R0 = *(stack_addr + REG_R0);
     reset_info_ptr->core_registers.R1 = *(stack_addr + REG_R1);
     reset_info_ptr->core_registers.R2 = *(stack_addr + REG_R2);
