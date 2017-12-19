@@ -22,35 +22,25 @@ extern const pio_map_t leuart_rx_map[];
 static void on_uart_tx_done_pri(UARTDRV_Handle_t handle, Ecode_t transfer_status, uint8_t *data,
                                             UARTDRV_Count_t transfer_count)
 {
-    ssize_t transmitted = 0;
-
-    if (ECODE_OK != transfer_status)
+    if (ECODE_OK == transfer_status)
     {
-        transmitted = -1;
+        if (__IS_INTERRUPT())
+            xQueueSendFromISR(((serial_t *) handle->parent)->on_tx_done_queue, &transfer_count, NULL);
+        else
+            xQueueSend(((serial_t *) handle->parent)->on_tx_done_queue, &transfer_count, portMAX_DELAY);
     }
-    else
-    {
-        transmitted = (ssize_t) transfer_count;
-    }
-
-    xQueueSendFromISR(((serial_t *) handle->parent)->on_tx_done_queue, &transmitted, NULL);
 }
 
 static void on_uart_rx_done_pri(UARTDRV_Handle_t handle, Ecode_t transfer_status, uint8_t *data,
                                             UARTDRV_Count_t transfer_count)
 {
-    ssize_t received = 0;
-
-    if (ECODE_OK != transfer_status)
+    if (ECODE_OK == transfer_status)
     {
-        received = -1;
+        if (__IS_INTERRUPT())
+            xQueueSendFromISR(((serial_t *) handle->parent)->on_rx_done_queue, &transfer_count, NULL);
+        else
+            xQueueSend(((serial_t *) handle->parent)->on_rx_done_queue, &transfer_count, portMAX_DELAY);
     }
-    else
-    {
-        received = (ssize_t) transfer_count;
-    }
-
-    xQueueSendFromISR(((serial_t *) handle->parent)->on_rx_done_queue, &received, NULL);
 }
 
 void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool use_leuart)
