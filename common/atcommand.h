@@ -46,6 +46,7 @@
 #include <stdbool.h>
 
 #define ATCMD_MAX_CMDLEN    127
+#define ATCMD_MAX_CMDARGS   112
 
 
 typedef enum {
@@ -72,7 +73,7 @@ typedef struct {
     atcmd_cmd_t cmd; // Base command
     atcmd_type_t type; // Command type (\0?=)
     atcmd_command_t command; // Extended command type
-    char args[112]; // Up to 112 characters in the args
+    char args[ATCMD_MAX_CMDARGS + 1]; // Up to 112 characters in the args, plus null terminator
 } atcmd_t;
 
 

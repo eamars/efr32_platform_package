@@ -32,7 +32,7 @@ uint8_t preparebuffer (char *buffer)
             seen_equals = 1;
         }
         if (!seen_equals && (buffer[i] >= 'a') && (buffer[i] <= 'z')) {
-            buffer[i] = buffer[i] - ('A' - 'a');
+            buffer[i] = buffer[i] - ('a' - 'A');
         }
         i++;
     }
@@ -129,6 +129,7 @@ int8_t atcmd_parse_type (atcmd_t *atcmd, char *buffer, uint8_t buflen)
                 // Neither '?' or '=' found.
                 atcmd->type = ATCMD_TYPE_NULL;
             }
+            break;
         default:
             atcmd->type = 0;
             return 1;
@@ -146,6 +147,7 @@ int8_t atcmd_parse_args (atcmd_t *atcmd, char *buffer, uint8_t buflen)
         case ATCMD_TYPE_GET:
         case ATCMD_TYPE_RUN:
             memcpy(atcmd->args, buffer, buflen);
+            buffer[buflen] = '\0';
             break;
     }
 
@@ -211,16 +213,18 @@ int8_t parse_command_args (atcmd_t *atcmd, char *buffer, uint8_t buflen)
 int8_t atcmd_parse_command_args (atcmd_t *atcmd, char *buffer, uint8_t buflen)
 {
     int8_t rc = 0;
+
+    atcmd->command = ATCMD_COMMAND_NONE;
     
     switch (atcmd->cmd) {
         case ATCMD_CMD_HELLO: // AT
             rc = atcmd_parse_args(atcmd, buffer + 2, buflen - 2);
             break;
         case ATCMD_CMD_COMMAND:
-            rc = parse_command_args(atcmd, buffer + 3, buflen - 3);
+            rc = parse_command_args(atcmd, buffer + 4, buflen - 3);
             break;
         default:
-            rc = atcmd_parse_args(atcmd, buffer + 3, buflen - 3);
+            rc = atcmd_parse_args(atcmd, buffer + 4, buflen - 3);
             break;
     }
 
@@ -251,7 +255,7 @@ int8_t atcmd_parse_buffer (atcmd_t *atcmd, char *buffer)
         return 2 << 4 | rc;
     }
 
-    rc = atcmd_parse_args(atcmd, buffer, len);
+    rc = atcmd_parse_command_args(atcmd, buffer, len);
     if (rc != 0) {
         return 3 << 4 | rc;
     }
