@@ -48,9 +48,11 @@
 #define ATCMD_MAX_CMDLEN    127
 #define ATCMD_MAX_CMDARGS   112
 
+typedef int8_t atcmd_ret_t;
 
 typedef enum {
-    ATCMD_CMD_HELLO = 1,
+    ATCMD_CMD_NONE = 0,
+    ATCMD_CMD_HELLO,
     ATCMD_CMD_ECHO,
     ATCMD_CMD_INFO,
     ATCMD_CMD_RESET,
@@ -58,7 +60,7 @@ typedef enum {
 } atcmd_cmd_t;
 
 typedef enum {
-    ATCMD_TYPE_NULL = 0, // ATE
+    ATCMD_TYPE_NONE = 0, // ATE
     ATCMD_TYPE_GET,      // ATE?
     ATCMD_TYPE_RUN      // ATE=0
 } atcmd_type_t;
@@ -66,7 +68,10 @@ typedef enum {
 typedef enum {
     ATCMD_COMMAND_NONE = 0,
     ATCMD_COMMAND_ECHO,
-    ATCMD_COMMAND_RESET
+    ATCMD_COMMAND_RESET,
+    ATCMD_COMMAND_RXD,
+    ATCMD_COMMAND_TXD,
+    ATCMD_COMMAND_BUFFERED
 } atcmd_command_t;
 
 typedef struct {
@@ -79,6 +84,6 @@ typedef struct {
 
 // Parses a null terminated buffer for the first AT command in it. 
 // Ignores trailing '\r','\n'
-int8_t atcmd_parse_buffer (atcmd_t *cmd, char *buffer);
+atcmd_ret_t atcmd_parse_buffer (atcmd_t *cmd, char *buffer);
 
 #endif //_ATCOMMAND_H
