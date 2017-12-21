@@ -11,15 +11,18 @@
 #include <stdint.h>
 
 #define BITS_MODIFY(dest, value, mask) \
-	(dest) = ((dest) & ~(mask)) | ((value) & (mask));
+    (dest) = ((dest) & ~(mask)) | ((value) & (mask));
 
 #define BITS_SET(dest, value) \
-	(dest) |= ((value))
+    (dest) |= ((value))
 
 #define BITS_CLEAR(dest, value) \
-	(dest) &= ~((value))
+    (dest) &= ~((value))
 
 #define BITS_TOGGLE(dest, value) \
-	(dest) ^= (value)
+    (dest) ^= (value)
+
+#define BITS_CHECK(target, mask) \
+    ((target) & (mask))
 
 #endif // BITS_H_H
