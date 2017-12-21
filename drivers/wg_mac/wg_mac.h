@@ -9,6 +9,10 @@
 
 #if USE_FREERTOS == 1
 
+#include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
+
 #include "radio_template.h"
 #include "FreeRTOS.h"
 #include "queue.h"
