@@ -15,6 +15,8 @@
 #define WG_MAC_NCP_QUEUE_LENGTH 4
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <string.h>
 
 #include "radio_template.h"
 #include "FreeRTOS.h"
