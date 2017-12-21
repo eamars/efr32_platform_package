@@ -9,6 +9,7 @@
 #include "serial.h"
 #include "drv_debug.h"
 #include "uartdrv.h"
+#include "bits.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -95,14 +96,14 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
     }
     else
     {
-        // find leuart engine and pin
+        // find USART engine and pin
         uint32_t tx_loc, rx_loc;
         USART_TypeDef * usart_base;
 
         DRV_ASSERT(find_pin_function(usart_tx_map, obj->tx, (void **) &usart_base, &tx_loc));
         DRV_ASSERT(find_pin_function(usart_rx_map, obj->rx, NULL, &rx_loc));
 
-        // initialize LEUART data
+        // initialize USART data
         UARTDRV_InitUart_t init_data = {
                 .port = usart_base,
                 .baudRate = baud_rate,
