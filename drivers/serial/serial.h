@@ -12,49 +12,48 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "uartdrv.h"
 #include "io_device.h"
 #include "pio_defs.h"
 
 #include "FreeRTOS.h"
-#include "queue.h"
+#include "semphr.h"
 
 
-typedef struct
-{
-    uint16_t head;
-    uint16_t tail;
-    volatile uint16_t used;
-    uint16_t size;
-    UARTDRV_Buffer_t fifo[EMDRV_UARTDRV_MAX_CONCURRENT_RX_BUFS];
-} serial_rx_buffer_t;
+#define SERIAL_BUFFER_SIZE 255
 
 typedef struct
 {
-    uint16_t head;
-    uint16_t tail;
-    volatile uint16_t used;
-    uint16_t size;
-    UARTDRV_Buffer_t fifo[EMDRV_UARTDRV_MAX_CONCURRENT_TX_BUFS];
-} serial_tx_buffer_t;
+    uint8_t buffer[SERIAL_BUFFER_SIZE];
+    uint32_t read_idx;
+    uint32_t write_idx;
+    uint32_t available_bytes;
+
+    SemaphoreHandle_t access_mutex;
+} serial_buffer_t;
 
 typedef struct
 {
     io_device base;
-
-    UARTDRV_HandleData_t handle_data;
 
     pio_t tx;
     pio_t rx;
 
     bool use_leuart;
 
-    xQueueHandle on_tx_done_queue;
-    xQueueHandle on_rx_done_queue;
+    void * uart_engine;
 
-    volatile serial_rx_buffer_t rx_buffer_queue;
-    volatile serial_tx_buffer_t tx_buffer_queue;
+    serial_buffer_t rx_buffer;
+    serial_buffer_t tx_buffer;
+
+    struct
+    {
+        SemaphoreHandle_t block_wait_sem;
+        uint32_t more_to_read;
+        uint32_t more_bytes_read;
+    } block_read;
 
 } serial_t;
 
