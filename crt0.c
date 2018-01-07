@@ -354,6 +354,7 @@ void Reset_Handler (void)
     NVIC_SetPriority(GPIO_EVEN_IRQn, 4);
     NVIC_SetPriority(TIMER0_IRQn, 4);
     NVIC_SetPriority(USART0_RX_IRQn, 4);
+    NVIC_SetPriority(USART0_TX_IRQn, 4);
     NVIC_SetPriority(ACMP0_IRQn, 4);
     NVIC_SetPriority(ADC0_IRQn, 4);
     NVIC_SetPriority(IDAC0_IRQn, 4);
