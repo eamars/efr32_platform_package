@@ -22,7 +22,7 @@
 #include "semphr.h"
 
 
-#define SERIAL_BUFFER_SIZE 255
+#define SERIAL_BUFFER_SIZE 0xff
 
 typedef struct
 {
@@ -54,6 +54,11 @@ typedef struct
         uint32_t more_to_read;
         uint32_t more_bytes_read;
     } block_read;
+
+    struct
+    {
+        SemaphoreHandle_t block_wait_sem;
+    } block_write;
 
 } serial_t;
 

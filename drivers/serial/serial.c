@@ -24,14 +24,33 @@ extern const pio_map_t leuart_rx_map[];
 
 void serial_tx_irq_handler(serial_t * obj)
 {
-    if (BITS_CHECK(((USART_TypeDef *) obj->uart_engine)->IF, USART_IF_TXIDLE))
-    {
-        BITS_SET(((USART_TypeDef *) obj->uart_engine)->IFC, USART_IFC_TXIDLE);
-    }
+    // clear the tx interrupt
+    volatile uint32_t IF = ((USART_TypeDef *) obj->uart_engine)->IF;
 
-    if (BITS_CHECK(((USART_TypeDef *) obj->uart_engine)->IF, USART_IF_TXC))
+    if (BITS_CHECK(((USART_TypeDef *) obj->uart_engine)->STATUS, USART_STATUS_TXBL))
     {
-        BITS_SET(((USART_TypeDef *) obj->uart_engine)->IFC, USART_IF_TXC);
+        if (obj->tx_buffer.available_bytes > 0)
+        {
+            ((USART_TypeDef *) obj->uart_engine)->TXDATA = obj->tx_buffer.buffer[obj->tx_buffer.read_idx++];
+
+            if (obj->tx_buffer.read_idx == SERIAL_BUFFER_SIZE)
+            {
+                obj->tx_buffer.read_idx = 0;
+            }
+
+            obj->tx_buffer.available_bytes -= 1;
+        }
+        else // if (obj->tx_buffer.available_bytes == 0)
+        {
+            // write complete
+            if (obj->block_write.block_wait_sem)
+            {
+                xSemaphoreGiveFromISR(obj->block_write.block_wait_sem, NULL);
+
+                // disable txbl interrupt
+                USART_IntDisable(obj->uart_engine, USART_IF_TXBL);
+            }
+        }
     }
 }
 
@@ -47,11 +66,11 @@ void serial_rx_irq_handler(serial_t * obj)
         obj->rx_buffer.buffer[obj->rx_buffer.write_idx++] = byte;
         obj->rx_buffer.available_bytes += 1;
 
-        // check for next cycle
+        // check for overflow
         if (obj->rx_buffer.write_idx == SERIAL_BUFFER_SIZE)
             obj->rx_buffer.write_idx = 0;
 
-        // check for overflow
+        // check for underflow
         if (obj->rx_buffer.read_idx == obj->rx_buffer.write_idx)
             obj->rx_buffer.available_bytes = 0;
         else
@@ -68,6 +87,7 @@ void serial_rx_irq_handler(serial_t * obj)
         }
     }
 }
+
 
 void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool use_leuart)
 {
@@ -185,9 +205,9 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
         BITS_SET(((USART_TypeDef *) obj->uart_engine)->CMD, USART_CMD_CLEARRX | USART_CMD_CLEARTX);
 
         // enable interrupt with conditions
-        USART_IntEnable(obj->uart_engine, USART_IF_RXDATAV | USART_IF_TXC);
+        USART_IntEnable(obj->uart_engine, USART_IF_RXDATAV);
 
-        // clear any interrupt
+        // clear any interrupt from source
         USART_IntClear(obj->uart_engine, 0xFFFFFFFF);
 
         // enable NVIC interrupt
@@ -204,8 +224,7 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
 ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_t timeout)
 {
     DRV_ASSERT(obj);
-
-    uint8_t * bytes = buffer;
+    DRV_ASSERT(size <= SERIAL_BUFFER_SIZE);
 
     ssize_t transmitted = 0;
     uint32_t block_ticks = 0;
@@ -216,40 +235,59 @@ ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_
     else
         block_ticks = pdMS_TO_TICKS(timeout);
 
-    if (size == 0)
+    // write to tx buffer
+    uint8_t * byte_array = (uint8_t *) buffer;
+
+    // enter critical section
+    xSemaphoreTake(obj->tx_buffer.access_mutex, portMAX_DELAY);
+
+    // go through ch one by one
+    for (size_t ch_idx = 0; ch_idx < size; ch_idx++)
     {
-        return 0;
+        obj->tx_buffer.buffer[obj->tx_buffer.write_idx++] = byte_array[ch_idx];
+        obj->tx_buffer.available_bytes += 1;
+
+        // check for overflow
+        if (obj->tx_buffer.write_idx == SERIAL_BUFFER_SIZE)
+            obj->tx_buffer.write_idx = 0;
+
+        // check for underflow
+        if (obj->tx_buffer.read_idx == obj->tx_buffer.write_idx)
+            obj->tx_buffer.available_bytes;
     }
-    else if (size == 1)
+
+    // block wait until transmit done
+    DRV_ASSERT(obj->block_write.block_wait_sem == NULL);
+    obj->block_write.block_wait_sem = xSemaphoreCreateBinary();
+
+    // enable interrupt
+    USART_IntEnable(obj->uart_engine, USART_IF_TXBL);
+
+    // wait until complete
+    if (!xSemaphoreTake(obj->block_write.block_wait_sem, block_ticks))
     {
-        BITS_SET(((USART_TypeDef *) obj->uart_engine)->TXDATA, bytes[0]);
-    }
-    else if (size % 2 == 0)
-    {
-        size_t idx = 0;
-        while (idx < size)
-        {
-            BITS_SET(
-                    ((USART_TypeDef *) obj->uart_engine)->TXDOUBLE,
-                    bytes[idx + 1] << _USART_TXDOUBLE_TXDATA1_SHIFT | bytes[idx] << _USART_TXDOUBLE_TXDATA0_SHIFT
-            );
-            idx += 2;
-        }
+        // failed to transmit before timeout, then disable the interrupt manually
+        USART_IntDisable(obj->uart_engine, USART_IF_TXBL);
+
+        // calculate byte transfered
+        transmitted = size - obj->tx_buffer.available_bytes;
+
+        // clear the data that failed to transmit
+        obj->tx_buffer.available_bytes = 0;
+        obj->tx_buffer.read_idx = obj->tx_buffer.write_idx;
     }
     else
     {
-        size_t idx = 0;
-        while (idx < size - 1)
-        {
-            BITS_SET(
-                    ((USART_TypeDef *) obj->uart_engine)->TXDOUBLE,
-                    bytes[idx + 1] << _USART_TXDOUBLE_TXDATA1_SHIFT | bytes[idx] << _USART_TXDOUBLE_TXDATA0_SHIFT
-            );
-            idx += 2;
-        }
-
-        BITS_SET(((USART_TypeDef *) obj->uart_engine)->TXDATA, bytes[idx]);
+        // calculate byte transfered
+        transmitted = size - obj->tx_buffer.available_bytes;
     }
+
+    // delete semaphore
+    vSemaphoreDelete(obj->block_write.block_wait_sem);
+    obj->block_write.block_wait_sem = NULL;
+
+    // leave critical section
+    xSemaphoreGive(obj->tx_buffer.access_mutex);
 
     return transmitted;
 }
