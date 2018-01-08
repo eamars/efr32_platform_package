@@ -209,7 +209,15 @@ SECTIONS
         __bss_end__ = .;
     } > RAM
 
-    .heap :
+    /* CSTACK is used by Silab's */
+    .cstack (NOLOAD) :
+    {
+        __CSTACK__begin = . ;
+        KEEP(*(.cstack .cstack.*));
+        __CSTACK__end = . ;
+    } > RAM
+
+    .heap (NOLOAD) :
     {
         . = ALIGN(4);
         __HEAP__begin = .;
@@ -220,20 +228,12 @@ SECTIONS
         __HEAP_end = .;
     } > RAM
 
-    /* CSTACK is used by Silab's */
-    .cstack :
-    {
-        __CSTACK__begin = . ;
-        KEEP(*(.cstack .cstack.*));
-        __CSTACK__end = . ;
-    } > RAM
-
     /* Set stack top to end of RAM, and stack limit move down by
     * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
 
     /* Check if FLASH usage exceeds FLASH size */
-    ASSERT( (LENGTH(FLASH) - 0x4) > (__etext + SIZEOF(.data) - ORIGIN(FLASH)), "FLASH memory overflowed !")
+    ASSERT( (LENGTH(FLASH) - 0x4) > (__rom_end__ - ORIGIN(FLASH)), "FLASH memory overflowed !")
 
     /* Stabs debugging sections.  */
     .stab          0 : { *(.stab) }
