@@ -22,7 +22,7 @@
 #include "semphr.h"
 
 
-#define SERIAL_BUFFER_SIZE 0xff
+#define SERIAL_BUFFER_SIZE 512
 
 typedef struct
 {
