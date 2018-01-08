@@ -11,6 +11,7 @@
 #include "uartdrv.h"
 #include "bits.h"
 #include "usartinterrupt.h"
+#include "leuartinterrupt.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -22,11 +23,8 @@ extern const pio_map_t usart_rx_map[];
 extern const pio_map_t leuart_tx_map[];
 extern const pio_map_t leuart_rx_map[];
 
-void serial_tx_irq_handler(serial_t * obj)
+static void serial_usart_tx_irq_handler(serial_t * obj)
 {
-    // clear the tx interrupt
-    volatile uint32_t IF = ((USART_TypeDef *) obj->uart_engine)->IF;
-
     if (BITS_CHECK(((USART_TypeDef *) obj->uart_engine)->STATUS, USART_STATUS_TXBL))
     {
         if (obj->tx_buffer.available_bytes > 0)
@@ -54,7 +52,7 @@ void serial_tx_irq_handler(serial_t * obj)
     }
 }
 
-void serial_rx_irq_handler(serial_t * obj)
+static void serial_usart_rx_irq_handler(serial_t * obj)
 {
     uint8_t byte;
 
@@ -88,6 +86,64 @@ void serial_rx_irq_handler(serial_t * obj)
     }
 }
 
+static void serial_leuart_irq_handler(serial_t * obj)
+{
+    uint8_t byte;
+    while (BITS_CHECK(((LEUART_TypeDef *) obj->uart_engine)->STATUS, LEUART_STATUS_RXDATAV))
+    {
+        byte = (uint8_t) ((LEUART_TypeDef *) obj->uart_engine)->RXDATA;
+
+        // store the byte to local buffer
+        obj->rx_buffer.buffer[obj->rx_buffer.write_idx++] = byte;
+        obj->rx_buffer.available_bytes += 1;
+
+        // check for overflow
+        if (obj->rx_buffer.write_idx == SERIAL_BUFFER_SIZE)
+            obj->rx_buffer.write_idx = 0;
+
+        // check for underflow
+        if (obj->rx_buffer.read_idx == obj->rx_buffer.write_idx)
+            obj->rx_buffer.available_bytes = 0;
+        else
+        {
+            // signal other thread to indicate the bytes is ready
+            if (obj->block_read.block_wait_sem)
+            {
+                obj->block_read.more_bytes_read += 1;
+                if (obj->block_read.more_bytes_read == obj->block_read.more_to_read)
+                {
+                    xSemaphoreGiveFromISR(obj->block_read.block_wait_sem, NULL);
+                }
+            }
+        }
+    }
+
+    if (BITS_CHECK(((LEUART_TypeDef *) obj->uart_engine)->STATUS, LEUART_STATUS_TXBL))
+    {
+        if (obj->tx_buffer.available_bytes > 0)
+        {
+            ((LEUART_TypeDef *) obj->uart_engine)->TXDATA = obj->tx_buffer.buffer[obj->tx_buffer.read_idx++];
+
+            if (obj->tx_buffer.read_idx == SERIAL_BUFFER_SIZE)
+            {
+                obj->tx_buffer.read_idx = 0;
+            }
+
+            obj->tx_buffer.available_bytes -= 1;
+        }
+        else // if (obj->tx_buffer.available_bytes == 0)
+        {
+            // write complete
+            if (obj->block_write.block_wait_sem)
+            {
+                xSemaphoreGiveFromISR(obj->block_write.block_wait_sem, NULL);
+
+                // disable txbl interrupt
+                LEUART_IntDisable(obj->uart_engine, USART_IF_TXBL);
+            }
+        }
+    }
+}
 
 void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool use_leuart)
 {
@@ -119,12 +175,87 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
     if (use_leuart)
     {
         uint32_t tx_loc, rx_loc;
+        CMU_Clock_TypeDef peripheral_clock;
+        uint32_t leuart_idx;
+        IRQn_Type leuart_irqn;
 
         DRV_ASSERT(find_pin_function(leuart_tx_map, obj->tx, &obj->uart_engine, &tx_loc));
         DRV_ASSERT(find_pin_function(leuart_rx_map, obj->rx, NULL, &rx_loc));
 
-        // TODO: Implement LEUART
-        DRV_ASSERT(false);
+        // find clocks and register object
+        switch ((uint32_t) obj->uart_engine)
+        {
+            case (uint32_t) LEUART0:
+            {
+                peripheral_clock = cmuClock_LEUART0;
+                leuart_idx = 0;
+                leuart_irqn = LEUART0_IRQn;
+                break;
+            }
+            default:
+            {
+                peripheral_clock = cmuClock_USART0;
+                leuart_idx = 0;
+                leuart_irqn = LEUART0_IRQn;
+                DRV_ASSERT(false);
+                break;
+            }
+        }
+
+        // enable peripheral clock
+        CMU_ClockEnable(cmuClock_HFPER, true);
+        CMU_ClockEnable(peripheral_clock, true);
+        CMU_ClockEnable(cmuClock_HFLE, true);
+
+        // Only try to use LF clock if LFXO is enabled and requested baudrate is low
+        if (CMU->STATUS & CMU_STATUS_LFXOENS && (baud_rate <= SystemLFXOClockGet()))
+        {
+            CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_LFXO);
+        } else
+        {
+            // Try to figure out the prescaler that will give us the best stability
+            CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_HFCLKLE);
+        }
+
+        // configure leuart
+        LEUART_Init_TypeDef init_data = LEUART_INIT_DEFAULT;
+
+        // override config
+        init_data.baudrate = baud_rate;
+        init_data.enable = leuartDisable;
+
+        // apply config
+        LEUART_Init(obj->uart_engine, &init_data);
+
+        // enable I/O and location
+        BITS_SET(((LEUART_TypeDef *) obj->uart_engine)->ROUTEPEN, LEUART_ROUTEPEN_TXPEN | LEUART_ROUTEPEN_RXPEN);
+        BITS_MODIFY(
+                ((LEUART_TypeDef *) obj->uart_engine)->ROUTELOC0,
+                (tx_loc << _LEUART_ROUTELOC0_TXLOC_SHIFT) | (rx_loc << _LEUART_ROUTELOC0_RXLOC_SHIFT),
+                _LEUART_ROUTELOC0_TXLOC_MASK | _LEUART_ROUTELOC0_RXLOC_MASK
+        );
+
+        // register callbacks
+        leuart_interrupt_callback_register_with_arg(leuart_idx, (void *) serial_leuart_irq_handler, obj);
+
+        // wait for previous write to sync
+        while (BITS_CHECK(((LEUART_TypeDef *) obj->uart_engine)->SYNCBUSY, LEUART_SYNCBUSY_CMD));
+
+        // discard false frames
+        BITS_SET(((LEUART_TypeDef *) obj->uart_engine)->CMD, LEUART_CMD_CLEARRX | LEUART_CMD_CLEARTX);
+
+        // clear any interrupt from source
+        LEUART_IntClear(obj->uart_engine, 0xFFFFFFFF);
+
+        // enable interrupt with conditions
+        LEUART_IntEnable(obj->uart_engine, LEUART_IF_RXDATAV);
+
+        // enable NVIC interrupt
+        NVIC_ClearPendingIRQ(leuart_irqn);
+        NVIC_EnableIRQ(leuart_irqn);
+
+        // enable usart
+        LEUART_Enable(obj->uart_engine, leuartEnable);
     }
     else
     {
@@ -187,10 +318,17 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
         CMU_ClockEnable(cmuClock_HFPER, true);
         CMU_ClockEnable(peripheral_clock, true);
 
+        // configure usart port
         USART_InitAsync_TypeDef init_data = USART_INITASYNC_DEFAULT;
+
+        // override configs
+        init_data.baudrate = baud_rate;
+        init_data.enable = usartDisable;
+
+        // apply config
         USART_InitAsync(obj->uart_engine, &init_data);
 
-        // enable IO and location
+        // enable I/O and location
         BITS_SET(((USART_TypeDef *) obj->uart_engine)->ROUTEPEN, (USART_ROUTEPEN_RXPEN | USART_ROUTEPEN_TXPEN));
         BITS_MODIFY(
                 ((USART_TypeDef *) obj->uart_engine)->ROUTELOC0,
@@ -199,16 +337,16 @@ void serial_init(serial_t * obj, pio_t tx, pio_t rx, uint32_t baud_rate, bool us
         );
 
         // register interrupt callback
-        usart_interrupt_callback_register_with_arg(usart_idx, (void *) serial_rx_irq_handler, obj, (void *) serial_tx_irq_handler, obj);
+        usart_interrupt_callback_register_with_arg(usart_idx, (void *) serial_usart_rx_irq_handler, obj, (void *) serial_usart_tx_irq_handler, obj);
 
         // discard false frames
         BITS_SET(((USART_TypeDef *) obj->uart_engine)->CMD, USART_CMD_CLEARRX | USART_CMD_CLEARTX);
 
-        // enable interrupt with conditions
-        USART_IntEnable(obj->uart_engine, USART_IF_RXDATAV);
-
         // clear any interrupt from source
         USART_IntClear(obj->uart_engine, 0xFFFFFFFF);
+
+        // enable interrupt with conditions
+        USART_IntEnable(obj->uart_engine, USART_IF_RXDATAV);
 
         // enable NVIC interrupt
         NVIC_ClearPendingIRQ(usart_rx_irqn);
@@ -261,13 +399,19 @@ ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_
     obj->block_write.block_wait_sem = xSemaphoreCreateBinary();
 
     // enable interrupt
-    USART_IntEnable(obj->uart_engine, USART_IF_TXBL);
+    if (obj->use_leuart)
+        LEUART_IntEnable(obj->uart_engine, LEUART_IF_TXBL);
+    else
+        USART_IntEnable(obj->uart_engine, USART_IF_TXBL);
 
     // wait until complete
     if (!xSemaphoreTake(obj->block_write.block_wait_sem, block_ticks))
     {
         // failed to transmit before timeout, then disable the interrupt manually
-        USART_IntDisable(obj->uart_engine, USART_IF_TXBL);
+        if (obj->use_leuart)
+            LEUART_IntDisable(obj->uart_engine, LEUART_IF_TXBL);
+        else
+            USART_IntDisable(obj->uart_engine, USART_IF_TXBL);
 
         // calculate byte transfered
         transmitted = size - obj->tx_buffer.available_bytes;
