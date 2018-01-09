@@ -20,7 +20,7 @@
  * @param addr address of target interrupt vector table
  */
 __attribute__ ((naked))
-static void _binary_exec(void *addr __attribute__((unused)))
+static void _binary_exec(void * r0 __attribute__((unused)))
 {
     __ASM (
         "mov r1, r0\n"			// r0 is the first argument
@@ -30,7 +30,7 @@ static void _binary_exec(void *addr __attribute__((unused)))
     );
 }
 
-static void binary_exec(void *addr)
+static void binary_exec(void * vtor_addr)
 {
     // disable global interrupts
     __disable_irq();
@@ -50,7 +50,7 @@ static void binary_exec(void *addr)
     __ISB();	// instruction memory barrier @__ISB()
 
     // change vector table
-    SCB->VTOR = ((uint32_t) addr & SCB_VTOR_TBLOFF_Msk);
+    SCB->VTOR = ((uint32_t) vtor_addr & SCB_VTOR_TBLOFF_Msk);
 
     // barriers
     __DSB();
@@ -60,7 +60,7 @@ static void binary_exec(void *addr)
     __enable_irq();
 
     // load stack and pc
-    _binary_exec(addr);
+    _binary_exec(vtor_addr);
 
     // should never run beyond this point
     while (1)
@@ -73,7 +73,7 @@ static void binary_exec(void *addr)
  * Reboot the program to the bootloadfer
  * @param reboot_now if the reboot_now is set, the processor will be reset immediately
  */
-void reboot_to_bootloader(bool reboot_now)
+void reboot_to_bootloader(void)
 {
     boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
@@ -84,13 +84,13 @@ void reboot_to_bootloader(bool reboot_now)
     system_reset(RESET_BOOTLOADER_BOOTLOAD);
 }
 
-void reboot_to_addr(uint32_t app_addr, bool reboot_now)
+void reboot_to_addr(uint32_t vtor_addr)
 {
     boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
     // set current application address and next application address
     boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
-    boot_info_map->next_aat_addr = app_addr;
+    boot_info_map->next_aat_addr = vtor_addr;
 
     // reset using debug interface
     system_reset(RESET_BOOTLOADER_GO);

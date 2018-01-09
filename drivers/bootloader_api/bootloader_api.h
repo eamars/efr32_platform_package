@@ -60,9 +60,9 @@ typedef struct
 extern "C" {
 #endif
 
-void reboot_to_bootloader(bool reboot_now);
-void reboot_to_addr(uint32_t app_addr, bool reboot_now);
-void branch_to_addr(uint32_t app_addr);
+void reboot_to_bootloader(void);
+void reboot_to_addr(uint32_t vtor_addr);
+void branch_to_addr(uint32_t vtor_addr);
 
 
 #ifdef __cplusplus
