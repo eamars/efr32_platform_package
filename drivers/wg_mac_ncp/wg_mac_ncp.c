@@ -262,33 +262,34 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 memset(client, 0x0, sizeof(wg_mac_ncp_client_t));
 
                 client->is_valid = true;
-                client->short_id = generate_unique_id(obj, join_request->eui64); // generate a unique short id for the client
+                client->short_id = generate_unique_id(obj,
+                                                      join_request->eui64); // generate a unique short id for the client
                 client->device_eui64 = join_request->eui64;
                 client->prev_packet_acked = true;
                 client->retry_counter = 0;
                 client->tx_seqid = 0;
                 client->rx_seqid = (uint8_t) (join_request->cmd_header.mac_header.seqid - 1);
-
-                DEBUG_PRINT("NCP: a new device [0x%08llx] joined, assigned with short_id [0x%02x]\r\n", client->device_eui64, client->short_id);
-
-                // send a response message back
-                wg_mac_ncp_msg_t tx_msg;
-                tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE;
-
-                // map
-                subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) tx_msg.buffer;
-                response_packet->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
-                response_packet->cmd_header.mac_header.src_id = 0;
-                response_packet->cmd_header.mac_header.dest_id = join_request->cmd_header.mac_header.src_id;
-                response_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
-                response_packet->cmd_header.mac_header.seqid = 0;
-
-                response_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_RESP;
-                response_packet->allocated_device_id = client->short_id;
-                response_packet->uplink_dest_id = (uint8_t) (obj->config.local_eui64 & 0xff);
-
-                wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
             }
+
+            DEBUG_PRINT("NCP: a new device [0x%08llx] joined, assigned with short_id [0x%02x]\r\n", client->device_eui64, client->short_id);
+
+            // send a response message back
+            wg_mac_ncp_msg_t tx_msg;
+            tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE;
+
+            // map
+            subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) tx_msg.buffer;
+            response_packet->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+            response_packet->cmd_header.mac_header.src_id = 0;
+            response_packet->cmd_header.mac_header.dest_id = join_request->cmd_header.mac_header.src_id;
+            response_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
+            response_packet->cmd_header.mac_header.seqid = 0;
+
+            response_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_RESP;
+            response_packet->allocated_device_id = client->short_id;
+            response_packet->uplink_dest_id = (uint8_t) (obj->config.local_eui64 & 0xff);
+
+            wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
 
             break;
         }

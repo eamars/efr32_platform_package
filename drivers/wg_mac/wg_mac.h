@@ -101,6 +101,7 @@ typedef struct
         xTimerHandle rx_window_timer;
         wg_mac_msg_t prev_packet;
         uint8_t retry_counter;
+        bool is_packet_clear;
     } retransmit;
 } wg_mac_t;
 
