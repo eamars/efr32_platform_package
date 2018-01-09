@@ -90,9 +90,9 @@ typedef struct
     // link state
     struct
     {
-        bool is_network_joined;
         uint8_t allocated_id;
         uint8_t uplink_dest_id;
+        bool is_network_joined;
     } link_state;
 
     // retransmit
