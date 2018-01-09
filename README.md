@@ -1,8 +1,38 @@
-# EFR32 Driver
+# EFR32 Target
 This repository is meant to be included in EFR32 related development project. 
 
-The Definitive Guide to Driver Development
------------------------------
+# EFR32 Device Memory Map
+
+The detailed memory layout can be found in `scripts/*.ld` folder. Following diagram shows the 
+generic application layout that are shared across multiple applications and the bootloader.
+
+![MemoryLayout](resources/efr32_memory_map.png)
+
+Three memory regions can be directly accessed by addresses:
+- Dedicated bootloader partition (`0xFE10000-0xFE18000`): On startup the program counter will point to `0xFE10000` if bootloader presents 
+and enabled. 
+- Application partition (`0x0-0x100000`): Application code.
+- SRAM (`0x20000000-0x20040000`): volatile Readable/Writable storage.
+
+Sections:
+------------
+- `.LOADER`: Load interrupt vector table and branch to the address of second word in vector table.
+- `.VECTORS.aat`: Static interrupt vector table and application information. Please refer to
+`app_header_block.c.in` and `bl_header_block.c.in` for more information.
+- `.text`: Function instructions.
+- `.rodata`: Read only data, normally strings and constant variables. 
+- `.NVM_SIMEE.simee`: Reserved region for simulated EEPROM region on FLASH memory.
+- `.RESETINFO.resetinfo`: The volatile persist region on SRAM. Please refer `README.md` in drivers for more
+information.
+- `.data.dynamic_vectors`: The configurable interrupt vector table.
+- `.data`: The initialized variables.
+- `.bss`: The uninitialized variables.
+- `.cstack`: Zigbee stack.
+- `.heap`: Configurable FreeRTOS heap.
+- `StackTop`: The base address of main stack pointer. 
+
+# The Definitive Guide to Driver Development
+
 0. Welcome to Embedded World
     - Anything can go wrong.
     - Nothing is reliable, especially the clock and *printf*.
@@ -21,6 +51,9 @@ The Definitive Guide to Driver Development
         ```
         In this case, if LSB of *R0* is not set, *UsageFault* will be called to indicating the processor is trying
         to switch from Thumb mode to ARM mode. (ARM mode is not fully supported by Cortex M4 processors)
+    - In recent release of the driver the fault can be handled by generic fault handler. Error registers, as well as 
+    generic purpose registers, will be dumped to `.RESETINFO` region before restart. 
+   
 
 1. Always comment your code
     - You don't need to comment every line of code you wrote, the code can explain itself.

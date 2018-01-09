@@ -11,7 +11,7 @@
 
 #include "drivers/bootloader_api/application_header.h"
 #include "irq.h"
-#include "reset_info.h"
+#include "drivers/reset_info/reset_info.h"
 #include "sys.h"
 
 #if USE_FREERTOS == 1

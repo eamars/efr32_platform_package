@@ -17,6 +17,7 @@ SET(ENABLED_DRIVERS
 		radio_template
 		radio_rfm9x
 		radio_efr32
+		reset_info
 		# lorawan
 		# lora_phy
 		serial

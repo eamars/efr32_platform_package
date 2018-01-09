@@ -5,14 +5,13 @@
  * @date March, 2017
  */
 
+#include PLATFORM_HEADER
 #include <stdbool.h>
 
-#include PLATFORM_HEADER
 #include "em_device.h"
 
-#include "btl_reset.h"
-#include "btl_reset_info.h"
-
+#include "reset_info.h"
+#include "drv_debug.h"
 #include "bootloader_api.h"
 #include "application_header.h"
 
@@ -21,7 +20,7 @@
  * @param addr address of target interrupt vector table
  */
 __attribute__ ((naked))
-static void _binary_exec(void *addr __attribute__((unused)))
+static void _binary_exec(void * r0 __attribute__((unused)))
 {
     __ASM (
         "mov r1, r0\n"			// r0 is the first argument
@@ -31,7 +30,7 @@ static void _binary_exec(void *addr __attribute__((unused)))
     );
 }
 
-static void binary_exec(void *addr)
+static void binary_exec(void * vtor_addr)
 {
     // disable global interrupts
     __disable_irq();
@@ -51,7 +50,7 @@ static void binary_exec(void *addr)
     __ISB();	// instruction memory barrier @__ISB()
 
     // change vector table
-    SCB->VTOR = ((uint32_t) addr & SCB_VTOR_TBLOFF_Msk);
+    SCB->VTOR = ((uint32_t) vtor_addr & SCB_VTOR_TBLOFF_Msk);
 
     // barriers
     __DSB();
@@ -61,7 +60,7 @@ static void binary_exec(void *addr)
     __enable_irq();
 
     // load stack and pc
-    _binary_exec(addr);
+    _binary_exec(vtor_addr);
 
     // should never run beyond this point
     while (1)
@@ -74,37 +73,27 @@ static void binary_exec(void *addr)
  * Reboot the program to the bootloadfer
  * @param reboot_now if the reboot_now is set, the processor will be reset immediately
  */
-void reboot_to_bootloader(bool reboot_now)
+void reboot_to_bootloader(void)
 {
-    // set field in reset info indicates that we want to boot to application
-    // map reset cause structure to the begin of crash info memory
-    BootloaderResetCause_t * reset_cause = (BootloaderResetCause_t *) &__RESETINFO__begin;
+    boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
-    reset_cause->signature = BOOTLOADER_RESET_SIGNATURE_VALID;
-    reset_cause->reason = BOOTLOADER_RESET_REASON_BOOTLOAD;
+    // set current current application address
+    boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
 
-    // software reset
-    NVIC_SystemReset();
+    // reset using debug interface
+    system_reset(RESET_BOOTLOADER_BOOTLOAD);
 }
 
-void reboot_to_addr(uint32_t app_addr, bool reboot_now)
+void reboot_to_addr(uint32_t vtor_addr)
 {
-    // set field in reset info indicates that we want to boot to application
-    // map reset cause structure to the begin of crash info memory
-    ExtendedBootloaderResetCause_t * reset_cause = (ExtendedBootloaderResetCause_t *) &__RESETINFO__begin;
+    boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
-    reset_cause->basicResetCause.signature = BOOTLOADER_RESET_SIGNATURE_VALID;
-    reset_cause->basicResetCause.reason = BOOTLOADER_RESET_REASON_GO;
+    // set current application address and next application address
+    boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
+    boot_info_map->next_aat_addr = vtor_addr;
 
-    // store the address that we want to run
-    reset_cause->app_signature = APP_SIGNATURE;
-    reset_cause->app_addr = app_addr;
-
-    if (reboot_now)
-    {
-        // software reset, SRAM is retained
-        NVIC_SystemReset();
-    }
+    // reset using debug interface
+    system_reset(RESET_BOOTLOADER_GO);
 }
 
 void branch_to_addr(uint32_t vtor_addr)

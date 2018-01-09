@@ -11,7 +11,6 @@
 #include "em_dbg.h"
 #include "bits.h"
 #include "reset_info.h"
-#include "micro/micro.h"
 
 #define IRQ_TO_VECT_NUM(x) ((x) + 16)
 
@@ -31,9 +30,10 @@ typedef enum
 void system_reset(uint16_t reset_reason)
 {
     // write to reset info with reset reason
-    reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
-    reset_info_ptr->reset_reason = reset_reason;
-    reset_info_ptr->reset_signature = RESET_INFO_SIGNATURE_VALID;
+    reset_info_set_reset_reason(reset_reason);
+
+    // set reset region valid
+    reset_info_set_valid();
 
     // break here if debugger is attached
     debug_breakpoint();
@@ -99,13 +99,13 @@ static _Unwind_Reason_Code backtrace_handler(_Unwind_Context * contex, void * ar
 void backtrace(void)
 {
     // get reset info
-    reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
+    reset_info_map_t * reset_info_map = (reset_info_map_t *) reset_info_read();
 
-    memset(reset_info_ptr->ip_stack, 0x0, BACKTRACE_MAX_DEPTH * sizeof(uint32_t));
+    memset(reset_info_map->ip_stack, 0x0, BACKTRACE_MAX_DEPTH * sizeof(uint32_t));
     unwind_ctrl_t ctrl = {
             .current_depth = 0,
             .max_depth = BACKTRACE_MAX_DEPTH,
-            .ip_stack = reset_info_ptr->ip_stack,
+            .ip_stack = reset_info_map->ip_stack,
             .code_stack = NULL
     };
 
@@ -120,16 +120,16 @@ void assert_failed(const char * file, uint32_t line)
     BITS_CLEAR(WDOG1->CTRL, WDOG_CTRL_EN);
 
     // store the assert information
-    reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
-    reset_info_ptr->assert_info.assert_filename_path_ptr = file;
-    reset_info_ptr->assert_info.assert_line = line;
+    reset_info_map_t * reset_info_map = (reset_info_map_t *) reset_info_read();
+    reset_info_map->assert_info.assert_filename_path_ptr = file;
+    reset_info_map->assert_info.assert_line = line;
 
     // copy filename to struct
     char * base = strrchr(file, '/');
     strncpy(
-            reset_info_ptr->assert_info.assert_filename,
+            reset_info_map->assert_info.assert_filename,
             base ? base + 1 : file,
-            sizeof(reset_info_ptr->assert_info.assert_filename)
+            sizeof(reset_info_map->assert_info.assert_filename)
     );
 
     // dump call stack
@@ -139,22 +139,32 @@ void assert_failed(const char * file, uint32_t line)
     system_reset(RESET_CRASH_ASSERT);
 }
 
+void assert_failed_func(const char * function_name)
+{
+    assert_failed(function_name, 0);
+}
+
+void assert_failed_null()
+{
+    assert_failed("IGNORED", 0);
+}
+
 uint16_t system_crash_handler(void)
 {
     uint16_t reset_reason = RESET_FAULT_UNKNOWN;
-    reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
+    reset_info_map_t * reset_info_map = (reset_info_map_t *) reset_info_read();
 
     // store scb contents
-    reset_info_ptr->scb_info.icsr.ICSR = SCB->ICSR;
-    reset_info_ptr->scb_info.shcsr.SHCSR = SCB->SHCSR;
-    reset_info_ptr->scb_info.cfsr.CFSR = SCB->CFSR;
-    reset_info_ptr->scb_info.hfsr.HFSR = SCB->HFSR;
-    reset_info_ptr->scb_info.mmar.MMAR = SCB->MMFAR;
-    reset_info_ptr->scb_info.bfar.BFAR = SCB->BFAR;
-    reset_info_ptr->scb_info.afsr.AFSR = SCB->AFSR;
+    reset_info_map->scb_info.icsr.ICSR = SCB->ICSR;
+    reset_info_map->scb_info.shcsr.SHCSR = SCB->SHCSR;
+    reset_info_map->scb_info.cfsr.CFSR = SCB->CFSR;
+    reset_info_map->scb_info.hfsr.HFSR = SCB->HFSR;
+    reset_info_map->scb_info.mmar.MMAR = SCB->MMFAR;
+    reset_info_map->scb_info.bfar.BFAR = SCB->BFAR;
+    reset_info_map->scb_info.afsr.AFSR = SCB->AFSR;
 
     // tell the reset reason
-    switch (reset_info_ptr->scb_info.icsr.VECTACTIVE)
+    switch (reset_info_map->scb_info.icsr.VECTACTIVE)
     {
         case IRQ_TO_VECT_NUM(WDOG0_IRQn):
         {
@@ -189,8 +199,16 @@ uint16_t system_crash_handler(void)
         }
         case IRQ_TO_VECT_NUM(UsageFault_IRQn):
         {
-            // TODO: Usage can be assertion error
-            reset_reason = RESET_FAULT_USAGE;
+            // UsageFault caused by assertion error
+            if (reset_info_map->scb_info.cfsr.CFSR & (1 << 16) && // TODO: not sure if this applies
+                    reset_info_map->core_registers.PC == 0xDE42)
+            {
+                reset_reason = RESET_CRASH_ASSERT;
+            }
+            else
+            {
+                reset_reason = RESET_FAULT_USAGE;
+            }
 
             break;
         }
@@ -201,7 +219,8 @@ uint16_t system_crash_handler(void)
         }
         default:
         {
-            if (reset_info_ptr->scb_info.icsr.VECTACTIVE && reset_info_ptr->scb_info.icsr.VECTACTIVE < VECTOR_TABLE_LENGTH)
+            if (reset_info_map->scb_info.icsr.VECTACTIVE &&
+                    reset_info_map->scb_info.icsr.VECTACTIVE < VECTOR_TABLE_LENGTH)
             {
                 reset_reason = RESET_FAULT_BADVECTOR;
             }
@@ -215,25 +234,20 @@ uint16_t system_crash_handler(void)
     return reset_reason;
 }
 
-void reset_info_clear(void)
-{
-    memset(&__RESETINFO__begin, 0x0, sizeof(reset_info_t));
-}
-
 void stack_reg_dump(const uint32_t * stack_addr)
 {
-    reset_info_t * reset_info_ptr = (reset_info_t *) &__RESETINFO__begin;
+    reset_info_map_t * reset_info_map = (reset_info_map_t *) reset_info_read();
 
     // fetch auto stacked register value before interrupt on stack
-    reset_info_ptr->core_registers.R0 = *(stack_addr + REG_R0);
-    reset_info_ptr->core_registers.R1 = *(stack_addr + REG_R1);
-    reset_info_ptr->core_registers.R2 = *(stack_addr + REG_R2);
-    reset_info_ptr->core_registers.R3 = *(stack_addr + REG_R3);
-    reset_info_ptr->core_registers.R12 = *(stack_addr + REG_R12);
-    reset_info_ptr->core_registers.LR = *(stack_addr + REG_LR);
-    reset_info_ptr->core_registers.PC = *(stack_addr + REG_PC);
-    reset_info_ptr->core_registers.XPSR.XPSR = *(stack_addr + REG_PSR);
-    reset_info_ptr->core_registers.SP = (uint32_t) (stack_addr + REG_PREV_SP);
+    reset_info_map->core_registers.R0 = *(stack_addr + REG_R0);
+    reset_info_map->core_registers.R1 = *(stack_addr + REG_R1);
+    reset_info_map->core_registers.R2 = *(stack_addr + REG_R2);
+    reset_info_map->core_registers.R3 = *(stack_addr + REG_R3);
+    reset_info_map->core_registers.R12 = *(stack_addr + REG_R12);
+    reset_info_map->core_registers.LR = *(stack_addr + REG_LR);
+    reset_info_map->core_registers.PC = *(stack_addr + REG_PC);
+    reset_info_map->core_registers.XPSR.XPSR = *(stack_addr + REG_PSR);
+    reset_info_map->core_registers.SP = (uint32_t) (stack_addr + REG_PREV_SP);
 }
 
 void debug_breakpoint(void)
@@ -243,5 +257,4 @@ void debug_breakpoint(void)
     {
         asm volatile ("bkpt #0");
     }
-
 }

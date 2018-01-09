@@ -13,7 +13,6 @@
 
 #include "stack32.h"
 #include "irq.h"
-#include "btl_reset_info.h"
 
 #define BL_PROTO_VER 0x0002
 #define APP_SIGNATURE 0xc91a2d2e
@@ -55,50 +54,15 @@ typedef struct
     stack_t base_addr_stack;
 } bootloader_config_t;
 
-typedef union
-{
-    uint32_t RMU_RESET_CAUSE;
-
-    struct __attribute__((packed))
-    {
-        uint32_t PORST      : 1;
-        uint32_t RESERVED1  : 1;
-        uint32_t AVDDBOD    : 1;
-        uint32_t DVDDBOD    : 1;
-        uint32_t DECBOD     : 1;
-        uint32_t RESERVED2  : 3;
-        uint32_t EXTRST     : 1;
-        uint32_t LOCKUPRST  : 1;
-        uint32_t SYSREQRST  : 1;
-        uint32_t WDOGRST    : 1;
-        uint32_t RESERVED3  : 4;
-        uint32_t EM4RST     : 1;
-        uint32_t RESERVED   : 15;
-    };
-} rmu_reset_cause_t;
-
-typedef struct
-{
-    BootloaderResetCause_t basicResetCause;
-
-    /// Signature indicating following application address is valid
-    uint32_t app_signature;
-
-    /// Address for the application
-    uint32_t app_addr;
-
-    /// RMU reset reason
-    rmu_reset_cause_t rmu_reset_cause;
-} ExtendedBootloaderResetCause_t;
 
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void reboot_to_bootloader(bool reboot_now);
-void reboot_to_addr(uint32_t app_addr, bool reboot_now);
-void branch_to_addr(uint32_t app_addr);
+void reboot_to_bootloader(void);
+void reboot_to_addr(uint32_t vtor_addr);
+void branch_to_addr(uint32_t vtor_addr);
 
 
 #ifdef __cplusplus
