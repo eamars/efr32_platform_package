@@ -70,8 +70,7 @@ typedef enum {
     ATCMD_COMMAND_ECHO,
     ATCMD_COMMAND_RESET,
     ATCMD_COMMAND_RXD,
-    ATCMD_COMMAND_TXD,
-    ATCMD_COMMAND_BUFFERED
+    ATCMD_COMMAND_TXD
 } atcmd_command_t;
 
 typedef struct {
