@@ -46,9 +46,9 @@ static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
     xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 }
 
-static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool first_attempt)
+static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_new_seqid)
 {
-    if (first_attempt)
+    if (generate_new_seqid)
     {
         // give seq id
         subg_mac_header_t * header = (subg_mac_header_t *) msg->buffer;
@@ -85,22 +85,31 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
     // read radio object
     wg_mac_t * obj = (wg_mac_t *) pvTimerGetTimerID(xTimer);
 
-    // at the moment where this function is called, which indicates no proper response is received from node, we need
-    // to start the retransmission
-
-    // we can bypass the idle state to transmit packet
-    obj->retransmit.retry_counter += 1;
-
-    if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
+    // if previous packet is acked, then I can safely enter the idle state and waiting for another transmission
+    if (obj->retransmit.is_packet_clear)
     {
-        // reset to idle state
         obj->fsm_state = WG_MAC_IDLE;
     }
     else
     {
-        // for the retransmission, we don't generate a different seqid
-        wg_mac_send_pri(obj, &obj->retransmit.prev_packet, false);
+        // at the moment where this function is called, which indicates no proper response is received from node, we need
+        // to start the retransmission
+
+        // we can bypass the idle state to transmit packet
+        obj->retransmit.retry_counter += 1;
+
+        if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
+        {
+            // reset to idle state
+            obj->fsm_state = WG_MAC_IDLE;
+        }
+        else
+        {
+            // for the retransmission, we don't generate a different seqid
+            wg_mac_send_pri(obj, &obj->retransmit.prev_packet, false);
+        }
     }
+
 }
 
 
@@ -193,9 +202,7 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_msg_t * msg
 
     if (clear_pending)
     {
-        xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
-
-        obj->fsm_state = WG_MAC_IDLE;
+        obj->retransmit.is_packet_clear = true;
     }
 
     if (send_ack)
@@ -243,6 +250,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 {
                     // set information for retransmission
                     obj->retransmit.retry_counter = 0;
+                    obj->retransmit.is_packet_clear = false;
 
                     // for the first attempt, we generate a unique seq id
                     wg_mac_send_pri(obj, &tx_msg, true);
@@ -383,6 +391,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
 
     // setup retransmit
     obj->retransmit.retry_counter = 0;
+    obj->retransmit.is_packet_clear = false;
     obj->retransmit.rx_window_timer = xTimerCreate(
             "rx_timer",
             pdMS_TO_TICKS(obj-config->rx_window_timeout_ms),
