@@ -22,6 +22,7 @@ const char atcmd_command_echo[] = "ECHO";
 const char atcmd_command_reset[] = "RESET";
 const char atcmd_command_rxd[] = "RXD";
 const char atcmd_command_txd[] = "TXD";
+const char atcmd_command_rxtimeout[] = "RXTIMEOUT";
 
 typedef struct {
     const atcmd_command_t command;
@@ -33,7 +34,8 @@ const atcmd_command_index_t atcmd_command_index[] = {
     {ATCMD_COMMAND_ECHO, atcmd_command_echo},
     {ATCMD_COMMAND_RESET, atcmd_command_reset},
     {ATCMD_COMMAND_RXD, atcmd_command_rxd},
-    {ATCMD_COMMAND_TXD, atcmd_command_txd}
+    {ATCMD_COMMAND_TXD, atcmd_command_txd},
+    {ATCMD_COMMAND_RXTIMEOUT, atcmd_command_rxtimeout}
 };
 
 
