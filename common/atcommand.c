@@ -11,11 +11,11 @@
 
 #include <string.h>
 
-const char atcmd_cmd_hello[] = "AT";
-const char atcmd_cmd_echo[] = "ATE";
-const char atcmd_cmd_info[] = "ATI";
-const char atcmd_cmd_reset[] = "ATZ";
-const char atcmd_cmd_cmd[] = "AT+";
+const char atcmd_cmd_hello[]    = "AT";
+const char atcmd_cmd_echo[]     = "ATE";
+const char atcmd_cmd_info[]     = "ATI";
+const char atcmd_cmd_reset[]    = "ATZ";
+const char atcmd_cmd_cmd[]      = "AT+";
 
 const char atcmd_command_none[] = "";
 const char atcmd_command_echo[] = "ECHO";
