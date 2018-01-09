@@ -62,7 +62,7 @@ typedef enum {
 typedef enum {
     ATCMD_TYPE_NONE = 0, // ATE
     ATCMD_TYPE_GET,      // ATE?
-    ATCMD_TYPE_RUN      // ATE=0
+    ATCMD_TYPE_RUN       // ATE=0
 } atcmd_type_t;
 
 typedef enum {
@@ -71,7 +71,7 @@ typedef enum {
     ATCMD_COMMAND_RESET,
     ATCMD_COMMAND_RXD,
     ATCMD_COMMAND_TXD,
-    ATCMD_COMMAND_BUFFERED
+    ATCMD_COMMAND_RXTIMEOUT
 } atcmd_command_t;
 
 typedef struct {

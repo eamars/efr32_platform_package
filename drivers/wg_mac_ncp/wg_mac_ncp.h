@@ -118,6 +118,9 @@ extern "C" {
  */
 extern const wg_mac_ncp_config_t wg_mac_ncp_default_config;
 
+wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_eui64(wg_mac_ncp_t * obj, uint64_t device_eui64);
+wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_short_id(wg_mac_ncp_t * obj, uint8_t short_id);
+
 /**
  * @brief Initialize WG_MAC Network Co-Processor stack
  * @param obj the NCP object
