@@ -5,14 +5,13 @@
  * @date March, 2017
  */
 
+#include PLATFORM_HEADER
 #include <stdbool.h>
 
-#include PLATFORM_HEADER
 #include "em_device.h"
 
-#include "btl_reset.h"
-#include "btl_reset_info.h"
-
+#include "reset_info.h"
+#include "drv_debug.h"
 #include "bootloader_api.h"
 #include "application_header.h"
 
@@ -76,35 +75,25 @@ static void binary_exec(void *addr)
  */
 void reboot_to_bootloader(bool reboot_now)
 {
-    // set field in reset info indicates that we want to boot to application
-    // map reset cause structure to the begin of crash info memory
-    BootloaderResetCause_t * reset_cause = (BootloaderResetCause_t *) &__RESETINFO__begin;
+    boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
-    reset_cause->signature = BOOTLOADER_RESET_SIGNATURE_VALID;
-    reset_cause->reason = BOOTLOADER_RESET_REASON_BOOTLOAD;
+    // set current current application address
+    boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
 
-    // software reset
-    NVIC_SystemReset();
+    // reset using debug interface
+    system_reset(RESET_BOOTLOADER_BOOTLOAD);
 }
 
 void reboot_to_addr(uint32_t app_addr, bool reboot_now)
 {
-    // set field in reset info indicates that we want to boot to application
-    // map reset cause structure to the begin of crash info memory
-    ExtendedBootloaderResetCause_t * reset_cause = (ExtendedBootloaderResetCause_t *) &__RESETINFO__begin;
+    boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
 
-    reset_cause->basicResetCause.signature = BOOTLOADER_RESET_SIGNATURE_VALID;
-    reset_cause->basicResetCause.reason = BOOTLOADER_RESET_REASON_GO;
+    // set current application address and next application address
+    boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
+    boot_info_map->next_aat_addr = app_addr;
 
-    // store the address that we want to run
-    reset_cause->app_signature = APP_SIGNATURE;
-    reset_cause->app_addr = app_addr;
-
-    if (reboot_now)
-    {
-        // software reset, SRAM is retained
-        NVIC_SystemReset();
-    }
+    // reset using debug interface
+    system_reset(RESET_BOOTLOADER_GO);
 }
 
 void branch_to_addr(uint32_t vtor_addr)
