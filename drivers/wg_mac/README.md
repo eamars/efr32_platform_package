@@ -3,10 +3,10 @@
 `wg_mac` module contains client side implementation of simple MAC protocol that has been
 used to report sensor data from Hatch to the gateway. 
 
-Following section briefly described how such protocol is implemented. Please refer to 
+Following sections briefly describes how is implemented. Please refer to 
 source code for more specific information.
 
-Network state
+Network States
 --------------------
 The network host (normally being referred as the gateway) keeps the state, as well as the device 
 identity (EUI64). Each client can only report data to one specific host at a time. This is achieved
@@ -26,7 +26,7 @@ the client while the client only knows host's short ID.
 
 ![join_request](../../resources/join_request.png)
 
-Uplink and Downlink
+Uplink and Downlink Channel
 --------------
 The uplink message can be transmitted at any time. To avoid (minimize) the chance of packet collision, 
 carrier sensing [^2] should be applied before transmitting. 
