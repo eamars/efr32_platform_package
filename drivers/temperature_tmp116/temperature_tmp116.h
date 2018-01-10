@@ -61,6 +61,7 @@ void temperature_tmp116_pull_config(temperature_tmp116_t * obj);
 void temperature_tmp116_push_config(temperature_tmp116_t * obj);
 
 void temperature_tmp116_set_conversion_mode(temperature_tmp116_t * obj, temperature_tmp116_functional_mode_t mode);
+static void temperature_tmp116_reader(temperature_tmp116_t * obj);
 
 #ifdef __cplusplus
 }

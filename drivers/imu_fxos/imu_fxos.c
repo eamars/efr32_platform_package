@@ -6,13 +6,18 @@
  */
 
 /**
- * Code will set thresholds ont he imu to use interupt line 2 on the imu. the mmicro controller uses purly weather this line is high to decice if the door is open
- * an advancement on this would be to use the acceleromiter or some other sort of signal alnasis of the vecto value/ indivicual values to decied if the door is open
+ * Thresholds are set on the IMU for opening and closing of the gate. When these thresholds are passed, an interrupt
+ * is triggered on IMU line 2.
  *
- * The device will calibrate on the first start if the device has not yet been calibrated or when a calibrate call is made. In the future values such as the temperature coeffcient will be
- * remembered by the micro controller eeprom even when the device is reset this way it can get an idea of its compoents.
+ * an advancement on this would be to use the accelerometer or some other sort of signal analysis of the vector value/individual
+ * values to decided if the door is open
  *
- * THe tempertarue task happens every 20s and will change stuff if the temperature has changed. read more on this at the tempeartuer adjustment task.
+ * The device will calibrate on the first start if the device has not yet been calibrated or when a calibrate call is made. (What would make this call?)
+ * In the future values such as the temperature coefficient will be remembered by the micro controller eeprom
+ * even when the device is reset this way it can remember components characteristics and compensate accordingly/
+ *
+ * The temperature task happens every 20s and will change stuff if the temperature has changed. read more on this at the
+ * temperature adjustment task.
  */
 
 
@@ -34,18 +39,18 @@
 
 
 /**
- * Intalise the imu and imu i2c instance
- * @param  obj        imu object holds all the necicary infomation about the IMU
- * @param  i2c_device i2c instace for the imu
+ * Initialise the imu and imu i2c instance
+ * @param  obj        imu object holds all the necessary information about the IMU
+ * @param  i2c_device i2c instance for the IMU
  * @param  enable     enable pin for the load switch on the imu
- * @param  int_1      immu interupt pin 1
- * @param  int_2      imu interupt pin 2
+ * @param  int_1      imu interrupt pin 1
+ * @param  int_2      imu interrupt pin 2
  * @param  address    I2C slave address, depending on hardware configuration
- * @return            if already intalised will not redinalise the
+ * @return            if already initialised will not reinitialise the IMU
  */
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address)
 {
-    uint16_t i = 0;
+//    uint16_t i = 0;
     // sanity check for pointers
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
@@ -63,7 +68,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // store enable pins
     obj->enable = enable;
 
-    // assigng interupt pins
+    // assign interrupt pins
     obj->int_1 = int_1;
     obj->int_2 = int_2;
 
@@ -72,12 +77,12 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     obj->current_compass = 0;
     obj->current_heading = 0;
-    obj->origin.tmp_coef = 3.0; //inital geuss for scaling factor of the imu z direction with temperature
+    obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
 
 	// initialize door state and calibrate state
 	obj->door_state = IMU_EVENT_DOOR_CLOSE;
 
-    //intalise que
+    //initialise queue
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
     // configure load switch pins
@@ -98,11 +103,11 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     FXOS8700CQ_ConfigureAccelerometer(obj);
     FXOS8700CQ_ConfigureMagnetometer(obj);
-    //sets inital thresholds (quite leaneant thesholds)
+    //sets initial thresholds (quite lenient thresholds)
 
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
-    FXOS8700CQ_Init_Interupt(obj);
+    FXOS8700CQ_Init_Interrupt(obj);
     FXOS8700CQ_ActiveMode(obj);
     if (obj->origin.checksum != true)
     {
@@ -426,7 +431,7 @@ void FXOS8700CQ_ConfigureGenericTapMode(imu_FXOS8700CQ_t * obj)
     //FXOS8700CQ_WriteByte(obj, PULSE_CFG, 0x6A);    //Example X, Y and Z configured for Double Tap with Latch enabled
     //FXOS8700CQ_WriteByte(obj, PULSE_CFG, 0x7F);    //Example X, Y and Z configured for Single Tap and Double Tap with Latch enabled
 
-    /**************Set Threesholds*************************/
+    /**************Set Thresholds*************************/
     FXOS8700CQ_WriteByte(obj, PULSE_THSX, 0x20);     //Set X Threshold to 32 counts or 2g
     FXOS8700CQ_WriteByte(obj, PULSE_THSY, 0x20);     //Set Y Threshold to 32 counts or 2g
     FXOS8700CQ_WriteByte(obj, PULSE_THSZ, 0x0C);     //Set Z Threshold to 48 counts or 3g
@@ -478,7 +483,7 @@ void FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * takes a measurement of the magnetomoiter and sets the x,y and z inital positoins
+ * takes a measurement of the magnetometer and sets the x,y and z initial positions
  * @param object [description]
  */
 void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
@@ -497,9 +502,11 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * Sets teh threshold for the magnetomiter interup as the origin +the threshold value
- * set the imu to interupt on the x and z axis as if the device is upright on the door
- * with no debounce and no latching interupt is on pin 1
+ * LEGACY - not currently being used
+ *
+ * Sets the threshold for the magnetometer interrupt as the origin + the threshold value
+ * set the imu to interrupt on the x and z axis as if the device is upright on the door
+ * with no debounce and no latching interrupt is on pin 1
  * @param obj Imu object
  */
 void FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj)
@@ -520,7 +527,7 @@ void FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_ActiveMode(obj);
 }
  /**
-  * set up the magnetic vector function of the imu and set up it as an interupt
+  * set up the magnetic vector function of the imu and set up it as an interrupt
   * @param obj imu object
   */
 void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
@@ -569,20 +576,21 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
 }
 
 /**
- * Handles teh the intterupts associate with the imu. check if the int pin is high or low and sends a door open/ closed to the que
- * @param pin in that is used for detection of the interupt (IMU INT pn2)
+ * Handles the interrupts associated with the IMU. check if the int pin is high or low and sends a door open/closed to the queue
+ * @param pin in that is used for detection of the interrupt (IMU INT pn2)
  * @param obj IMU object
  */
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
-    bool interupt_1 = 0;
+    bool interrupt_1 = 0;
     uint8_t Vector_Threshold[2] = {0};
-    interupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
-    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // esentialy debouncing wont let the state change constalty
+
+    interrupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentially debouncing wont let the state change constantly
     {
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
         // this may also remove some false positives that are only there for a very short time
-        if (interupt_1 == true)
+        if (interrupt_1 == true)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
             //halSetLed(BOARDLED1);
@@ -597,11 +605,8 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
             //halClearLed(BOARDLED1);
             Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
             Vector_Threshold[1] = (uint8_t)obj->origin.vector_threshold_open ;
-
-
-
         }
-        if (obj->door_state != obj->last_event)
+        if (obj->door_state != obj->last_event) // Statement seems defunct, this would always be true
         {
             FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
 
@@ -609,13 +614,13 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
             xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
             obj->last_event = obj->door_state;
         }
-        obj->last_call = xTaskGetTickCountFromISR();
+        obj->last_call = xTaskGetTickCountFromISR(); //could potentially be a really large number, will wrap every 50 days
     }
 }
 
 
 /**
- * Polls the magnetomiter and checks for a door change in angle
+ * Polls the magnetometer and checks for a door change in angle
  * @param obj IMU device object
  */
 void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
@@ -634,12 +639,12 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * [FXOS8700CQ_Init_Interupt  Sets up the interupt for the imu interupt_1
+ * [FXOS8700CQ_Init_Interrupt  Sets up the interrupt for the imu interrupt_1
  * @param obj IMU object holing information about the imu and door open / closed state.
  */
-void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
+void FXOS8700CQ_Init_Interrupt (imu_FXOS8700CQ_t * obj)
 {
-     // creates the temperature adjusting que(this is here instead of the init as the temp code needs the int to initalised first)
+    // creates the temperature adjusting queue (this is here instead of the init as the temp code needs the int to initialised first)
     xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler);
 
     GPIO_PinModeSet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), gpioModeInput, 0);
@@ -654,8 +659,8 @@ void FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * Takes a measurement of the temperatue and check to see if it has changed more than 2 degrees. if the
- * device has changed and the door is closed the device reclaibrates
+ * Takes a measurement of the temperature and check to see if it has changed more than 2 degrees. if the
+ * device has changed and the door is closed the device recalibrates
  * obj->temp is the last temp that was measure_period_mstemperature_imu is the current temperature
  * @param obj imu object
  */
@@ -739,7 +744,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * finds the temperature scaling factor and used very simple smoothing to make sure to outlandish valeus are achived. starts off with a gues of 3
+ * finds the temperature scaling factor and used very simple smoothing to make sure to outlandish values are achived. starts off with a gues of 3
  * every thing in this is made to be a float as it was having problems with it befor.
  * @param obj         imu object
  * @param temp_change the change in temperatue since the device last updated the z value
@@ -785,10 +790,10 @@ void FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t* obj)
 
 
 /**
- * poll the magnetomiter and calcutes the change in vector (the same way the the imu does and intterupt is driven by)
+ * poll the magnetometer and calculates the change in vector (the same way the the imu does and interrupt is driven by)
  * @param obj imu object
  */
-void FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj)
+void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
 {
     rawdata_t mag_raw;
     FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
@@ -822,7 +827,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_Set_Origin(obj);
     for (i =0;i <= 2; i++)
     {
-        FXOS8700CQ_Caclculate_Vector(obj);
+        FXOS8700CQ_Calculate_Vector(obj);
         if (temp_vector < obj->vector)
         {
             temp_vector = obj->vector;
