@@ -40,9 +40,15 @@ typedef enum
     WG_MAC_NCP_NO_CLIENT_FOUND,
 } wg_mac_ncp_error_code_t;
 
+typedef enum
+{
+    WG_MAC_NCP_CLIENT_NO_RESPONSE,
+    WG_MAC_NCP_CLIENT_LOST,
+} wg_mac_ncp_client_deport_reason_t;
+
 typedef struct
 {
-    uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
+    uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE];
     uint16_t size;
     int32_t rssi;
     int32_t snr;
@@ -56,12 +62,21 @@ typedef struct
     uint32_t last_seen_sec;
     uint32_t next_retry_time_sec;
 
-    wg_mac_ncp_msg_t prev_packet;
-    bool prev_packet_acked;
-    uint8_t retry_counter;
     uint8_t tx_seqid;
     uint8_t rx_seqid;
 
+    struct
+    {
+        wg_mac_ncp_msg_t prev_packet;
+        bool prev_packet_acked;
+        uint8_t retry_counter;
+    } retransmit;
+
+    struct
+    {
+        wg_mac_ncp_msg_t downlink_packet;
+        bool pending_downlink_packet;
+    } downlink;
 } wg_mac_ncp_client_t;
 
 typedef struct
