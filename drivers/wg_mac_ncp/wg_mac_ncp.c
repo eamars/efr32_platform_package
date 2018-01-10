@@ -130,10 +130,10 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
             header->src_id = (uint8_t) (obj->config.local_eui64 & 0xff);
 
             // make a copy of previously transmitted packet
-            memcpy(&client->prev_packet, msg, sizeof(wg_mac_ncp_msg_t));
+            memcpy(&client->retransmit.prev_packet, msg, sizeof(wg_mac_ncp_msg_t));
 
             // indicating the first attempt
-            client->retry_counter = 1;
+            client->retransmit.retry_counter = 1;
         }
 
         // for every packet that requires the ack, we calculate the next retransmission time
@@ -161,9 +161,9 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
         {
             // the next retransmission time is calculated by: current time + retry_counter * ack_window
             client->next_retry_time_sec =
-                    obj->sec_since_start + client->retry_counter * obj->config.ack_window_sec;
+                    obj->sec_since_start + client->retransmit.retry_counter * obj->config.ack_window_sec;
 
-            client->prev_packet_acked = false;
+            client->retransmit.prev_packet_acked = false;
         }
     }
 
@@ -265,10 +265,10 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 client->short_id = generate_unique_id(obj,
                                                       join_request->eui64); // generate a unique short id for the client
                 client->device_eui64 = join_request->eui64;
-                client->prev_packet_acked = true;
-                client->retry_counter = 0;
                 client->tx_seqid = 0;
                 client->rx_seqid = (uint8_t) (join_request->cmd_header.mac_header.seqid - 1);
+                client->retransmit.prev_packet_acked = true;
+                client->retransmit.retry_counter = 0;
             }
 
             DEBUG_PRINT("NCP: a new device [0x%08llx] joined, assigned with short_id [0x%02x]\r\n", client->device_eui64, client->short_id);
@@ -408,15 +408,15 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
             if (obj->clients[idx].is_valid)
             {
                 // if the device didn't ack me yet
-                if (!obj->clients[idx].prev_packet_acked)
+                if (!obj->clients[idx].retransmit.prev_packet_acked)
                 {
                     // retransmit if it's the time to retransmit
                     if (obj->sec_since_start > obj->clients[idx].next_retry_time_sec)
                     {
-                        obj->clients[idx].retry_counter += 1;
+                        obj->clients[idx].retransmit.retry_counter += 1;
 
                         // exceed the maximum retry threshold, then remove the device from list
-                        if (obj->clients[idx].retry_counter > obj->config.max_retries)
+                        if (obj->clients[idx].retransmit.retry_counter > obj->config.max_retries)
                         {
                             // TODO: report to host that a device is unresponsive
                             DEBUG_PRINT("NCP: a client [0x%08llx] failed to ACK, removed from device list\r\n", obj->clients[idx].device_eui64);
@@ -430,10 +430,9 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                         else
                         {
                             // retransmit the same packet
-                            wg_mac_ncp_send_pri(obj, &obj->clients[idx].prev_packet, false, false);
+                            wg_mac_ncp_send_pri(obj, &obj->clients[idx].retransmit.prev_packet, false, false);
                         }
                     }
-
                 }
 
                 // remove the device from list if unseen for a certain amount of time
