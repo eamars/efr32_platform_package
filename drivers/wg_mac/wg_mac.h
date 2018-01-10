@@ -72,8 +72,6 @@ typedef enum
 
 
 typedef void (*wg_mac_on_network_state_changed_cb)(void * obj, wg_mac_network_state_t state);
-typedef void (*wg_mac_on_data_packet_received_cb)(void * obj, wg_mac_msg_t * msg);
-
 
 typedef struct
 {
@@ -116,7 +114,6 @@ typedef struct
     struct
     {
         wg_mac_on_network_state_changed_cb on_network_state_changed_cb;
-        wg_mac_on_data_packet_received_cb on_data_packet_received_cb;
     } callbacks;
 } wg_mac_t;
 

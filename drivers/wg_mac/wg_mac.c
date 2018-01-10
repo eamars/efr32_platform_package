@@ -203,7 +203,7 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_msg_t * msg
             clear_pending = true;
             send_ack = true;
 
-            // call callback to indicate the network state has changed
+            // fire callback to indicate the network state has changed
             if (obj->callbacks.on_network_state_changed_cb)
                 obj->callbacks.on_network_state_changed_cb(obj, WG_MAC_NETWORK_JOINED);
 
@@ -242,10 +242,6 @@ static wg_mac_error_code_t process_data_packet(wg_mac_t * obj, wg_mac_msg_t * ms
     {
         send_ack_packet(obj, data_header->mac_header.seqid);
     }
-
-    // fire the callback
-    if (obj->callbacks.on_data_packet_received_cb)
-        obj->callbacks.on_data_packet_received_cb(obj, msg);
 
     return WG_MAC_NO_ERROR;
 }
@@ -404,6 +400,10 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
     // clear all callback functions to avoid errors
     memset(&obj->callbacks, 0x0, sizeof(obj->callbacks));
 
+    // register radio callback function
+    radio_set_rx_done_handler(obj->radio, wg_mac_on_rx_done_isr, obj);
+    radio_set_tx_done_handler(obj->radio, wg_mac_on_tx_done_isr, obj);
+
     // initialize the link state
     obj->link_state.is_network_joined = false;
     obj->link_state.allocated_id = 0;
@@ -422,10 +422,6 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
 
     // set radio to sleep default state
     radio_set_opmode_sleep(obj->radio);
-
-    // register callback function
-    radio_set_rx_done_handler(obj->radio, wg_mac_on_rx_done_isr, obj);
-    radio_set_tx_done_handler(obj->radio, wg_mac_on_tx_done_isr, obj);
 
     // configure state machine
     obj->fsm_state = WG_MAC_IDLE;
