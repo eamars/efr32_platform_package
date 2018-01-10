@@ -17,6 +17,11 @@
 #include "gpiointerrupt.h"
 #include "drv_debug.h"
 #include "bits.h"
+#include "delay.h"
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
+
 
 
 
@@ -92,6 +97,9 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_DRALERT_SHIFT);
 
 	temperature_tmp116_push_config(obj);
+
+	// creates the temperature adjusting queue (this is here instead of the init as the temp code needs the int to initialised first)
+	xTaskCreate((void *) temperature_tmp116_reader, "temp_reader", 200, obj, 2, NULL);
 }
 
 void temperature_tmp116_deinit(temperature_tmp116_t * obj)
@@ -158,13 +166,19 @@ int16_t temperature_tmp116_read_temperature_raw(temperature_tmp116_t * obj)
 {
 	DRV_ASSERT(obj);
 
-	return temperature_tmp116_read_word_pri(obj, TMP116_REG_ADDR_TEMPERATURE);
+	int16_t raw_temp = temperature_tmp116_read_word_pri(obj, TMP116_REG_ADDR_TEMPERATURE);
+
+	int16_t raw_temp_shifted = (raw_temp >> 8) | (raw_temp << 8);
+
+	return raw_temp_shifted;
 }
 
 
 float temperature_tmp116_read_temperature(temperature_tmp116_t * obj)
 {
-	return TMP116_TEMPERATURE_RESOLUTION * temperature_tmp116_read_temperature_raw(obj);
+	float temp = TMP116_TEMPERATURE_RESOLUTION * temperature_tmp116_read_temperature_raw(obj);
+
+	return temp;
 }
 
 
@@ -197,4 +211,20 @@ void temperature_tmp116_push_config(temperature_tmp116_t * obj)
 		temperature_tmp116_write_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION, obj->local_config_cache);
 		obj->is_local_config_cache_dirty = false;
 	}
+}
+
+static void temperature_tmp116_reader(temperature_tmp116_t * obj)
+{
+	portTickType xLastWakeTime;
+
+	float temperature = 0;
+
+	xLastWakeTime = xTaskGetTickCount();
+	while(1)
+	{
+		temperature = temperature_tmp116_read_temperature(obj);
+		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(2000));
+	}
+
+
 }
