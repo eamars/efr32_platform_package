@@ -271,8 +271,6 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 client->retransmit.retry_counter = 0;
             }
 
-            DEBUG_PRINT("NCP: a new device [0x%08llx] joined, assigned with short_id [0x%02x]\r\n", client->device_eui64, client->short_id);
-
             // send a response message back
             wg_mac_ncp_msg_t tx_msg;
             tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE;
@@ -291,6 +289,10 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
 
             wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
 
+            // fire the callback which indicates the device has joined the network
+            if (obj->callbacks.on_client_joined)
+                obj->callbacks.on_client_joined(obj, client);
+
             break;
         }
         case SUBG_MAC_PACKET_CMD_JOIN_RESP:
@@ -302,7 +304,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             break;
     }
 
-    // if there is a client, then do some bookkeeping stuff
+    // if there is a client, update the information of such client
     if (client)
     {
         // set the general attribute for the client
@@ -338,10 +340,10 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     YIELD(
         if (seqid_diff == 0)
         {
-            // TODO: repeated packet, this is likely caused by retransmission from the client
+            // repeated packet, this is likely caused by retransmission from the client
             // we are not going to report the packet to the upper layer
-            DEBUG_PRINT("NCP: receive repeated packet with seqid [0x%x] from [0x%08llx], message won't deliver to upper layer\r\n",
-                        data_header->mac_header.seqid, client->device_eui64);
+            if (obj->callbacks.on_repeated_message_recevied)
+                obj->callbacks.on_repeated_message_recevied(obj, client, msg);
 
             break;
         }
@@ -349,13 +351,14 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
         {
             // have some missing packet however we don't care that much
             DEBUG_PRINT("NCP: have [%d] packet missing from [0x%08llx]\r\n", seqid_diff, client->device_eui64);
+            if (obj->callbacks.on_packet_missing)
+                obj->callbacks.on_packet_missing(obj, client, seqid_diff);
         }
         else // diff == 1
         {
             // no missing packet
         }
 
-        // TODO: Send the packet to host
         xQueueSend(obj->rx_queue, msg, 0);
     );
 
@@ -381,6 +384,12 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
     wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
+
+    // for safety concern, we only transmit data on data packet rx window
+    if (client->downlink.pending_downlink_packet)
+    {
+        wg_mac_ncp_send_pri(obj, &client->downlink.downlink_packet, true, false);
+    }
 
     return WG_MAC_NCP_NO_ERROR;
 }
@@ -424,6 +433,10 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                             // mark the device as invalid
                             obj->clients[idx].is_valid = false;
 
+                            // fire the callback to notify the client has been removed
+                            if (obj->callbacks.on_client_left)
+                                obj->callbacks.on_client_left(obj, &obj->clients[idx], WG_MAC_NCP_CLIENT_NO_RESPONSE);
+
                             // no further checking of the client
                             continue;
                         }
@@ -441,6 +454,10 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                 if (unseen_period_sec > obj->config.max_heartbeat_period_sec)
                 {
                     obj->clients[idx].is_valid = false;
+
+                    // fire the callback to notify the client has been removed
+                    if (obj->callbacks.on_client_left)
+                        obj->callbacks.on_client_left(obj, &obj->clients[idx], WG_MAC_NCP_CLIENT_LOST);
                 }
             }
         }
@@ -500,6 +517,9 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                     {
                         break;
                     }
+
+                    // fire the callback for debug purposes
+                    obj->callbacks.on_raw_packet_received(obj, &msg);
 
                     // process packet with different type
                     switch(header->packet_type)
@@ -587,7 +607,10 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
         obj->clients[client_idx].is_valid = false;
     }
 
-    // register callback functions
+    // reset user-defined callbacks
+    memset(&obj->callbacks, 0x0, sizeof(obj->callbacks));
+
+    // register radio callback functions
     radio_set_rx_done_handler(obj->radio, wg_mac_ncp_on_rx_done_handler, obj);
     radio_set_tx_done_handler(obj->radio, wg_mac_ncp_on_tx_done_handler, obj);
 
@@ -665,6 +688,5 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
     // timeout, nothing is received in rx queue
     return false;
 }
-
 
 #endif // #if USE_FREERTOS == 1

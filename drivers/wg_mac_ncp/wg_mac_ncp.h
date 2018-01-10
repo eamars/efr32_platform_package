@@ -89,6 +89,12 @@ typedef struct
     bool auto_ack;
 } wg_mac_ncp_config_t;
 
+typedef void (*wg_mac_ncp_on_client_joined)(void * obj, wg_mac_ncp_client_t * client);
+typedef void (*wg_mac_ncp_on_client_left)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_client_deport_reason_t reason);
+typedef void (*wg_mac_ncp_on_repeated_message_recevied)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_msg_t * msg);
+typedef void (*wg_mac_ncp_on_packet_missing)(void * obj, wg_mac_ncp_client_t * client, uint8_t diff);
+typedef void (*wg_mac_ncp_on_raw_packet_received)(void * obj, wg_mac_ncp_msg_t * msg);
+
 typedef struct
 {
     // internal properties
@@ -120,6 +126,18 @@ typedef struct
 
     // connected clients
     wg_mac_ncp_client_t clients[WG_MAC_NCP_MAX_CLIENT_COUNT];
+
+    // callbacks
+    struct
+    {
+        wg_mac_ncp_on_client_joined on_client_joined;
+        wg_mac_ncp_on_client_left on_client_left;
+        wg_mac_ncp_on_repeated_message_recevied on_repeated_message_recevied;
+        wg_mac_ncp_on_packet_missing on_packet_missing;
+
+        // callbacks for debug purposes
+        wg_mac_ncp_on_raw_packet_received on_raw_packet_received;
+    } callbacks;
 } wg_mac_ncp_t;
 
 
