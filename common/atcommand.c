@@ -27,15 +27,15 @@ const char atcmd_command_rxtimeout[] = "RXTIMEOUT";
 typedef struct {
     const atcmd_command_t command;
     const char *command_str;
+    const uint8_t command_len;
 } atcmd_command_index_t;
 
 const atcmd_command_index_t atcmd_command_index[] = {
-    {ATCMD_COMMAND_NONE, atcmd_command_none},
-    {ATCMD_COMMAND_ECHO, atcmd_command_echo},
-    {ATCMD_COMMAND_RESET, atcmd_command_reset},
-    {ATCMD_COMMAND_RXD, atcmd_command_rxd},
-    {ATCMD_COMMAND_TXD, atcmd_command_txd},
-    {ATCMD_COMMAND_RXTIMEOUT, atcmd_command_rxtimeout}
+    {ATCMD_COMMAND_ECHO, atcmd_command_echo, strlen(atcmd_command_echo)},
+    {ATCMD_COMMAND_RESET, atcmd_command_reset, strlen(atcmd_command_reset)},
+    {ATCMD_COMMAND_RXD, atcmd_command_rxd, strlen(atcmd_command_rxd)},
+    {ATCMD_COMMAND_TXD, atcmd_command_txd, strlen(atcmd_command_txd)},
+    {ATCMD_COMMAND_RXTIMEOUT, atcmd_command_rxtimeout, strlen(atcmd_command_rxtimeout)}
 };
 
 
@@ -189,13 +189,17 @@ atcmd_ret_t command_from_buffer (atcmd_t *atcmd, char *buffer, uint8_t buflen)
 
     atcmd->command = ATCMD_COMMAND_NONE;
 
+    int32_t cmdlen = 0;
+
     // BUFFER MAY NOT BE NULL TERMINATED!!!
     if (buflen <= 3) {
         return 1;
     }
 
     for (i = 0; i < (sizeof(atcmd_command_index)/sizeof(atcmd_command_index_t)); i += 1) {
-        if (strncmp(buffer + 3, atcmd_command_index[i].command_str, buflen - 3) == 0) {
+        if (strncmp(buffer + 3, 
+                atcmd_command_index[i].command_str, 
+                atcmd_command_index[i].command_len) == 0) {
             atcmd->command = atcmd_command_index[i].command;
             i = (sizeof(atcmd_command_index)/sizeof(atcmd_command_index_t));
         }
