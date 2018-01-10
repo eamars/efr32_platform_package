@@ -23,7 +23,7 @@
 
 #define WG_MAC_MSG_BUFFER_SIZE 0xff
 #define WG_MAC_DEFAULT_TX_TIMEOUT_MS 5000
-#define WG_MAC_DEFAULT_MAX_RETRIES 3
+#define WG_MAC_DEFAULT_MAX_RETRIES 5
 #define WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS 1000
 
 
@@ -37,6 +37,11 @@ typedef enum
     WG_MAC_RX
 } wg_mac_fsm_state_t;
 
+typedef enum
+{
+    WG_MAC_NETWORK_JOINED,
+    WG_MAC_NETWORK_LEFT
+} wg_mac_network_state_t;
 
 /**
  * @brief Physical layer message payload
@@ -64,6 +69,10 @@ typedef enum
     WG_MAC_UNKNOWN_ERROR,
     WG_MAC_INVALID_PACKET_LENGTH,
 } wg_mac_error_code_t;
+
+
+typedef void (*wg_mac_on_network_state_changed_cb)(void * obj, wg_mac_network_state_t state);
+typedef void (*wg_mac_on_data_packet_received_cb)(void * obj, wg_mac_msg_t * msg);
 
 
 typedef struct
@@ -103,6 +112,12 @@ typedef struct
         uint8_t retry_counter;
         bool is_packet_clear;
     } retransmit;
+
+    struct
+    {
+        wg_mac_on_network_state_changed_cb on_network_state_changed_cb;
+        wg_mac_on_data_packet_received_cb on_data_packet_received_cb;
+    } callbacks;
 } wg_mac_t;
 
 
