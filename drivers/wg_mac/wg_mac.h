@@ -20,12 +20,13 @@
 #include "semphr.h"
 #include "timers.h"
 
+#include "subg_mac.h"
 
-#define WG_MAC_MSG_BUFFER_SIZE 0xff
+#define WG_MAC_MSG_BUFFER_SIZE 0xff // this value need to be greater than the sizeof biggest payload + overhead
 #define WG_MAC_DEFAULT_TX_TIMEOUT_MS 5000
 #define WG_MAC_DEFAULT_MAX_RETRIES 5
 #define WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS 1000
-
+#define WG_MAC_QUEUE_LENGTH 4
 
 /**
  * @brief Internal LoRa state machine properties
@@ -43,6 +44,13 @@ typedef enum
     WG_MAC_NETWORK_LEFT
 } wg_mac_network_state_t;
 
+typedef struct
+{
+    uint8_t allocated_id;
+    uint8_t uplink_dest_id;
+    bool is_network_joined;
+} wg_mac_link_state_t;
+
 /**
  * @brief Physical layer message payload
  */
@@ -51,8 +59,24 @@ typedef struct
     uint8_t buffer[WG_MAC_MSG_BUFFER_SIZE]; // 1 byte reserved for data alignment
     uint16_t size;
     int32_t rssi;
-    int32_t snr;
-} wg_mac_msg_t;
+    int32_t quality;
+} wg_mac_raw_msg_t;
+
+typedef struct
+{
+    uint16_t payload_size;
+    uint8_t payload[SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE];
+    bool requires_ack;
+} wg_mac_uplink_msg_t;
+
+typedef struct
+{
+    int32_t rssi;
+    int32_t quality;
+    uint16_t payload_size;
+    uint8_t payload[SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE];
+    uint8_t src_id;
+} wg_mac_downlink_msg_t;
 
 typedef struct
 {
@@ -82,9 +106,13 @@ typedef struct
     uint8_t local_seq_id;
 
     // packet queue
-    QueueHandle_t tx_queue;
-    QueueHandle_t rx_queue_pri;
-    QueueHandle_t rx_queue;
+    QueueHandle_t rx_data_packet_queue;
+    QueueHandle_t rx_raw_packet_queue;
+
+    QueueHandle_t tx_data_packet_queue;
+    QueueHandle_t tx_raw_packet_queue;
+    QueueSetHandle_t tx_queue_set;
+
 
     // state machine
     wg_mac_fsm_state_t fsm_state;
@@ -95,18 +123,13 @@ typedef struct
     wg_mac_config_t config;
 
     // link state
-    struct
-    {
-        uint8_t allocated_id;
-        uint8_t uplink_dest_id;
-        bool is_network_joined;
-    } link_state;
+    wg_mac_link_state_t link_state;
 
     // retransmit
     struct
     {
         xTimerHandle rx_window_timer;
-        wg_mac_msg_t prev_packet;
+        wg_mac_raw_msg_t prev_packet;
         uint8_t retry_counter;
         bool is_packet_clear;
     } retransmit;
@@ -148,7 +171,7 @@ void wg_mac_join_network(wg_mac_t * obj);
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether message is transmitted successfully within timeout, if maximum block time is configured
  */
-bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_uplink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_send(obj, msg) \
 		wg_mac_send_timeout((obj), (msg), 0)
 #define wg_mac_send_block(obj, msg) \
@@ -161,7 +184,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
  * @param timeout_ms maximum block time, portMAX_DELAY if block forever
  * @return whether received message is valid, if maximum block time is specified
  */
-bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_downlink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_recv(obj, msg) \
 		wg_mac_recv_timeout((obj), (msg), 0)
 #define wg_mac_recv_block(obj, msg) \

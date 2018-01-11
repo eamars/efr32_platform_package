@@ -19,9 +19,9 @@ const wg_mac_config_t wg_mac_default_config = {
         .forwared_all_packets = false
 };
 
-static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int32_t rssi, int32_t snr)
+static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
 {
-    wg_mac_msg_t rx_msg;
+    wg_mac_raw_msg_t rx_msg;
 
     DRV_ASSERT(size <= 0xff);
 
@@ -31,13 +31,13 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
 
     // copy rssi and snr
     rx_msg.rssi = rssi;
-    rx_msg.snr = snr;
+    rx_msg.quality = quality;
 
     // continue receive packet unless interrupted
     radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
-    xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
+    xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
 }
 
 static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
@@ -46,7 +46,7 @@ static void wg_mac_on_tx_done_isr(wg_mac_t * obj)
     xSemaphoreGiveFromISR(obj->fsm_tx_done, NULL);
 }
 
-static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_new_seqid)
+static void wg_mac_send_raw_pri(wg_mac_t * obj, wg_mac_raw_msg_t * msg, bool generate_new_seqid)
 {
     if (generate_new_seqid)
     {
@@ -69,7 +69,7 @@ static void wg_mac_send_pri(wg_mac_t * obj, wg_mac_msg_t * msg, bool generate_ne
         }
 
         // keep a copy of previously transmitted packet
-        memcpy(&obj->retransmit.prev_packet, msg, sizeof(wg_mac_msg_t));
+        memcpy(&obj->retransmit.prev_packet, msg, sizeof(wg_mac_raw_msg_t));
     }
 
     // send to phy layer handler
@@ -101,7 +101,7 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
         if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
         {
             // leave the network
-            obj->link_state.is_network_joined = false;
+            // obj->link_state.is_network_joined = false;
 
             // leave the network
             if (obj->callbacks.on_network_state_changed_cb)
@@ -113,16 +113,15 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
         else
         {
             // for the retransmission, we don't generate a different seqid
-            wg_mac_send_pri(obj, &obj->retransmit.prev_packet, false);
+            wg_mac_send_raw_pri(obj, &obj->retransmit.prev_packet, false);
         }
     }
-
 }
 
 
 static void send_ack_packet(wg_mac_t * obj, uint8_t seqid_to_ack)
 {
-    wg_mac_msg_t tx_msg;
+    wg_mac_raw_msg_t tx_msg;
 
     tx_msg.size = sizeof(subg_mac_cmd_ack_t);
 
@@ -138,11 +137,11 @@ static void send_ack_packet(wg_mac_t * obj, uint8_t seqid_to_ack)
     ack_packet->ack_seqid = seqid_to_ack;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
-    wg_mac_send_pri(obj, &tx_msg, true);
+    wg_mac_send_raw_pri(obj, &tx_msg, true);
 }
 
 
-static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_msg_t * msg)
+static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t * msg)
 {
     // if the message is smaller than a command packet, then quit
     if (msg->size < sizeof(subg_mac_cmd_header_t))
@@ -227,21 +226,29 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_msg_t * msg
 }
 
 
-static wg_mac_error_code_t process_data_packet(wg_mac_t * obj, wg_mac_msg_t * msg)
+static wg_mac_error_code_t process_data_packet(wg_mac_t * obj, wg_mac_raw_msg_t * msg)
 {
     if (msg->size < sizeof(subg_mac_data_header_t))
         return WG_MAC_INVALID_PACKET_LENGTH;
 
+    wg_mac_downlink_msg_t downlink_msg;
     subg_mac_data_header_t * data_header = (subg_mac_data_header_t *) msg->buffer;
-
-    // send data to upper layer
-    xQueueSend(obj->rx_queue, msg, 0);
 
     // if data requires ack, then send one
     if (data_header->data_type == SUBG_MAC_PACKET_DATA_CONFIRM)
     {
         send_ack_packet(obj, data_header->mac_header.seqid);
     }
+
+    // dump payload from raw packet
+    downlink_msg.rssi = msg->rssi;
+    downlink_msg.quality = msg->quality;
+    downlink_msg.src_id = data_header->mac_header.src_id;
+    downlink_msg.payload_size = data_header->payload_length;
+    memcpy(downlink_msg.payload, &data_header->payload_start_place_holder, data_header->payload_length);
+
+    // send data to upper layer
+    xQueueSend(obj->rx_data_packet_queue, &downlink_msg, 0);
 
     return WG_MAC_NO_ERROR;
 }
@@ -257,16 +264,66 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
             {
                 radio_set_opmode_sleep(obj->radio);
 
-                // in the idle state the fsm will wait for any new message that is ready to transmit
-                wg_mac_msg_t tx_msg;
-                if (xQueueReceive(obj->tx_queue, &tx_msg, portMAX_DELAY))
-                {
-                    // set information for retransmission
-                    obj->retransmit.retry_counter = 0;
-                    obj->retransmit.is_packet_clear = false;
+                // in idle state, the stack will listen to both tx_raw queue and tx_data queue
+                // however, tx_raw queue has higher priority than tx_data queue
+                QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->tx_queue_set, portMAX_DELAY);
 
-                    // for the first attempt, we generate a unique seq id
-                    wg_mac_send_pri(obj, &tx_msg, true);
+                // set information for retransmission
+                obj->retransmit.retry_counter = 0;
+                obj->retransmit.is_packet_clear = false;
+
+                if (queue == obj->tx_raw_packet_queue)
+                {
+                    wg_mac_raw_msg_t raw_msg;
+
+                    // read from raw packet queue
+                    if (!xQueueReceive(obj->tx_raw_packet_queue, &raw_msg, 0))
+                    {
+                        DRV_ASSERT(false);
+                    }
+
+                    // send to transceiver
+                    wg_mac_send_raw_pri(obj, &raw_msg, true);
+                }
+                else if (queue == obj->tx_data_packet_queue)
+                {
+                    wg_mac_uplink_msg_t uplink_msg;
+
+                    // read from tx data queue
+                    if (!xQueueReceive(obj->tx_data_packet_queue, &uplink_msg, 0))
+                    {
+                        DRV_ASSERT(false);
+                    }
+
+                    // build raw data
+                    wg_mac_raw_msg_t raw_msg;
+                    {
+                        subg_mac_data_header_t * data_header = (subg_mac_data_header_t *) raw_msg.buffer;
+
+                        data_header->mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+                        data_header->mac_header.src_id = 0;
+                        data_header->mac_header.dest_id = 0;
+                        data_header->mac_header.packet_type = SUBG_MAC_PACKET_DATA;
+                        data_header->mac_header.seqid = 0;
+
+                        data_header->data_type = uplink_msg.requires_ack ?
+                                                 SUBG_MAC_PACKET_DATA_CONFIRM :
+                                                 SUBG_MAC_PACKET_DATA_UNCONFIRM;
+                        data_header->payload_length = uplink_msg.payload_size;
+
+                        // copy payload
+                        memcpy(&data_header->payload_start_place_holder, uplink_msg.payload, uplink_msg.payload_size);
+
+                        // set mac layer payload size
+                        raw_msg.size = (uint16_t) (SUBG_MAC_PACKET_DATA_HEADER_SIZE + data_header->payload_length);
+                    }
+
+                    // send to transceiver
+                    wg_mac_send_raw_pri(obj, &raw_msg, true);
+                }
+                else
+                {
+                    DRV_ASSERT(false);
                 }
 
                 break;
@@ -285,6 +342,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 }
                 else
                 {
+                    obj->retransmit.is_packet_clear = false;
                     // if previously doesn't require ack or the previous packet is an ack, we are not expecting an ack
                     subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
                     if (header->packet_type == SUBG_MAC_PACKET_CMD)
@@ -292,8 +350,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                         subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) obj->retransmit.prev_packet.buffer;
                         if (cmd_header->cmd_type == SUBG_MAC_PACKET_CMD_ACK)
                         {
-                            obj->fsm_state = WG_MAC_IDLE;
-                            break;
+                            obj->retransmit.is_packet_clear = true;
                         }
                     }
                     else if (header->packet_type == SUBG_MAC_PACKET_DATA)
@@ -301,8 +358,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                         subg_mac_data_header_t * data_header = (subg_mac_data_header_t *) obj->retransmit.prev_packet.buffer;
                         if (data_header->data_type == SUBG_MAC_PACKET_DATA_UNCONFIRM)
                         {
-                            obj->fsm_state = WG_MAC_IDLE;
-                            break;
+                            obj->retransmit.is_packet_clear = true;
                         }
                     }
 
@@ -325,8 +381,8 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
             case WG_MAC_RX:
             {
                 // wait for packets to arrive
-                wg_mac_msg_t rx_msg;
-                if (xQueueReceive(obj->rx_queue_pri, &rx_msg, pdMS_TO_TICKS(100)))
+                wg_mac_raw_msg_t rx_msg;
+                if (xQueueReceive(obj->rx_raw_packet_queue, &rx_msg, pdMS_TO_TICKS(100)))
                 {
                     // validate the packet lenght
                     if (rx_msg.size < SUBG_MAC_HEADER_SIZE)
@@ -425,18 +481,28 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
 
     // configure state machine
     obj->fsm_state = WG_MAC_IDLE;
-    obj->tx_queue = xQueueCreate(4, sizeof(wg_mac_msg_t));
-    obj->rx_queue_pri = xQueueCreate(4, sizeof(wg_mac_msg_t));
-    obj->rx_queue = xQueueCreate(4, sizeof(wg_mac_msg_t));
-
     obj->fsm_tx_done = xSemaphoreCreateBinary();
+    DRV_ASSERT(obj->fsm_tx_done);
+
+    // configure queue
+    obj->rx_raw_packet_queue = xQueueCreate(WG_MAC_QUEUE_LENGTH, sizeof(wg_mac_raw_msg_t));
+    obj->rx_data_packet_queue = xQueueCreate(WG_MAC_QUEUE_LENGTH, sizeof(wg_mac_downlink_msg_t));
+    DRV_ASSERT(obj->rx_data_packet_queue);
+    DRV_ASSERT(obj->rx_raw_packet_queue);
+
+    obj->tx_raw_packet_queue = xQueueCreate(WG_MAC_QUEUE_LENGTH, sizeof(wg_mac_raw_msg_t));
+    obj->tx_data_packet_queue = xQueueCreate(WG_MAC_QUEUE_LENGTH, sizeof(wg_mac_uplink_msg_t));
+    DRV_ASSERT(obj->tx_raw_packet_queue);
+    DRV_ASSERT(obj->tx_data_packet_queue);
+
+    // create queue set
+    obj->tx_queue_set = xQueueCreateSet(WG_MAC_QUEUE_LENGTH * 2);
+    DRV_ASSERT(obj->tx_queue_set);
+
+    xQueueAddToSet(obj->tx_raw_packet_queue, obj->tx_queue_set);
+    xQueueAddToSet(obj->tx_data_packet_queue, obj->tx_queue_set);
 
     xTaskCreate((void *) wg_mac_fsm_thread, "wg_mac", 500, obj, 3, &obj->fsm_thread_handler);
-
-    DRV_ASSERT(obj->tx_queue);
-    DRV_ASSERT(obj->rx_queue_pri);
-    DRV_ASSERT(obj->rx_queue);
-    DRV_ASSERT(obj->fsm_tx_done);
 }
 
 
@@ -445,7 +511,7 @@ void wg_mac_join_network(wg_mac_t * obj)
     DRV_ASSERT(obj);
 
     // form a join request packet
-    wg_mac_msg_t tx_msg;
+    wg_mac_raw_msg_t tx_msg;
     subg_mac_cmd_join_req_t * join_request = (subg_mac_cmd_join_req_t *) tx_msg.buffer;
 
     // set the packet length
@@ -460,11 +526,11 @@ void wg_mac_join_network(wg_mac_t * obj)
     join_request->eui64 = obj->config.local_eui64;
 
     // send to local transmit queue
-    wg_mac_send_timeout(obj, &tx_msg, portMAX_DELAY);
+    xQueueSend(obj->tx_raw_packet_queue, &tx_msg, portMAX_DELAY);
 }
 
 
-bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_uplink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
@@ -472,7 +538,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
     // send message buffer to the queue
     if (timeout_ms == portMAX_DELAY)
     {
-        if (xQueueSend(obj->tx_queue, msg, portMAX_DELAY) == pdFALSE)
+        if (xQueueSend(obj->tx_data_packet_queue, msg, portMAX_DELAY) == pdFALSE)
         {
             return false;
         }
@@ -480,7 +546,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
     else
     {
         // wait for TX to get ready
-        if (xQueueSend(obj->tx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+        if (xQueueSend(obj->tx_data_packet_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
         {
             // timeout, indicating we failed to wait for transceiver to get ready
             return false;
@@ -490,7 +556,7 @@ bool wg_mac_send_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
     return true;
 }
 
-bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_downlink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
@@ -498,7 +564,7 @@ bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
     // allow user to wait forever
     if (timeout_ms == portMAX_DELAY)
     {
-        if (xQueueReceive(obj->rx_queue, msg, portMAX_DELAY) == pdFALSE)
+        if (xQueueReceive(obj->rx_data_packet_queue, msg, portMAX_DELAY) == pdFALSE)
         {
             return false;
         }
@@ -506,7 +572,7 @@ bool wg_mac_recv_timeout(wg_mac_t * obj, wg_mac_msg_t * msg, uint32_t timeout_ms
     else
     {
         // attempt to read from queue
-        if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
+        if (xQueueReceive(obj->rx_data_packet_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
         {
             // timeout, nothing is received in rx queue
             return false;
