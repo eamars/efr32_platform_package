@@ -21,13 +21,12 @@ const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
         .ack_window_sec = 2,
         .max_retries = 3,
-        .forward_all_packets = true,
         .auto_ack = true,
 };
 
-static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t snr)
+static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
 {
-    wg_mac_ncp_msg_t rx_msg;
+    wg_mac_ncp_raw_msg_t rx_msg;
 
     DRV_ASSERT(size <= 0xff);
 
@@ -35,13 +34,13 @@ static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_
     rx_msg.size = (uint8_t) size;
     memcpy(rx_msg.buffer, msg, rx_msg.size);
     rx_msg.rssi = rssi;
-    rx_msg.snr = snr;
+    rx_msg.quality = quality;
 
     // enter rx state again
     radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
-    xQueueSendFromISR(obj->rx_queue_pri, &rx_msg, NULL);
+    xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
 }
 
 static void wg_mac_ncp_on_tx_done_handler(wg_mac_ncp_t * obj)
@@ -94,7 +93,7 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_available_client_slot(wg_mac_ncp_t * obj)
     return NULL;
 }
 
-static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool first_attempt, bool one_off)
+static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * msg, bool generate_new_seqid, bool one_off)
 {
     // look for the destination
     subg_mac_header_t * header = (subg_mac_header_t *) msg->buffer;
@@ -121,7 +120,7 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
         }
 
         // generate sequence id, if requested
-        if (first_attempt)
+        if (generate_new_seqid)
         {
             // assign
             header->seqid = obj->clients->tx_seqid++;
@@ -130,7 +129,7 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
             header->src_id = (uint8_t) (obj->config.local_eui64 & 0xff);
 
             // make a copy of previously transmitted packet
-            memcpy(&client->retransmit.prev_packet, msg, sizeof(wg_mac_ncp_msg_t));
+            memcpy(&client->retransmit.prev_packet, msg, sizeof(wg_mac_ncp_raw_msg_t));
 
             // indicating the first attempt
             client->retransmit.retry_counter = 1;
@@ -167,14 +166,14 @@ static void wg_mac_ncp_send_pri(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, bool
         }
     }
 
-    // send to the queue
+    // send to queue
     if (__IS_INTERRUPT())
     {
-        xQueueSendFromISR(obj->tx_queue_pri, msg, NULL);
+        xQueueSendFromISR(obj->tx_raw_packet_queue, msg, NULL);
     }
     else
     {
-        xQueueSend(obj->tx_queue_pri, msg, portMAX_DELAY);
+        xQueueSend(obj->tx_raw_packet_queue, msg, portMAX_DELAY);
     }
 }
 
@@ -217,7 +216,7 @@ static uint8_t generate_unique_id(wg_mac_ncp_t * obj, uint64_t eui64)
 }
 
 
-static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg)
+static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * msg)
 {
     // if the message is smaller than a command packet, then quit
     if (msg->size < sizeof(subg_mac_cmd_header_t))
@@ -272,7 +271,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             }
 
             // send a response message back
-            wg_mac_ncp_msg_t tx_msg;
+            wg_mac_ncp_raw_msg_t tx_msg;
             tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE;
 
             // map
@@ -287,7 +286,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             response_packet->allocated_device_id = client->short_id;
             response_packet->uplink_dest_id = (uint8_t) (obj->config.local_eui64 & 0xff);
 
-            wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
+            wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
 
             // fire the callback which indicates the device has joined the network
             if (obj->callbacks.on_client_joined)
@@ -316,7 +315,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
 }
 
 
-static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg)
+static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * msg)
 {
     // if the message is smaller than a data header, quit
     if (msg->size < sizeof(subg_mac_data_header_t))
@@ -359,7 +358,16 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
             // no missing packet
         }
 
-        xQueueSend(obj->rx_queue, msg, 0);
+        // deliver message to upper layer
+        wg_mac_ncp_uplink_msg_t uplink_msg;
+
+        uplink_msg.rssi = msg->rssi;
+        uplink_msg.quality = msg->quality;
+        uplink_msg.client = client;
+        uplink_msg.payload_size = data_header->payload_length;
+        memcpy(uplink_msg.payload, &data_header->payload_start_place_holder, data_header->payload_length);
+
+        xQueueSend(obj->rx_data_packet_queue, &uplink_msg, 0);
     );
 
     // set the general attribute for the client
@@ -367,7 +375,7 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     client->rx_seqid = data_header->mac_header.seqid;
 
     // process acknowledgement
-    wg_mac_ncp_msg_t tx_msg;
+    wg_mac_ncp_raw_msg_t tx_msg;
 
     tx_msg.size = sizeof(subg_mac_cmd_ack_t);
 
@@ -383,18 +391,21 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     ack_packet->ack_seqid = client->rx_seqid;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
-    wg_mac_ncp_send_pri(obj, &tx_msg, true, true);
+    wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
 
     // for safety concern, we only transmit data on data packet rx window
-    if (client->downlink.pending_downlink_packet)
+    if (client->downlink.is_pending_downlink_packet)
     {
-        wg_mac_ncp_send_pri(obj, &client->downlink.downlink_packet, true, false);
+        wg_mac_ncp_send_raw_pri(obj, &client->downlink.pending_downlink_packet, true, false);
+
+        // clear the pending packet
+        client->downlink.is_pending_downlink_packet = false;
     }
 
     return WG_MAC_NCP_NO_ERROR;
 }
 
-static wg_mac_ncp_error_code_t process_routing_packet(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg)
+static wg_mac_ncp_error_code_t process_routing_packet(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * msg)
 {
     return WG_MAC_NCP_NO_ERROR;
 }
@@ -443,7 +454,7 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                         else
                         {
                             // retransmit the same packet
-                            wg_mac_ncp_send_pri(obj, &obj->clients[idx].retransmit.prev_packet, false, false);
+                            wg_mac_ncp_send_raw_pri(obj, &obj->clients[idx].retransmit.prev_packet, false, false);
                         }
                     }
                 }
@@ -481,28 +492,39 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                 // listen on both tx_queue_pri and rx_queue_pri
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->queue_set_pri, portMAX_DELAY);
 
-                wg_mac_ncp_msg_t msg;
-
-                // read from queue
-                xQueueReceive(queue, &msg, 0);
-
-                if (queue == obj->tx_queue_pri)
+                if (queue == obj->tx_raw_packet_queue)
                 {
-                    // send to radio phy layer
-                    radio_send_timeout(obj->radio, msg.buffer, msg.size, 0);
+                    wg_mac_ncp_raw_msg_t raw_msg;
 
-                    // advance to tx state
+                    // read from raw packet queue
+                    if (!xQueueReceive(queue, &raw_msg, 0))
+                    {
+                        DRV_ASSERT(false);
+                    }
+
+                    // send to radio immediately
+                    radio_send_timeout(obj->radio, raw_msg.buffer, raw_msg.size, 0);
+
+                    // advance to Tx state waiting for tx_done
                     obj->state = WG_MAC_NCP_TX;
                 }
-                else if (queue == obj->rx_queue_pri)
+                else if (queue == obj->rx_raw_packet_queue)
                 {
+                    wg_mac_ncp_raw_msg_t raw_msg;
+
+                    // read from data queue
+                    if (!xQueueReceive(queue, &raw_msg, 0))
+                    {
+                        DRV_ASSERT(false);
+                    }
+
                     // validate packet length
-                    if (msg.size < SUBG_MAC_HEADER_SIZE)
+                    if (raw_msg.size < SUBG_MAC_HEADER_SIZE)
                     {
                         break;
                     }
 
-                    subg_mac_header_t * header = (subg_mac_header_t *) msg.buffer;
+                    subg_mac_header_t * header = (subg_mac_header_t *) raw_msg.buffer;
 
                     // validate the protocol version
                     if (header->magic_byte != SUBG_MAC_MAGIC_BYTE)
@@ -513,31 +535,31 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                     // validate the destination (allow the broadcast as well)
                     // when forward_all_packet option is enabled, the destination of the packet will be ignored
                     if (header->dest_id != (uint8_t) (obj->config.local_eui64 & 0xff) &&
-                            header->dest_id != SUBG_MAC_BROADCAST_ADDR_ID)
+                        header->dest_id != SUBG_MAC_BROADCAST_ADDR_ID)
                     {
                         break;
                     }
 
                     // fire the callback for debug purposes
                     if (obj->callbacks.on_raw_packet_received)
-                        obj->callbacks.on_raw_packet_received(obj, &msg);
+                        obj->callbacks.on_raw_packet_received(obj, &raw_msg);
 
                     // process packet with different type
                     switch(header->packet_type)
                     {
                         case SUBG_MAC_PACKET_CMD:
                         {
-                            process_cmd_packet(obj, &msg);
+                            process_cmd_packet(obj, &raw_msg);
                             break;
                         }
                         case SUBG_MAC_PACKET_DATA:
                         {
-                            process_data_packet(obj, &msg);
+                            process_data_packet(obj, &raw_msg);
                             break;
                         }
                         case SUBG_MAC_PACKET_ROUTING:
                         {
-                            process_routing_packet(obj, &msg);
+                            process_routing_packet(obj, &raw_msg);
                             break;
                         }
                         default:
@@ -571,19 +593,6 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
     }
 }
 
-static void wg_mac_ncp_tx_queue_handler_thread(wg_mac_ncp_t * obj)
-{
-    // wait on tx_queue
-    while (1)
-    {
-        wg_mac_ncp_msg_t tx_msg;
-        if (xQueueReceive(obj->tx_queue, &tx_msg, portMAX_DELAY))
-        {
-            // for the message with first transmission, we always generate a seqid
-            wg_mac_ncp_send_pri(obj, &tx_msg, true, false);
-        }
-    }
-}
 
 void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config)
 {
@@ -616,17 +625,21 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     radio_set_tx_done_handler(obj->radio, wg_mac_ncp_on_tx_done_handler, obj);
 
     // create queue
-    obj->tx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
-    obj->tx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
-    obj->rx_queue_pri = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
-    obj->rx_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_msg_t));
+    obj->tx_raw_packet_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_raw_msg_t));
+    DRV_ASSERT(obj->tx_raw_packet_queue);
+
+    obj->rx_data_packet_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_uplink_msg_t));
+    obj->rx_raw_packet_queue = xQueueCreate(WG_MAC_NCP_QUEUE_LENGTH, sizeof(wg_mac_ncp_raw_msg_t));
+    DRV_ASSERT(obj->rx_data_packet_queue);
+    DRV_ASSERT(obj->rx_raw_packet_queue);
 
     // create queue set
     obj->queue_set_pri = xQueueCreateSet(WG_MAC_NCP_QUEUE_LENGTH * 2);
-    xQueueAddToSet(obj->tx_queue_pri, obj->queue_set_pri);
-    xQueueAddToSet(obj->rx_queue_pri, obj->queue_set_pri);
+    xQueueAddToSet(obj->tx_raw_packet_queue, obj->queue_set_pri);
+    xQueueAddToSet(obj->rx_raw_packet_queue, obj->queue_set_pri);
 
     obj->tx_done_signal = xSemaphoreCreateBinary();
+    DRV_ASSERT(obj->tx_done_signal);
 
     // put radio to rx state
     obj->state = WG_MAC_NCP_RX;
@@ -634,37 +647,52 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     // create book keeping thread (handles transceiver state)
     xTaskCreate((void *) wg_mac_ncp_client_bookkeeping_thread, "ncp_b", 500, obj, 4, &obj->client_bookkeeping_thread);
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
-    xTaskCreate((void *) wg_mac_ncp_tx_queue_handler_thread, "ncp_q", 500, obj, 4, &obj->tx_queue_handler_thread);
 }
 
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
+    DRV_ASSERT(msg->client);
 
-    // send message buffer to the queue
-    if (timeout_ms == portMAX_DELAY)
+    if (msg->client->is_valid)
     {
-        if (xQueueSend(obj->tx_queue, msg, portMAX_DELAY) == pdFALSE)
-        {
-            return false;
-        }
+        return false;
     }
-    else
+
+    // the downlink message can only be transmitted right after the uplink message from
+    // corresponding client. Each client has one slot for holding the most recent downlink
+    // message.
+    msg->client->downlink.is_pending_downlink_packet = true;
+
+    // build message;
     {
-        // wait for TX to get ready
-        if (xQueueSend(obj->tx_queue, msg, pdMS_TO_TICKS(timeout_ms)) == pdFALSE)
-        {
-            // timeout, indicating we failed to wait for transceiver to get ready
-            return false;
-        }
+        subg_mac_data_header_t * data_header =
+                (subg_mac_data_header_t *) msg->client->downlink.pending_downlink_packet.buffer;
+
+        data_header->mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+        data_header->mac_header.src_id = 0;
+        data_header->mac_header.dest_id = msg->client->short_id;
+        data_header->mac_header.packet_type = SUBG_MAC_PACKET_DATA;
+        data_header->mac_header.seqid = 0;
+
+        data_header->data_type = msg->requires_ack ?
+                                 SUBG_MAC_PACKET_DATA_CONFIRM :
+                                 SUBG_MAC_PACKET_DATA_UNCONFIRM;
+        data_header->payload_length = msg->payload_size;
+
+        memcpy(&data_header->payload_start_place_holder, msg->payload, msg->payload_size);
+
+        // set mac layer payload size
+        msg->client->downlink.pending_downlink_packet.size =
+                (uint16_t) (SUBG_MAC_PACKET_DATA_HEADER_SIZE + data_header->payload_length);
     }
 
     return true;
 }
 
 
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms)
+bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
@@ -672,7 +700,7 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
     // allow user to wait forever
     if (timeout_ms == portMAX_DELAY)
     {
-        if (xQueueReceive(obj->rx_queue, msg, portMAX_DELAY))
+        if (xQueueReceive(obj->rx_data_packet_queue, msg, portMAX_DELAY))
         {
             return true;
         }
@@ -680,7 +708,7 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
     else
     {
         // attempt to read from queue
-        if (xQueueReceive(obj->rx_queue, msg, pdMS_TO_TICKS(timeout_ms)))
+        if (xQueueReceive(obj->rx_data_packet_queue, msg, pdMS_TO_TICKS(timeout_ms)))
         {
             return true;
         }

@@ -25,6 +25,8 @@
 #include "semphr.h"
 #include "timers.h"
 
+#include "subg_mac.h"
+
 typedef enum
 {
     WG_MAC_NCP_RX,
@@ -51,8 +53,8 @@ typedef struct
     uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE];
     uint16_t size;
     int32_t rssi;
-    int32_t snr;
-} wg_mac_ncp_msg_t;
+    int32_t quality;
+} wg_mac_ncp_raw_msg_t;
 
 typedef struct
 {
@@ -67,17 +69,34 @@ typedef struct
 
     struct
     {
-        wg_mac_ncp_msg_t prev_packet;
+        wg_mac_ncp_raw_msg_t prev_packet;
         bool prev_packet_acked;
         uint8_t retry_counter;
     } retransmit;
 
     struct
     {
-        wg_mac_ncp_msg_t downlink_packet;
-        bool pending_downlink_packet;
+        wg_mac_ncp_raw_msg_t pending_downlink_packet;
+        bool is_pending_downlink_packet;
     } downlink;
 } wg_mac_ncp_client_t;
+
+typedef struct
+{
+    wg_mac_ncp_client_t * client;
+    uint16_t payload_size;
+    uint8_t payload[SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE];
+    bool requires_ack;
+} wg_mac_ncp_downlink_msg_t;
+
+typedef struct
+{
+    int32_t rssi;
+    int32_t quality;
+    wg_mac_ncp_client_t * client;
+    uint16_t payload_size;
+    uint8_t payload[SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE];
+} wg_mac_ncp_uplink_msg_t;
 
 typedef struct
 {
@@ -85,15 +104,14 @@ typedef struct
     uint32_t max_heartbeat_period_sec;
     uint32_t ack_window_sec;
     uint8_t max_retries;
-    bool forward_all_packets;
     bool auto_ack;
 } wg_mac_ncp_config_t;
 
 typedef void (*wg_mac_ncp_on_client_joined)(void * obj, wg_mac_ncp_client_t * client);
 typedef void (*wg_mac_ncp_on_client_left)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_client_deport_reason_t reason);
-typedef void (*wg_mac_ncp_on_repeated_message_recevied)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_msg_t * msg);
+typedef void (*wg_mac_ncp_on_repeated_message_recevied)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_packet_missing)(void * obj, wg_mac_ncp_client_t * client, uint8_t diff);
-typedef void (*wg_mac_ncp_on_raw_packet_received)(void * obj, wg_mac_ncp_msg_t * msg);
+typedef void (*wg_mac_ncp_on_raw_packet_received)(void * obj, wg_mac_ncp_raw_msg_t * msg);
 
 typedef struct
 {
@@ -103,10 +121,9 @@ typedef struct
     wg_mac_ncp_state state;
 
     // packet queue
-    QueueHandle_t tx_queue_pri;
-    QueueHandle_t tx_queue;
-    QueueHandle_t rx_queue_pri;
-    QueueHandle_t rx_queue;
+    QueueHandle_t rx_data_packet_queue;
+    QueueHandle_t rx_raw_packet_queue;
+    QueueHandle_t tx_raw_packet_queue;
 
     // queue set
     QueueSetHandle_t queue_set_pri;
@@ -119,7 +136,6 @@ typedef struct
     // bookkeeping fsm
     TaskHandle_t client_bookkeeping_thread;
     TaskHandle_t state_machine_thread;
-    TaskHandle_t tx_queue_handler_thread;
 
     // config
     wg_mac_ncp_config_t config;
@@ -169,7 +185,7 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
  * @param timeout_ms timeout when waiting for place in queue
  * @return if the timeout is triggered
  */
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_ncp_send(obj, msg) \
         wg_mac_ncp_send_timeout((obj), (msg), 0)
 #define wg_mac_ncp_send_block(obj, msg) \
@@ -182,10 +198,10 @@ bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_
  * @param timeout_ms timeout when waiting to read from queue
  * @return if the timeout is triggered
  */
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_msg_t * msg, uint32_t timeout_ms);
+bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_ncp_recv(obj, msg) \
         wg_mac_ncp_recv_timeout((obj), (msg), 0)
-#define wg_mac_ncp(obj, msg) \
+#define wg_mac_ncp_recv_block(obj, msg) \
         wg_mac_ncp_recv_timeout((obj), (msg), portMAX_DELAY)
 
 #ifdef __cplusplus
