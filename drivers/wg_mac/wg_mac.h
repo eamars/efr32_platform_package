@@ -84,7 +84,6 @@ typedef struct
     uint32_t rx_window_timeout_ms;
     uint32_t tx_timeout_ms;
     uint8_t max_retransmit;
-    bool forwared_all_packets;
 } wg_mac_config_t;
 
 typedef enum
@@ -95,7 +94,9 @@ typedef enum
 } wg_mac_error_code_t;
 
 
-typedef void (*wg_mac_on_network_state_changed_cb)(void * obj, wg_mac_network_state_t state);
+typedef void (*wg_mac_on_network_state_changed)(void * obj, wg_mac_network_state_t state);
+typedef void (*wg_mac_on_raw_packet_received)(void * obj, wg_mac_raw_msg_t *msg);
+
 
 typedef struct
 {
@@ -136,7 +137,10 @@ typedef struct
 
     struct
     {
-        wg_mac_on_network_state_changed_cb on_network_state_changed_cb;
+        wg_mac_on_network_state_changed on_network_state_changed;
+
+        // callback for debug purpose
+        wg_mac_on_raw_packet_received on_raw_packet_received;
     } callbacks;
 } wg_mac_t;
 

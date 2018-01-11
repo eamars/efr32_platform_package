@@ -16,7 +16,6 @@ const wg_mac_config_t wg_mac_default_config = {
         .rx_window_timeout_ms = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS,
         .tx_timeout_ms = WG_MAC_DEFAULT_TX_TIMEOUT_MS,
         .max_retransmit = WG_MAC_DEFAULT_MAX_RETRIES,
-        .forwared_all_packets = false
 };
 
 static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
@@ -104,8 +103,8 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
             // obj->link_state.is_network_joined = false;
 
             // leave the network
-            if (obj->callbacks.on_network_state_changed_cb)
-                obj->callbacks.on_network_state_changed_cb(obj, WG_MAC_NETWORK_LEFT);
+            if (obj->callbacks.on_network_state_changed)
+                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
 
             // reset to idle state
             obj->fsm_state = WG_MAC_IDLE;
@@ -203,8 +202,8 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
             send_ack = true;
 
             // fire callback to indicate the network state has changed
-            if (obj->callbacks.on_network_state_changed_cb)
-                obj->callbacks.on_network_state_changed_cb(obj, WG_MAC_NETWORK_JOINED);
+            if (obj->callbacks.on_network_state_changed)
+                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
 
             break;
         }
@@ -415,6 +414,10 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                             break;
                         }
                     }
+
+                    // fire the callback for debug purposes
+                    if (obj->callbacks.on_raw_packet_received)
+                        obj->callbacks.on_raw_packet_received(obj, &rx_msg);
 
                     // process packet
                     switch (header->packet_type)
