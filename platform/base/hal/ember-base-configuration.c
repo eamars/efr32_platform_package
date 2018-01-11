@@ -60,7 +60,7 @@ void halSimEepromCallback(EmberStatus status)
         //all HW pages are erased.  Without this explicit check before
         //ErasePage, when halSimEepromErasePage() returns 0 the code wont
         //know if a page was actually erased or not and properly break out.
-        while (halSimEepromErasePage()) {
+        while (halSimEepromErasePage() != 0U) {
         }
         // A fresh virtual page now exists to use
         break;

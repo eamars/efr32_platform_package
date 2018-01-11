@@ -21,7 +21,8 @@ options = {
             item_description="LED %n"
         ),
         "description": "Number of LEDs available on board",
-        "allowedconflicts": ["BSP_BUTTON", "BSP_BTL_BUTTON"]
+        "allowedconflicts": ["BSP_BUTTON", "BSP_BTL_BUTTON"],
+        "longdescription": "Number of LEDs physically present in hardware [0-8]",
     },
     "HAL_LED_COUNT": {
         "type": "uint8_t",
@@ -29,11 +30,13 @@ options = {
         "min": "0",
         "max": "8",
         "advanced": True,
+        "longdescription": "Cannot exceed number of LEDs configured as available above.",
     },
     "HAL_LED_ENABLE": {
         "type": "array",
-        "description": "Array of LED indices to initialize",
+        "description": "List of LED indices to initialize",
         "defaultValue": "0, 1",
         "advanced": True,
+        "longdescription": "Comma separated list of the LEDs that should be enabled for this application. Example: Board has 4 LEDs, but application only uses LEDs 0 and 2. Configure the list of LEDs to enable as \"0, 2\", and the number of LEDs to initialize as 2.",
     },
 }

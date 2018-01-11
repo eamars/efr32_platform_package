@@ -56,7 +56,7 @@ typedef uint8_t EmberStatus;
 //  halGetExtendedResetInfo() API should be called.
 
 #define RESET_BASE_TYPE(extendedType)   ((uint8_t)(((extendedType) >> 8) & 0xFF))
-#define RESET_EXTENDED_FIELD(extendedType) ((uint8_t)(extendedType & 0xFF))
+#define RESET_EXTENDED_FIELD(extendedType) ((uint8_t)((extendedType) & 0xFF))
 #define RESET_VALID_SIGNATURE           (0xF00F)
 #define RESET_INVALID_SIGNATURE         (0xC33C)
 
@@ -120,22 +120,22 @@ uint32_t halInternalGetHeapBottom(void);
 /**
  * @brief A numerical definition for a vector.
  */
-#define STACK_VECTOR_INDEX          0 // special case: stack pointer at reset
-#define RESET_VECTOR_INDEX          1
-#define NMI_VECTOR_INDEX            2
-#define HARD_FAULT_VECTOR_INDEX     3
-#define MEMORY_FAULT_VECTOR_INDEX   4
-#define BUS_FAULT_VECTOR_INDEX      5
-#define USAGE_FAULT_VECTOR_INDEX    6
-#define RESERVED07_VECTOR_INDEX     7
-#define RESERVED08_VECTOR_INDEX     8
-#define RESERVED09_VECTOR_INDEX     9
-#define RESERVED10_VECTOR_INDEX     10
-#define SVCALL_VECTOR_INDEX         11
-#define DEBUG_MONITOR_VECTOR_INDEX  12
-#define RESERVED13_VECTOR_INDEX     13
-#define PENDSV_VECTOR_INDEX         14
-#define SYSTICK_VECTOR_INDEX        15
+#define STACK_VECTOR_INDEX          0U // special case: stack pointer at reset
+#define RESET_VECTOR_INDEX          1U
+#define NMI_VECTOR_INDEX            2U
+#define HARD_FAULT_VECTOR_INDEX     3U
+#define MEMORY_FAULT_VECTOR_INDEX   4U
+#define BUS_FAULT_VECTOR_INDEX      5U
+#define USAGE_FAULT_VECTOR_INDEX    6U
+#define RESERVED07_VECTOR_INDEX     7U
+#define RESERVED08_VECTOR_INDEX     8U
+#define RESERVED09_VECTOR_INDEX     9U
+#define RESERVED10_VECTOR_INDEX     10U
+#define SVCALL_VECTOR_INDEX         11U
+#define DEBUG_MONITOR_VECTOR_INDEX  12U
+#define RESERVED13_VECTOR_INDEX     13U
+#define PENDSV_VECTOR_INDEX         14U
+#define SYSTICK_VECTOR_INDEX        15U
 
 /**
  * @brief Utility macro to convert from IRQ numbers to exception numbers/
@@ -144,7 +144,7 @@ uint32_t halInternalGetHeapBottom(void);
  * These are different because the latter include the Cortex-M standard
  * exceptions while the former do not.
  */
-#define IRQ_TO_VECTOR_NUMBER(x)     (x + 16)
+#define IRQ_TO_VECTOR_NUMBER(x)     ((x) + 16U)
 
 /**
  * @brief Number of vectors.
@@ -319,5 +319,5 @@ void halRadioPowerDownHandler(void);
 
 #endif //__EFM_MICRO_H__
 
-/**@} // END micro group
+/**@} END micro group
  */

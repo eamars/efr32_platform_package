@@ -6,7 +6,7 @@
 // @version 1.0.0
 //
 // @section License
-// <b>(C) Copyright 2014 Silicon Laboratories, http://www.silabs.com</b>
+// <b>(C) Copyright 2014 Silicon Laboratories, www.silabs.com</b>
 //
 // This file is licensed under the Silabs License Agreement. See the file
 // "Silabs_License_Agreement.txt" for details. Before using this software for
@@ -117,19 +117,19 @@ EmberStatus halPtaSetOptions(HalPtaOptions options)
     //Only modify public options
     halPtaOptions = options;
   }
-  if ((~oldOptions) & options & PTA_OPT_FORCE_HOLDOFF) {
-    //Cancel all requests if request option is disabled
+  if (((~oldOptions) & options & PTA_OPT_FORCE_HOLDOFF) != 0U) {
+    //Cancel all requests if force holdoff option is enabled
     (void) halPtaSetTxRequest(PTA_REQ_OFF, NULL);
     (void) halPtaSetRxRequest(PTA_REQ_OFF, NULL);
   }
   if ((status == EMBER_SUCCESS)
       && (halPtaOptions & PTA_OPT_RHO_ENABLED) != (oldOptions & PTA_OPT_RHO_ENABLED)) {
-    status = halSetRadioHoldOff(options & PTA_OPT_RHO_ENABLED);
+    status = halSetRadioHoldOff((options & PTA_OPT_RHO_ENABLED) != 0U);
   }
 #ifdef PTA_OPT_PTA_ENABLED
   if ((status == EMBER_SUCCESS)
       && (options & PTA_OPT_PTA_ENABLED) != (oldOptions & PTA_OPT_PTA_ENABLED)) {
-    status = halPtaSetEnable(options & PTA_OPT_RHO_ENABLED);
+    status = halPtaSetEnable((options & PTA_OPT_RHO_ENABLED) != 0U);
   }
 #endif //PTA_OPT_PTA_ENABLED
   return status;
@@ -195,11 +195,11 @@ static inline void ptaReqGpioCfg(void)
 {
   // Only configure GPIO if it was not set up prior
   if (halGpioGetConfig(PTA_REQ_GPIO) == gpioModeDisabled) {
-     #if     PTA_REQ_ASSERTED
+   #if     PTA_REQ_ASSERTED
     halGpioClear(PTA_REQ_GPIO);
-     #else//!PTA_REQ_ASSERTED
+   #else//!PTA_REQ_ASSERTED
     halGpioSet(PTA_REQ_GPIO);
-     #endif//PTA_REQ_ASSERTED
+   #endif//PTA_REQ_ASSERTED
     halGpioSetConfig(PTA_REQ_GPIO, PTA_REQ_GPIOCFG);
   }
   // Here we sense asserted state is opposite of its current output state.
@@ -258,13 +258,13 @@ static inline void ptaReqGpioIntEnable(void)
 
   #define ptaReqGpioSet(enable)      /* no-op */
   #define ptaReqGpioCfg()            /* no-op */
-  #define ptaReqGpioCfgIsShared()    0
-  #define ptaReqGpioInAsserted()     0
+  #define ptaReqGpioCfgIsShared()    false
+  #define ptaReqGpioInAsserted()     false
   #define ptaReqGpioIntAcknowledge() /* no-op */
   #define ptaReqGpioIntDisable()     /* no-op */
   #define ptaReqGpioIntEnable()      /* no-op */
-  #define ptaReqGpioOutAsserted()    1
-  #define ptaReqAndGntIrqShared()    0
+  #define ptaReqGpioOutAsserted()    true
+  #define ptaReqAndGntIrqShared()    false
   #define halPtaCounter(type, data)    /* no-op */
 
  #endif//PTA_REQ_GPIO
@@ -329,7 +329,7 @@ static inline void ptaGntGpioIntPend(void)
  #else//!PTA_GNT_GPIO
 
   #define ptaGntGpioCfg()            /* no-op */
-  #define ptaGntGpioInAsserted()     1
+  #define ptaGntGpioInAsserted()     true
   #define ptaGntGpioIntAcknowledge() /* no-op */
   #define ptaReqGpioIntDisable()     /* no-op */
   #define ptaGntGpioIntDisable()     /* no-op */
@@ -374,8 +374,8 @@ static inline void ptaPriGpioCfg(void)
  #else//!PTA_PRI_GPIO
 
   #define ptaPriGpioOutAsserted()    false
-  #define ptaPriGpioSet(enable)      /* no-op */
-  #define ptaPriGpioCfg()            /* no-op */
+  #define ptaPriGpioSet(ptaPriGpioSetEnable)      /* no-op */
+  #define ptaPriGpioCfg()                         /* no-op */
 
  #endif//PTA_PRI_GPIO
 
@@ -391,16 +391,16 @@ static void ptaUpdateReqIsr(void)
 {
   halPtaReq_t txReqL = txReq;   // Local non-volatile flavor avoids warnings
   halPtaReq_t rxReqL = rxReq;   // Local non-volatile flavor avoids warnings
-  bool myReq = !!((txReqL | rxReqL) & PTA_REQ_ON);       // I need to REQUEST
-  bool force = !!((txReqL | rxReqL) & PTA_REQ_FORCE);    // (ignoring others)
-  bool exReq;                                            // external requestor?
+  bool myReq = (((txReqL | rxReqL) & PTA_REQ_ON) != 0U);   // I need to REQUEST
+  bool force = (((txReqL | rxReqL) & PTA_REQ_FORCE) != 0U);// (ignoring others)
+  bool exReq;                                              // external requestor?
   if (ptaReqGpioOutAsserted()) {    // in GRANT phase
     exReq = false;                  // ignore external requestors
   } else {                          // in REQUEST phase
     ptaReqGpioIntAcknowledge();     // Before sampling REQUEST, avoids race
     exReq = ptaReqGpioCfgIsShared() && ptaReqGpioInAsserted();
   }
-  if (halPtaOptions & PTA_OPT_FORCE_HOLDOFF) {
+  if ((halPtaOptions & PTA_OPT_FORCE_HOLDOFF) != 0U) {
     myReq = false;
   }
   if (myReq) {                      // want to assert REQUEST
@@ -412,14 +412,14 @@ static void ptaUpdateReqIsr(void)
       ptaGntGpioIntAcknowledge();
       ptaGntGpioIntEnable();
       ptaReqGpioSet(true);
-      ptaPriGpioSet(!!((txReqL | rxReqL) & PTA_REQ_HIPRI));
+      ptaPriGpioSet(((txReqL | rxReqL) & PTA_REQ_HIPRI) != 0U);
       // Issue callbacks on REQUEST assertion
       // These are one-shot callbacks
-      if ((rxCb != NULL) && (rxReq & PTA_REQCB_REQUESTED)) {
+      if ((rxCb != NULL) && ((rxReqL & PTA_REQCB_REQUESTED) != 0U)) {
         (*rxCb)(PTA_REQCB_REQUESTED);
         rxReq &= ~PTA_REQCB_REQUESTED;
       }
-      if ((txCb != NULL) && (txReq & PTA_REQCB_REQUESTED)) {
+      if ((txCb != NULL) && ((txReqL & PTA_REQCB_REQUESTED) != 0U)) {
         (*txCb)(PTA_REQCB_REQUESTED);
         txReq &= ~PTA_REQCB_REQUESTED;
       }
@@ -456,11 +456,15 @@ static void PTA_GNT_ISR(uint8_t pin)
       // Issue callbacks on GRANT assert or negate
       // These are not one-shot callbacks
       halPtaReq_t newState = (newGnt ? PTA_REQCB_GRANTED : PTA_REQCB_NEGATED);
-      if ((rxCb != NULL) && (rxReq & newState)) {
-        (*rxCb)(newState);
+      if (rxCb != NULL) {
+        if ((rxReq & newState) != 0U) {
+          (*rxCb)(newState);
+        }
       }
-      if ((txCb != NULL) && (txReq & newState)) {
-        (*txCb)(newState);
+      if (txCb != NULL) {
+        if ((txReq & newState) != 0U) {
+          (*txCb)(newState);
+        }
       }
       // Do we need this to meet GRANT -> REQUEST timing?
       // On GNT deassertion, pulse REQUEST to keep us going.
@@ -472,7 +476,7 @@ static void PTA_GNT_ISR(uint8_t pin)
         // If grant is lost mid transmit,
         // cancel request if we are transmitting
         // or if ack hold off is enabled and we are receiving
-        if ((halPtaOptions & PTA_OPT_ABORT_TX)
+        if (((halPtaOptions & PTA_OPT_ABORT_TX) != 0U)
             && ((txReq != PTA_REQ_OFF)
                 || ((halPtaGetOptions() & PTA_OPT_ACK_HOLDOFF)
                     && (rxReq != PTA_REQ_OFF)))) {
@@ -527,19 +531,20 @@ static void PTA_REQ_ISR(uint8_t pin)
 EmberStatus halPtaSetTxRequest(halPtaReq_t ptaReq, halPtaCb_t ptaCb)
 {
   EmberStatus status = EMBER_ERR_FATAL;
-  ATOMIC(
-    if (ptaEnabled) {
+  DECLARE_INTERRUPT_STATE;
+  DISABLE_INTERRUPTS();
+  if (ptaEnabled) {
+    halPtaReq_t txReqL = txReq; // Local non-volatile flavor avoids warnings
     // Signal old OFF callback when unrequesting
     // in case PTA is disabled whilst in the midst of a request,
     // so the requestor's state machine doesn't lock up.
-    if ((ptaReq == PTA_REQ_OFF)
-        && (txReq != PTA_REQ_OFF)
-        && (txCb != NULL)
-        && (txReq & PTA_REQCB_OFF)) {
-      (*txCb)(PTA_REQCB_OFF);
+    if ((ptaReq == PTA_REQ_OFF) && (txReqL != PTA_REQ_OFF)) {
+      if ((txCb != NULL) && ((txReqL & PTA_REQCB_OFF) != 0U)) {
+        (*txCb)(PTA_REQCB_OFF);
+      }
     }
     txCb  = ptaCb;
-    if (txReq == ptaReq) {
+    if (txReqL == ptaReq) {
       // Save a little time if redundant request
     } else {
       txReq = ptaReq;
@@ -547,26 +552,27 @@ EmberStatus halPtaSetTxRequest(halPtaReq_t ptaReq, halPtaCb_t ptaCb)
     }
     status = EMBER_SUCCESS;
   }
-    )//ATOMIC
+  RESTORE_INTERRUPTS();
   return status;
 }
 
 EmberStatus halPtaSetRxRequest(halPtaReq_t ptaReq, halPtaCb_t ptaCb)
 {
   EmberStatus status = EMBER_ERR_FATAL;
-  ATOMIC(
-    if (ptaEnabled) {
+  DECLARE_INTERRUPT_STATE;
+  DISABLE_INTERRUPTS();
+  if (ptaEnabled) {
+    halPtaReq_t rxReqL = rxReq; // Local non-volatile flavor avoids warnings
     // Signal old OFF callback when unrequesting
     // in case PTA is disabled whilst in the midst of a request,
     // so the requestor's state machine doesn't lock up.
-    if ((ptaReq == PTA_REQ_OFF)
-        && (rxReq != PTA_REQ_OFF)
-        && (rxCb != NULL)
-        && (rxReq & PTA_REQCB_OFF)) {
-      (*rxCb)(PTA_REQCB_OFF);
+    if ((ptaReq == PTA_REQ_OFF) && (rxReqL != PTA_REQ_OFF)) {
+      if ((rxCb != NULL) && ((rxReqL & PTA_REQCB_OFF) != 0U)) {
+        (*rxCb)(PTA_REQCB_OFF);
+      }
     }
     rxCb  = ptaCb;
-    if (rxReq == ptaReq) {
+    if (rxReqL == ptaReq) {
       // Save a little time if redundant request
     } else {
       rxReq = ptaReq;
@@ -574,7 +580,7 @@ EmberStatus halPtaSetRxRequest(halPtaReq_t ptaReq, halPtaCb_t ptaCb)
     }
     status = EMBER_SUCCESS;
   }
-    )//ATOMIC
+  RESTORE_INTERRUPTS();
   return status;
 }
 
@@ -582,9 +588,9 @@ halPtaReq_t halPtaFrameDetectReq(void)
 {
   HalPtaOptions options = halPtaGetOptions();
   halPtaReq_t syncDet = PTA_REQ_OFF;
-  if (halPtaIsEnabled() && !(options & PTA_OPT_REQ_FILTER_PASS)) {
+  if (halPtaIsEnabled() && ((options & PTA_OPT_REQ_FILTER_PASS) == 0U)) {
     syncDet |= PTA_REQ_ON;
-    if (options & PTA_OPT_RX_HIPRI) {
+    if ((options & PTA_OPT_RX_HIPRI) != 0U) {
       syncDet |= PTA_REQ_HIPRI;
     }
   }
@@ -597,7 +603,7 @@ halPtaReq_t halPtaFilterPassReq(void)
   halPtaReq_t filterPass = PTA_REQ_OFF;
   if (halPtaIsEnabled()) {
     filterPass |= PTA_REQ_ON;
-    if (options & (PTA_OPT_RX_HIPRI | PTA_OPT_HIPRI_FILTER_PASS)) {
+    if ((options & (PTA_OPT_RX_HIPRI | PTA_OPT_HIPRI_FILTER_PASS)) != 0U) {
       filterPass |= PTA_REQ_HIPRI;
     }
   }
@@ -652,13 +658,13 @@ static bool rhoAsserted = !!RHO_ASSERTED;
 
 bool halGetRadioHoldOff(void)
 {
-  return (!!(rhoState & RHO_ENABLED_MASK));
+  return ((rhoState & RHO_ENABLED_MASK) != 0U);
 }
 
 // Return active state of Radio HoldOff GPIO pin
 static bool halInternalRhoPinIsActive(void)
 {
-  return ((rhoState & RHO_ENABLED_MASK)
+  return (((rhoState & RHO_ENABLED_MASK) != 0U)
           && (((bool)halGpioRead(RHO_GPIO)) == rhoAsserted));
 }
 
@@ -682,27 +688,27 @@ static void RHO_ISR(uint8_t pin)
 {
   // Ack interrupt before reading GPIO to avoid potential of missing int
   GPIO_IntClear(GPIO_FLAG(RHO_GPIO));
-  if (rhoState & RHO_ENABLED_MASK) {
+  if ((rhoState & RHO_ENABLED_MASK) != 0U) {
     // Notify Radio land of state change
     halInternalTogglePtaReq();
     halInternalPtaOrRhoNotifyRadio();
   }
 }
 
-EmberStatus halSetRadioHoldOff(bool enabled)
+EmberStatus halSetRadioHoldOff(bool enable)
 {
   // If enabling afresh or disabling after having been enabled
   // restart from a fresh state just in case.
-  if (enabled || (rhoState & RHO_ENABLED_MASK)) {
+  if (enable || ((rhoState & RHO_ENABLED_MASK) != 0U)) {
     // Disable RHO interrupt & callback
     GPIO_IntConfig(GPIO_PORT(RHO_GPIO), GPIO_PIN(RHO_GPIO),
                    false, false, false);
     GPIOINT_CallbackUnRegister(GPIO_PIN(RHO_GPIO));
   }
 
-  rhoState = (rhoState & ~RHO_ENABLED_MASK) | (enabled ? RHO_ENABLED_MASK : 0);
+  rhoState = (rhoState & ~RHO_ENABLED_MASK) | (enable ? RHO_ENABLED_MASK : 0);
 
-  if (enabled) {
+  if (enable) {
     // Safely turn on GPIO interrupts
     GPIOINT_InitSafe();
 
@@ -721,7 +727,7 @@ EmberStatus halSetRadioHoldOff(bool enabled)
                    true, true, false);
 
     // Only update radio if it's on, otherwise defer to when it gets turned on
-    if (rhoState & RHO_RADIO_ON_MASK) {
+    if ((rhoState & RHO_RADIO_ON_MASK) != 0U) {
       halInternalPtaOrRhoNotifyRadio(); //Notify Radio land of current state
       GPIO_IntEnable(GPIO_FLAG(RHO_GPIO));
       // Interrupt on now, ISR will maintain proper state
@@ -730,14 +736,15 @@ EmberStatus halSetRadioHoldOff(bool enabled)
     halInternalPtaOrRhoNotifyRadio(); //Notify Radio land of configured state
     // Leave interrupt state untouched (probably turned off above)
   }
-  setBitMask(&halPtaOptions, PTA_OPT_RHO_ENABLED, rhoState & RHO_ENABLED_MASK);
+  setBitMask(&halPtaOptions, PTA_OPT_RHO_ENABLED,
+             ((rhoState & RHO_ENABLED_MASK) != 0U));
   return EMBER_SUCCESS;
 }
 
 void halStackRadioHoldOffPowerDown(void)
 {
   rhoState &= ~RHO_RADIO_ON_MASK;
-  if (rhoState & RHO_ENABLED_MASK) {
+  if ((rhoState & RHO_ENABLED_MASK) != 0U) {
     // When sleeping radio, no need to monitor RHO anymore
     GPIO_IntDisable(GPIO_FLAG(RHO_GPIO)); //clear RHO top level int enable
   }
@@ -746,7 +753,7 @@ void halStackRadioHoldOffPowerDown(void)
 void halStackRadioHoldOffPowerUp(void)
 {
   rhoState |= RHO_RADIO_ON_MASK;
-  if (rhoState & RHO_ENABLED_MASK) {
+  if ((rhoState & RHO_ENABLED_MASK) != 0U) {
     // When waking radio, set up initial state and resume monitoring
     GPIO_IntDisable(GPIO_FLAG(RHO_GPIO)); //ensure RHO interrupt is off
     RHO_ISR(0); // Manually call ISR to assess current state
@@ -763,9 +770,9 @@ bool halGetRadioHoldOff(void)
   return false;
 }
 
-EmberStatus halSetRadioHoldOff(bool enabled)
+EmberStatus halSetRadioHoldOff(bool enable)
 {
-  return (enabled ? EMBER_BAD_ARGUMENT : EMBER_SUCCESS);
+  return (enable ? EMBER_BAD_ARGUMENT : EMBER_SUCCESS);
 }
 
 void halStackRadioHoldOffPowerDown(void)

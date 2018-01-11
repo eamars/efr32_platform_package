@@ -277,7 +277,7 @@ void halInternalClassifyReset(void)
   uint16_t i;
 
   for (i = 0; i < sizeof(resetEventTable) / sizeof(resetEventTable[0]); i++) {
-    if (resetEvent & (1 << i)) {
+    if ((resetEvent & (1 << i)) != 0U) {
       cause = resetEventTable[i];
       break;
     }

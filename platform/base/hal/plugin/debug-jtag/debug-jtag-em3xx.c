@@ -32,13 +32,13 @@
 #define ramOutBlockPointer \
   ((uint32_t *)(debugChannel + RAM_OUT_BLOCK_POINTER_INDEX))
 
-#define OUT_VERSION_INDEX   0
-#define OUT_TYPE_INDEX      1
-#define OUT_SEQUENCE_INDEX  3
-#define OUT_DATA_INDEX      4
+#define OUT_VERSION_INDEX   0U
+#define OUT_TYPE_INDEX      1U
+#define OUT_SEQUENCE_INDEX  3U
+#define OUT_DATA_INDEX      4U
 #define OUT_VERSION 0xD1
 
-#define TIMEOUT_MS 500
+#define TIMEOUT_MS 500U
 
 // This is the division factor used to generate the correct baud rate:
 // NOTE:  If the prescaler is changed, then the delay in emDebugPowerDown
@@ -410,7 +410,7 @@ EmberStatus emDebugInit(void)
 
   emDebugPowerUp();
 
-  return EMBER_SUCCESS;
+  return (EmberStatus) EMBER_SUCCESS;
 }
 
 //NOTE:  If emDebugPowerDown is ever called, emDebugPowerUp must be called
@@ -418,7 +418,7 @@ EmberStatus emDebugInit(void)
 void emDebugPowerDown(void)
 {
   #ifndef RAM_DEBUG_OUTPUT
-  if ((ITM->TCR & ITM_TCR_ITMENA_Msk)) {
+  if ((ITM->TCR & ITM_TCR_ITMENA_Msk) != 0U) {
     //Set DWT Sync Tap to 0, disabling sync counting and preventing any
     //new sync packets from being generated:
     DWT->CTRL = (DWT->CTRL & (~DWT_CTRL_SYNCTAP_Msk));
@@ -429,13 +429,13 @@ void emDebugPowerDown(void)
     ITM->TCR &= ~ITM_TCR_ITMENA_Msk;
 
     //Wait for the ITM to indicate that is has gone idle
-    while (ITM->TCR & ITM_TCR_BUSY_Msk) {
+    while ((ITM->TCR & ITM_TCR_BUSY_Msk) != 0U) {
     }
 
     //Don't bother delaying during shutdown if CDBGPWRUPREQ is not set since
     //this indicates that the debugger is not connected so we do not need
     //to worry about cutting off some data.
-    if (CMHV->CPWRUPREQSTATUS) {
+    if ((CMHV->CPWRUPREQSTATUS) != 0U) {
       //ARM suggests waiting long enough for 5 bytes of data to be output
       //(50 bit times) which should ensure that any old data has been cleanly
       //output.  50 bit times at 500kbps is 100us.  This matches with testing
@@ -475,16 +475,16 @@ void emDebugPowerUp(void)
   #ifndef RAM_DEBUG_OUTPUT
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;          // Trace enable.
   TPI->CSPSR = 1;                             // Port size.
-  halInternalTpiuSetSpeedHz(SPEED_HZ);      // Speed divisor.
+  (void) halInternalTpiuSetSpeedHz(SPEED_HZ);      // Speed divisor.
   TPI->SPPR = 2;                             // Pin protocol (2 = NRZ).
   TPI->FFCR = 0;                             // Disable formatter.
-  ITM->LAR = 0xC5ACCE55;                      // Unlock ITM.
+  ITM->LAR = 0xC5ACCE55U;                      // Unlock ITM.
   ITM->TER = 1;                              // Enable stimulus port 0.
-  ITM->TCR = ((0x01 << ITM_TCR_TraceBusID_Pos)    // Must be value between 0x01-0x6F
+  ITM->TCR = ((0x01U << ITM_TCR_TraceBusID_Pos)    // Must be value between 0x01-0x6F
               | ITM_TCR_DWTENA_Msk              // Enable DWT.
               | ITM_TCR_SYNCENA_Msk             // Enable synchronization.
               | ITM_TCR_ITMENA_Msk);             // Enable ITM.
-  DWT->CTRL = ((1 << DWT_CTRL_SYNCTAP_Pos)   // Synchronisation pulse rate.
+  DWT->CTRL = ((1U << DWT_CTRL_SYNCTAP_Pos)   // Synchronisation pulse rate.
                | DWT_CTRL_CYCCNTENA_Msk);       // Enable CYCCNT.
   #endif //RAM_DEBUG_OUTPUT
 
@@ -497,9 +497,9 @@ bool halStackDebugActive(void)
   #ifdef RAM_DEBUG_OUTPUT
   return (debugChannel[RAM_OUT_STATUS_INDEX] == RAM_OUT_STATUS_GO);
   #else//!RAM_DEBUG_OUTPUT
-  return ((TPI->ACPR != 0)
-          && CMHV->CPWRUPREQSTATUS
-          && (CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) != 0);
+  return ((TPI->ACPR != 0U)
+          && ((CMHV->CPWRUPREQSTATUS) != 0U)
+          && ((CoreDebug->DEMCR & CoreDebug_DEMCR_TRCENA_Msk) != 0U));
   #endif//RAM_DEBUG_OUTPUT
 }
 
@@ -557,43 +557,43 @@ static EmberStatus ramOutput(EmberMessageBuffer buffer)
 
 static EmberStatus swoOutput(EmberMessageBuffer buffer)
 {
-  uint8_t length = emberMessageBufferLength(buffer) + 5;
-  uint8_t index = 0;
+  uint8_t swoOutputLength = emberMessageBufferLength(buffer) + 5U;
+  uint8_t index = 0U;
   uint16_t startTime = halCommonGetInt16uMillisecondTick();
-  uint16_t crc = 0xFFFF;
-  while ((halStackDebugActive()) && (index < length)) {
+  uint16_t crc = 0xFFFFU;
+  while ((halStackDebugActive()) && (index < swoOutputLength)) {
     uint16_t now = halCommonGetInt16uMillisecondTick();
     if (elapsedTimeInt16u(startTime, now) > TIMEOUT_MS) {
       break;
     }
-    if (ITM->PORT[0].u32 == 1 /*ITM_SP0_FIFOREADY*/) {
-      uint32_t output = 0;
+    if (ITM->PORT[0].u32 == 1U /*ITM_SP0_FIFOREADY*/) {
+      uint32_t output = 0U;
       uint8_t i;
-      for (i = 0; i < 4; i++) {
+      for (i = 0; i < 4U; i++) {
         uint8_t outputByte;
         if (index == 0) {
-          outputByte = '[';
+          outputByte = (uint8_t)'[';
           index++;
-        } else if (index == 1) {
+        } else if (index == 1U) {
           outputByte = emberMessageBufferLength(buffer);
           index++;
-        } else if (index == length - 3) {
+        } else if (index == swoOutputLength - 3U) {
           outputByte = LOW_BYTE(crc);
           index++;
-        } else if (index == length - 2) {
+        } else if (index == swoOutputLength - 2U) {
           outputByte = HIGH_BYTE(crc);
           index++;
-        } else if (index == length - 1) {
-          outputByte = ']';
+        } else if (index == swoOutputLength - 1U) {
+          outputByte = (uint8_t) ']';
           index++;
-        } else if (index == length) {
-          outputByte = 0;
+        } else if (index == swoOutputLength) {
+          outputByte = 0U;
         } else {
-          outputByte = emberGetLinkedBuffersByte(buffer, index - 2);
+          outputByte = emberGetLinkedBuffersByte(buffer, index - 2U);
           crc = halCommonCrc16(outputByte, crc);
           index++;
         }
-        output |= (uint32_t) (((uint32_t) outputByte) << (i * 8));
+        output |= (uint32_t) (((uint32_t) outputByte) << (i * 8U));
       }
       ITM->PORT[0].u32 = output;
     }
@@ -609,10 +609,10 @@ static EmberStatus swoOutput(EmberMessageBuffer buffer)
   //add a small amount (factor of safety) beyond the time necessary (10-40us).
   halCommonDelayMicroseconds(TX_COMPLETE_DELAY);
 
-  if (index == length) {
-    return EMBER_SUCCESS;
+  if (index == swoOutputLength) {
+    return (EmberStatus) EMBER_SUCCESS;
   } else {
-    return EMBER_ERR_FATAL;
+    return (EmberStatus) EMBER_ERR_FATAL;
   }
 }
 
@@ -621,7 +621,7 @@ static EmberStatus swoOutput(EmberMessageBuffer buffer)
 EmberStatus halStackDebugPutBuffer(EmberMessageBuffer buffer)
 {
   if (emberMessageBufferLength(buffer) < OUT_DATA_INDEX) {
-    return EMBER_ERR_FATAL;
+    return (EmberStatus) EMBER_ERR_FATAL;
   }
   #ifdef RAM_DEBUG_OUTPUT
   return ramOutput(buffer);
@@ -633,26 +633,26 @@ EmberStatus halStackDebugPutBuffer(EmberMessageBuffer buffer)
 void halDebugIsr(void)
 {
   uint8_t remainingLength = debugChannel[RAM_IN_LENGTH_INDEX];
-  if (remainingLength > 0) {
+  if (remainingLength > 0U) {
     uint16_t startTime = halCommonGetInt16uMillisecondTick();
     EmberMessageBuffer buffer = emberFillLinkedBuffers(NULL, remainingLength);
     EmberMessageBuffer currentBlock = buffer;
-    if (buffer == EMBER_NULL_MESSAGE_BUFFER) {
-      debugChannel[RAM_IN_LENGTH_INDEX] = 0;
+    if (buffer == (EmberMessageBuffer)EMBER_NULL_MESSAGE_BUFFER) {
+      debugChannel[RAM_IN_LENGTH_INDEX] = 0U;
       return;
     }
     uint8_t blockSize = MIN(remainingLength, PACKET_BUFFER_SIZE);
     *ramInBlockPointer = (uint32_t)emberMessageBufferContents(currentBlock);
     debugChannel[RAM_IN_BLOCK_SIZE_INDEX] = blockSize;
-    while (debugChannel[RAM_IN_LENGTH_INDEX] > 0) {
+    while (debugChannel[RAM_IN_LENGTH_INDEX] > 0U) {
       uint16_t now = halCommonGetInt16uMillisecondTick();
       if (elapsedTimeInt16u(startTime, now) > TIMEOUT_MS) {
         break;
       }
-      if (debugChannel[RAM_IN_BLOCK_SIZE_INDEX] == 0) {
+      if (debugChannel[RAM_IN_BLOCK_SIZE_INDEX] == 0U) {
         remainingLength -= blockSize;
         debugChannel[RAM_IN_LENGTH_INDEX] = remainingLength;
-        if (remainingLength > 0) {
+        if (remainingLength > 0U) {
           currentBlock = emberStackBufferLink(currentBlock);
           blockSize = MIN(remainingLength, PACKET_BUFFER_SIZE);
           *ramInBlockPointer = (uint32_t)emberMessageBufferContents(currentBlock);
@@ -660,25 +660,25 @@ void halDebugIsr(void)
         }
       }
     }
-    if (remainingLength == 0
-        && debugChannel[RAM_IN_LENGTH_INDEX] == 0
-        && debugChannel[RAM_IN_BLOCK_SIZE_INDEX] == 0) {
+    if (remainingLength == 0U
+        && debugChannel[RAM_IN_LENGTH_INDEX] == 0U
+        && debugChannel[RAM_IN_BLOCK_SIZE_INDEX] == 0U) {
       uint8_t bufferLength = emberMessageBufferLength(buffer);
       uint16_t type = emberGetLinkedBuffersLowHighInt16u(buffer,
-                                                         bufferLength - 2);
+                                                         bufferLength - 2U);
       // Virtual UART input is handled immediately (in interrupt context). All
       // other input is put on a queue so it can be handled by
       // emDebugReceiveTick(). This is so that applications can receive virtual
       // UART input without having to call emDebugReceiveTick().
       if (type == EM_DEBUG_VIRTUAL_UART_RX) {
-        emberSetLinkedBuffersLength(buffer, bufferLength - 2);
+        emberSetLinkedBuffersLength(buffer, bufferLength - 2U);
         emDebugProcessIncoming(type, buffer);
       } else {
         emDebugQueueAdd(buffer);
       }
     } else {
-      debugChannel[RAM_IN_LENGTH_INDEX] = 0;
-      debugChannel[RAM_IN_BLOCK_SIZE_INDEX] = 0;
+      debugChannel[RAM_IN_LENGTH_INDEX] = 0U;
+      debugChannel[RAM_IN_BLOCK_SIZE_INDEX] = 0U;
     }
     emberReleaseMessageBuffer(buffer);
   }

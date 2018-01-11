@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file app_hal.c
  * @brief This file handles the hardware interactions for RAILtest
- * @copyright Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2016 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include <stdio.h>

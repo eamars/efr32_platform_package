@@ -1,17 +1,17 @@
 // -----------------------------------------------------------------------------
-// @file
-// @brief Radio coexistence utilities
-//
-// @author Silicon Laboratories Inc.
-// @version 1.0.0
-//
-// @section License
-// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
-//
-// This file is licensed under the Silabs License Agreement. See the file
-// "Silabs_License_Agreement.txt" for details. Before using this software for
-// any purpose, you must agree to the terms of that agreement.
-//
+/// @file coexistence.c
+/// @brief Radio coexistence utilities
+///
+/// @author Silicon Laboratories Inc.
+/// @version 1.0.0
+///
+/// @section License
+/// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
+///
+/// This file is licensed under the Silabs License Agreement. See the file
+/// "Silabs_License_Agreement.txt" for details. Before using this software for
+/// any purpose, you must agree to the terms of that agreement.
+///
 // -----------------------------------------------------------------------------
 #include "em_core.h"
 #include "coexistence/coexistence.h"
@@ -19,32 +19,34 @@
 #define coexReqAndGntIrqShared() \
   (reqCfg.cb == &COEX_GNT_ISR)
 
-#define NUM_COEX_REQ_MODES 3
-
 static void (*setCoexPowerStateCallbackPtr)(bool powerUp);
-static bool (*setCoexReqCallbackPtr)(COEX_Req_t coexReq, COEX_ReqMode_t coexReqMode);
+static bool (*setCoexReqCallbackPtr)(COEX_ReqState_t *reqState,
+                                     COEX_Req_t coexReq,
+                                     COEX_ReqCb_t cb);
 static const COEX_HalCallbacks_t *coexHalCallbacks;
-static const COEX_RadioCallbacks_t *coexRadioCallbacks;
+static COEX_RadioCallback_t coexRadioCallback;
+static COEX_RandomDelayCallback_t coexRandomDelayCallback;
 static void coexNotifyRadio(void);
 
 /** PTA radio hold off GPIO configuration */
-COEX_GpioHandle_t rhoHandle = NULL;
+static COEX_GpioHandle_t rhoHandle = NULL;
 
 /** PTA grant GPIO configuration */
-COEX_GpioHandle_t gntHandle = NULL;
+static COEX_GpioHandle_t gntHandle = NULL;
 
 /** PTA request GPIO configuration */
-COEX_GpioHandle_t reqHandle = NULL;
+static COEX_GpioHandle_t reqHandle = NULL;
 
 /** PTA priority GPIO configuration */
-COEX_GpioHandle_t priHandle = NULL;
+static COEX_GpioHandle_t priHandle = NULL;
 
-typedef struct COEX_Cfg{
+typedef struct COEX_Cfg {
   /** PTA request states*/
-  volatile COEX_Req_t reqStates[NUM_COEX_REQ_MODES];
-  volatile COEX_Req_t combinedReqState;
+  COEX_ReqState_t *reqHead;
+  volatile COEX_Req_t combinedRequestState;
   volatile bool radioOn : 1;
-
+  volatile bool requestDenied : 1;
+  volatile bool updateGrantInProgress : 1;
   COEX_Options_t options;
 } COEX_Cfg_t;
 
@@ -76,14 +78,6 @@ static COEX_GpioConfig_t priCfg = {
   .options = COEX_GPIO_OPTION_OUTPUT
 };
 
-/** @brief Enables or disables Radio HoldOff support
- *
- * @return true if Radio HoldOff was configured as desired
- * or false if requesting it be enabled but RHO has not
- * been configured by the BOARD_HEADER.
- */
-static bool setRadioHoldOff(COEX_GpioHandle_t gpioHandle);
-
 static bool gntWasAsserted = false;
 
 void COEX_SetHalCallbacks(const COEX_HalCallbacks_t *callbacks)
@@ -91,35 +85,40 @@ void COEX_SetHalCallbacks(const COEX_HalCallbacks_t *callbacks)
   coexHalCallbacks = callbacks;
 }
 
-void COEX_SetRadioCallbacks(const COEX_RadioCallbacks_t *callbacks)
+void COEX_SetRandomDelayCallback(COEX_RandomDelayCallback_t callback)
 {
-  coexRadioCallbacks = callbacks;
+  coexRandomDelayCallback = callback;
+}
+
+void COEX_SetRadioCallback(COEX_RadioCallback_t callback)
+{
+  coexRadioCallback = callback;
 }
 
 static bool isReqShared(void)
 {
-  return reqCfg.options & COEX_GPIO_OPTION_SHARED;
+  return (reqCfg.options & COEX_GPIO_OPTION_SHARED) != 0U;
 }
 
 static void coexReqRandomBackoff(void)
 {
-  if (coexHalCallbacks->randomDelay != NULL) {
-    coexHalCallbacks->randomDelay(coexCfg.options
-                                  & COEX_OPTION_MAX_REQ_BACKOFF_MASK);
+  if (coexRandomDelayCallback != NULL) {
+    (*coexRandomDelayCallback)(coexCfg.options
+                               & COEX_OPTION_MAX_REQ_BACKOFF_MASK);
   }
 }
 
 static void setGpio(COEX_GpioHandle_t gpioHandle, bool enabled)
 {
   if (coexHalCallbacks->setGpio != NULL && gpioHandle != NULL) {
-    coexHalCallbacks->setGpio(gpioHandle, enabled);
+    (*coexHalCallbacks->setGpio)(gpioHandle, enabled);
   }
 }
 
 static bool isGpioInSet(COEX_GpioHandle_t gpioHandle, bool defaultValue)
 {
   if (coexHalCallbacks->isGpioInSet != NULL && gpioHandle != NULL) {
-    return coexHalCallbacks->isGpioInSet(gpioHandle);
+    return (*coexHalCallbacks->isGpioInSet)(gpioHandle);
   }
   return defaultValue;
 }
@@ -127,7 +126,7 @@ static bool isGpioInSet(COEX_GpioHandle_t gpioHandle, bool defaultValue)
 static bool getGpioOut(COEX_GpioHandle_t gpioHandle, bool defaultValue)
 {
   if (coexHalCallbacks->isGpioOutSet != NULL && gpioHandle != NULL) {
-    return coexHalCallbacks->isGpioOutSet(gpioHandle);
+    return (*coexHalCallbacks->isGpioOutSet)(gpioHandle);
   }
   return defaultValue;
 }
@@ -135,28 +134,28 @@ static bool getGpioOut(COEX_GpioHandle_t gpioHandle, bool defaultValue)
 static void enableGpioInt(COEX_GpioHandle_t gpioHandle, bool *wasAsserted)
 {
   if (coexHalCallbacks->enableGpioInt != NULL && gpioHandle != NULL) {
-    coexHalCallbacks->enableGpioInt(gpioHandle, true, wasAsserted);
+    (*coexHalCallbacks->enableGpioInt)(gpioHandle, true, wasAsserted);
   }
 }
 
 static void disableGpioInt(COEX_GpioHandle_t gpioHandle)
 {
   if (coexHalCallbacks->enableGpioInt != NULL && gpioHandle != NULL) {
-    coexHalCallbacks->enableGpioInt(gpioHandle, false, NULL);
+    (*coexHalCallbacks->enableGpioInt)(gpioHandle, false, NULL);
   }
 }
 
 static void setGpioFlag(COEX_GpioHandle_t gpioHandle)
 {
   if (coexHalCallbacks->setGpioFlag != NULL && gpioHandle != NULL) {
-    coexHalCallbacks->setGpioFlag(gpioHandle, true);
+    (*coexHalCallbacks->setGpioFlag)(gpioHandle, true);
   }
 }
 
 static void clearGpioFlag(COEX_GpioHandle_t gpioHandle)
 {
   if (coexHalCallbacks->setGpioFlag != NULL && gpioHandle != NULL) {
-    coexHalCallbacks->setGpioFlag(gpioHandle, false);
+    (*coexHalCallbacks->setGpioFlag)(gpioHandle, false);
   }
 }
 
@@ -175,17 +174,20 @@ static void configGpio(COEX_GpioHandle_t gpioHandle,
   }
 }
 
-static void abortTx(void)
+static void coexEventCallback(COEX_Events_t events)
 {
-  if (coexRadioCallbacks->abortTx != NULL) {
-    coexRadioCallbacks->abortTx();
+  if (coexRadioCallback != NULL) {
+    if (getGpioOut(priHandle, false)) {
+      events |= COEX_EVENT_PRIORITY_ASSERTED;
+    }
+    coexRadioCallback(events);
   }
 }
 
 static void toggleCoexReq(void)
 {
-  if ( (coexCfg.options
-        & COEX_OPTION_PULSE_REQ_ON_RHO_RELEASE) // Pulse request on RHO release selected
+  if ( ((coexCfg.options
+         & COEX_OPTION_PULSE_REQ_ON_RHO_RELEASE) != 0U) // Pulse request on RHO release selected
        && getGpioOut(reqHandle, false)          // REQUESTing and
        && !isGpioInSet(rhoHandle, false)          // RHO not asserted and
        && !isGpioInSet(gntHandle, true)) {        // GRANT not asserted
@@ -197,10 +199,11 @@ static void toggleCoexReq(void)
 // Must be called with interrupts disabled
 static void coexUpdateReqIsr(void)
 {
-  COEX_Req_t combinedReqState = coexCfg.combinedReqState; // Local non-volatile flavor avoids warnings
-  bool myReq = !!(combinedReqState & COEX_REQ_ON);     // I need to REQUEST
-  bool force = !!(combinedReqState & COEX_REQ_FORCE);  // (ignoring others)
-  bool exReq;                                          // external requestor?
+  COEX_Req_t combinedReqState = coexCfg.combinedRequestState; // Local non-volatile flavor avoids warnings
+  bool myReq = ((combinedReqState & COEX_REQ_ON) != 0U); // I need to REQUEST
+  bool force = ((combinedReqState & COEX_REQ_FORCE) != 0U); // (ignoring others)
+  bool exReq; // external requestor?
+
   if (getGpioOut(reqHandle, false)) {  // in GRANT phase
     exReq = false;                // ignore external requestors
   } else {                        // in REQUEST phase
@@ -209,15 +212,36 @@ static void coexUpdateReqIsr(void)
   }
   if (myReq) {                    // want to assert REQUEST
     if (force || !exReq) {        // can assert REQUEST
+      if (!getGpioOut(reqHandle, false)) {
+        // Assume request denied until request is granted
+        coexCfg.requestDenied = true;
+      }
       clearGpioFlag(gntHandle);
       enableGpioInt(gntHandle, &gntWasAsserted);
       setGpio(reqHandle, true);
-      setGpio(priHandle, !!(combinedReqState & COEX_REQ_HIPRI));
+      setGpio(priHandle, ((combinedReqState & COEX_REQ_HIPRI) != 0U));
+      // Issue callbacks on REQUEST assertion
+      // These are one-shot callbacks
+      COEX_ReqState_t* reqPtr;
+      for (reqPtr = coexCfg.reqHead; reqPtr != NULL; reqPtr = reqPtr->next) {
+        if ((reqPtr->cb != NULL) && ((reqPtr->coexReq & COEX_REQCB_REQUESTED) != 0U)) {
+          reqPtr->coexReq &= ~COEX_REQCB_REQUESTED;
+          (*reqPtr->cb)(COEX_REQCB_REQUESTED);
+        }
+      }
       setGpioFlag(gntHandle); // Manually force GRANT check if missed/no edge
     } else {                      // must wait for REQUEST
       enableGpioInt(reqHandle, NULL);
     }
   } else {                        // negate REQUEST
+    if (getGpioOut(reqHandle, false) ) {
+      COEX_Events_t coexEvents = COEX_EVENT_REQUEST_RELEASED;
+      if (coexCfg.requestDenied) {
+        coexCfg.requestDenied = false;
+        coexEvents |= COEX_EVENT_REQUEST_DENIED;
+      }
+      coexEventCallback(coexEvents);
+    }
     setGpio(priHandle, false);
     setGpio(reqHandle, false);
     disableGpioInt(gntHandle);
@@ -228,27 +252,35 @@ static void coexUpdateReqIsr(void)
 
 void COEX_UpdateGrant(void)
 {
+  if (coexCfg.updateGrantInProgress) {
+    // Prevent this function from being called recursively
+    return;
+  } else {
+    coexCfg.updateGrantInProgress = true;
+  }
   if (getGpioOut(reqHandle, false)) {    // GRANT phase
     bool newGnt = isGpioInSet(gntHandle, false);   // Sample GPIO once, now
     if (newGnt != gntWasAsserted) {
       gntWasAsserted = newGnt;
       coexNotifyRadio();
-
-      if (!newGnt) {
-        // If grant is lost mid transmit,
-        // cancel request if we are transmitting
-        if ((coexCfg.options & COEX_OPTION_TX_ABORT)
-            && (coexCfg.reqStates[COEX_REQ_MODE_TX] != COEX_REQ_OFF)) {
-          abortTx();
+      // Issue callbacks on GRANT assert or negate
+      // These are not one-shot callbacks
+      COEX_ReqState_t* reqPtr;
+      COEX_Req_t newState = (newGnt ? COEX_REQCB_GRANTED : COEX_REQCB_NEGATED);
+      for (reqPtr = coexCfg.reqHead; reqPtr != NULL; reqPtr = reqPtr->next) {
+        if ((reqPtr->cb != NULL) && ((reqPtr->coexReq & newState) != 0U)) {
+          (*reqPtr->cb)(newState);
         }
-        // Issue callbacks on GRANT assert or negate
-        // These are not one-shot callbacks
+      }
+      if (!newGnt) {
+        coexEventCallback(COEX_EVENT_GRANT_RELEASED);
+
         // Do we need this to meet GRANT -> REQUEST timing?
         // On GNT deassertion, pulse REQUEST to keep us going.
         // Don't want to revert to REQUEST phase here but stay in GRANT phase.
         // This seems dangerous in that it could allow a peer to assert their
         // REQUEST causing a conflict/race.
-        if (coexCfg.options & COEX_OPTION_PULSE_REQ_ON_GNT_RELEASE) {
+        if ((coexCfg.options & COEX_OPTION_PULSE_REQ_ON_GNT_RELEASE) != 0U) {
           setGpio(reqHandle, false);
           setGpio(reqHandle, true);
         }
@@ -264,6 +296,7 @@ void COEX_UpdateGrant(void)
       // Ignore GRANT changes unless we are REQUESTing
     }
   }
+  coexCfg.updateGrantInProgress = false;
 }
 
 // Triggered on both GRANT edges
@@ -286,39 +319,71 @@ static void COEX_REQ_ISR(void)
 }
 
 // Public API
-bool COEX_SetRequest(COEX_Req_t coexReq,
-                     COEX_ReqMode_t coexReqMode)
+bool COEX_SetRequest(COEX_ReqState_t *reqState,
+                     COEX_Req_t coexReq,
+                     COEX_ReqCb_t cb)
 {
   bool status = false;
 
   if (setCoexReqCallbackPtr != NULL) {
-    status = setCoexReqCallbackPtr(coexReq, coexReqMode);
+    status = setCoexReqCallbackPtr(reqState, coexReq, cb);
   }
   return status;
 }
 
-static bool setCoexReqCallback(COEX_Req_t coexReq,
-                               COEX_ReqMode_t coexReqMode)
+static void updateReqList(COEX_ReqState_t *reqState)
 {
-  CORE_DECLARE_IRQ_STATE;
-  bool status = true;
-  unsigned int reqType;
-  COEX_Req_t combinedReqState = COEX_REQ_OFF;
-  CORE_ENTER_ATOMIC();
-  for (reqType = 0; coexReqMode && (reqType < NUM_COEX_REQ_MODES); ++reqType) {
-    if (coexReqMode & 1) {
-      if (coexCfg.reqStates[reqType] != coexReq) {
-        coexCfg.reqStates[reqType] = coexReq;
+  bool reqFound = false;
+  COEX_ReqState_t** current;
+  COEX_Req_t combinedRequestState = reqState->coexReq;
+  for (current = &coexCfg.reqHead; *current != NULL; current = &((*current)->next)) {
+    if (*current == reqState) {
+      reqFound = true;
+      if (reqState->coexReq == COEX_REQ_OFF) {
+        // remove disabled request from the list, it has nothing to combine
+        *current = (*current)->next;
+        reqState->next = NULL;
+        if (*current == NULL) {
+          // break out the loop if the tail was deleted
+          break;
+        }
       }
     }
-    combinedReqState |= coexCfg.reqStates[reqType];
-    coexReqMode >>= 1;
+    combinedRequestState |= (*current)->coexReq;
   }
-  coexCfg.combinedReqState = combinedReqState;
-  coexUpdateReqIsr();
-  status = true;
+  if (!reqFound && (reqState->coexReq != COEX_REQ_OFF)) {
+    // Insert new non-OFF entry at head of list
+    reqState->next = coexCfg.reqHead;
+    coexCfg.reqHead = reqState;
+  }
+  coexCfg.combinedRequestState = combinedRequestState;
+}
+
+static bool setCoexReqCallback(COEX_ReqState_t *reqState,
+                               COEX_Req_t coexReq,
+                               COEX_ReqCb_t cb)
+{
+  if (reqState == NULL) {
+    return false;
+  }
+  CORE_DECLARE_IRQ_STATE;
+  CORE_ENTER_ATOMIC();
+
+  if (((coexReq & COEX_REQ_ON) == 0U)
+      && ((reqState->coexReq & COEX_REQ_ON) != 0U)
+      && (reqState->cb != NULL)
+      && ((reqState->coexReq & COEX_REQCB_OFF) != 0U)) {
+    (*reqState->cb)(COEX_REQCB_OFF);
+  }
+  reqState->cb = cb;
+  if (reqState->coexReq != coexReq) {
+    reqState->coexReq = coexReq;
+    updateReqList(reqState);
+    coexUpdateReqIsr();
+  }
+
   CORE_EXIT_ATOMIC();
-  return status;
+  return true;
 }
 
 static void coexRadioHoldOffPowerDown(void)
@@ -366,26 +431,59 @@ static void RHO_ISR(void)
   }
 }
 
-static bool setRadioHoldOff(COEX_GpioHandle_t gpioHandle)
+static bool enableCoexistence(void)
 {
+  bool enabled = ((coexCfg.options & COEX_OPTION_COEX_ENABLED) != 0U);
+  COEX_ReqState_t* reqPtr;
+
+  setCoexReqCallbackPtr = enabled ? &setCoexReqCallback : NULL;
+
+  for (reqPtr = coexCfg.reqHead; reqPtr != NULL; reqPtr = reqPtr->next) {
+    COEX_SetRequest(reqPtr, COEX_REQ_OFF, NULL);
+  }
+  (*coexEventCallback)(enabled
+                       ? COEX_EVENT_COEX_ENABLED
+                       : COEX_EVENT_COEX_DISABLED);
+  return true;
+}
+
+static bool enableRadioHoldOff(void)
+{
+  bool enabled = ((coexCfg.options & COEX_OPTION_RHO_ENABLED) != 0U);
+
   // Configure GPIO as input and if pulling, pull it toward deasserted state
-  configGpio(gpioHandle, &rhoHandle, &rhoCfg);
-  if (coexCfg.radioOn || gpioHandle == NULL) {
+  if (!enabled) {
+    disableGpioInt(rhoHandle);
+  }
+  if (coexCfg.radioOn || !enabled) {
     coexNotifyRadio(); //Notify Radio land of current state
   }
-  if (coexCfg.radioOn && gpioHandle != NULL) {
+  if (coexCfg.radioOn && enabled) {
     enableGpioInt(rhoHandle, NULL);
   }
   return true;
 }
 
+static bool coexHoldOffActive(void)
+{
+  return ((coexCfg.options & COEX_OPTION_COEX_ENABLED) != 0U)
+         && ((!getGpioOut(reqHandle, true)       // not REQUESTing or
+              || !isGpioInSet(gntHandle, true) ) );    // REQUEST not GRANTed
+}
+
+static bool radioHoldOffActive(void)
+{
+  return ((coexCfg.options & COEX_OPTION_RHO_ENABLED) != 0U)
+         && isGpioInSet(rhoHandle, false);
+}
+
 static void coexNotifyRadio(void)
 {
-  bool coexRho = ((!getGpioOut(reqHandle, true)       // not REQUESTing or
-                   || !isGpioInSet(gntHandle, true) ) );    // REQUEST not GRANTed
-  if (coexRadioCallbacks->holdOff != NULL) {
-    coexRadioCallbacks->holdOff(coexRho || isGpioInSet(rhoHandle, false));
+  bool coexRho = coexHoldOffActive() || radioHoldOffActive();
+  if (!coexRho) {
+    coexCfg.requestDenied = false;
   }
+  coexEventCallback(coexRho ? COEX_EVENT_HOLDOFF_ENABLED : COEX_EVENT_HOLDOFF_DISABLED);
 }
 
 bool COEX_IsEnabled(void)
@@ -399,17 +497,16 @@ bool COEX_ConfigRadioHoldOff(COEX_GpioHandle_t gpioHandle)
 {
   setCoexPowerStateCallbackPtr = &setCoexPowerStateCallback;
 
-  if (rhoHandle != gpioHandle) {
-    // Register chip specific RHO interrupt
-    setRadioHoldOff(gpioHandle);
-  }
+  // Register chip specific RHO interrupt
+  configGpio(gpioHandle, &rhoHandle, &rhoCfg);
+  enableRadioHoldOff();
 
   return true;
 }
 
 bool COEX_ConfigPriority(COEX_GpioHandle_t gpioHandle)
 {
-  if (coexCfg.options & COEX_OPTION_PRI_SHARED) {
+  if ((coexCfg.options & COEX_OPTION_PRI_SHARED) != 0U) {
     priCfg.options |= COEX_GPIO_OPTION_SHARED;
   } else {
     priCfg.options &= ~COEX_GPIO_OPTION_SHARED;
@@ -426,22 +523,28 @@ bool COEX_ConfigGrant(COEX_GpioHandle_t gpioHandle)
 
 bool COEX_ConfigRequest(COEX_GpioHandle_t gpioHandle)
 {
-  setCoexReqCallbackPtr = &setCoexReqCallback;
-
-  if (coexCfg.options & COEX_OPTION_REQ_SHARED) {
+  if ((coexCfg.options & COEX_OPTION_REQ_SHARED) != 0U) {
     reqCfg.options |= COEX_GPIO_OPTION_SHARED;
   } else {
     reqCfg.options &= ~COEX_GPIO_OPTION_SHARED;
   }
   configGpio(gpioHandle, &reqHandle, &reqCfg);
-  COEX_SetRequest(COEX_REQ_OFF, COEX_REQ_MODE_ALL);
+  enableCoexistence();
 
   return true;
 }
 
 bool COEX_SetOptions(COEX_Options_t options)
 {
+  COEX_Options_t changedOptions = (COEX_Options_t)(coexCfg.options ^ options);
+
   coexCfg.options = options;
+  if ((changedOptions & COEX_OPTION_RHO_ENABLED) != 0U) {
+    enableRadioHoldOff();
+  }
+  if ((changedOptions & COEX_OPTION_COEX_ENABLED) != 0U) {
+    enableCoexistence();
+  }
   return true;
 }
 

@@ -16,41 +16,34 @@
 #undef TOKEN_MFG
 #undef DEFINETOKENS
 
-static const uint8_t nullEui[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+static const uint8_t nullEui[] = { 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU, 0xFFU };
 
-void halInternalGetMfgTokenData(void *data,
-                                uint16_t token,
-                                uint8_t index,
-                                uint8_t len)
+static void getMfgTokenData(void *data,
+                            uint16_t token,
+                            uint8_t index,
+                            uint8_t len)
 {
   uint8_t *ram = (uint8_t*)data;
 
   //0x7F is a non-indexed token.  Remap to 0 for the address calculation
-  index = (index == 0x7F) ? 0 : index;
+  index = (index == 0x7FU) ? 0U : index;
 
-  if (token == MFG_EUI_64_LOCATION) {
-    //There are two EUI64's stored in the flash, Ember and Custom.
-    //MFG_EUI_64_LOCATION is the address used by the generic EUI64 token.
-    //It is the low level routine's responbility to pick and return EUI64 from
-    //either Ember or Custom.  Return the Custom EUI64 if it is not all FF's,
-    //otherwise return the Ember EUI64.
-    tokTypeMfgEui64 eui64;
-    halCommonGetMfgToken(&eui64, TOKEN_MFG_CUSTOM_EUI_64);
-    if (MEMCOMPARE(eui64, nullEui, 8 /*EUI64_SIZE*/) == 0) {
-      halCommonGetMfgToken(&eui64, TOKEN_MFG_EMBER_EUI_64);
-    }
-    MEMCOPY(ram, eui64, 8 /*EUI64_SIZE*/);
-  } else if (token == MFG_EMBER_EUI_64_LOCATION) {
+  if (token == MFG_EMBER_EUI_64_LOCATION) {
     uint32_t low = (DEVINFO->UNIQUEL);
     uint32_t high = (DEVINFO->UNIQUEH);
-    ram[0] = (low >> 0) & 0xFF;
-    ram[1] = (low >> 8) & 0xFF;
-    ram[2] = (low >> 16) & 0xFF;
-    ram[3] = (low >> 24) & 0xFF;
-    ram[4] = (high >> 0) & 0xFF;
-    ram[5] = (high >> 8) & 0xFF;
-    ram[6] = (high >> 16) & 0xFF;
-    ram[7] = (high >> 24) & 0xFF;
+    uint8_t i = 0U;
+    while ((i < 4U) && (len > 0U)) {
+      ram[i] = low & 0xFFU;
+      low >>= 8;
+      len--;
+      i++;
+    }
+    while ((i < 8U) && (len > 0U)) {
+      ram[i] = high & 0xFFU;
+      high >>= 8;
+      len--;
+      i++;
+    }
   } else if ((token & 0xF000) == (USERDATA_TOKENS & 0xF000)) {
     uint32_t realAddress = ((USERDATA_BASE | (token & 0x0FFF)) + (len * index));
     uint8_t *flash = (uint8_t *)realAddress;
@@ -62,7 +55,35 @@ void halInternalGetMfgTokenData(void *data,
     uint8_t *flash = (uint8_t *)realAddress;
 
     MEMCOPY(ram, flash, len);
+  } else {
+    // Sate MISRA
   }
+}
+
+void halInternalGetMfgTokenData(void *data,
+                                uint16_t token,
+                                uint8_t index,
+                                uint8_t len)
+{
+  if (len == 0U) {
+    return; // Nothing to do...
+  }
+  if (token == MFG_EUI_64_LOCATION) {
+    //There are two EUI64's stored in the flash, Ember and Custom.
+    //MFG_EUI_64_LOCATION is the address used by the generic EUI64 token.
+    //It is the low level routine's responbility to pick and return EUI64 from
+    //either Ember or Custom.  Return the Custom EUI64 if it is not all FF's,
+    //otherwise return the Ember EUI64.
+    if (len > sizeof(nullEui)) {
+      len = sizeof(nullEui);
+    }
+    getMfgTokenData(data, MFG_CUSTOM_EUI_64_LOCATION, 0x7FU, len);
+    if (MEMCOMPARE(data, nullEui, len) != 0) {
+      return;
+    }
+    token = MFG_EMBER_EUI_64_LOCATION;
+  }
+  getMfgTokenData(data, token, index, len);
 }
 
 void halInternalSetMfgTokenData(uint16_t token, void *data, uint8_t len)
@@ -71,7 +92,7 @@ void halInternalSetMfgTokenData(uint16_t token, void *data, uint8_t len)
   uint32_t realAddress = 0;
   //Initializing to a high memory address adds protection by causing a
   //hardfault if accidentally used.
-  uint8_t *flash = (uint8_t *)0xFFFFFFF0;
+  uint8_t *flash = (uint8_t *)0xFFFFFFF0U;
   uint32_t i;
   //The flash library requires the address and length to both
   //be multiples of 16bits.  Since this API is only valid for writing to

@@ -120,7 +120,7 @@
   #define DEFAULT_PTA_OPT_RX_RETRY_REQ PTA_OPT_DISABLED
 #endif //PTA_RX_RETRY_TIMEOUT_MS
 
-#define DEFAULT_PTA_OPTIONS (0                                             \
+#define DEFAULT_PTA_OPTIONS (0U                                            \
                              | DEFAULT_PTA_OPT_RX_RETRY_TIMEOUT_MS         \
                              | DEFAULT_PTA_OPT_ACK_HOLDOFF                 \
                              | DEFAULT_PTA_OPT_ABORT_TX                    \
@@ -187,7 +187,7 @@
 #define PUBLIC_PTA_OPT_MAC_FAIL_THRESHOLD PTA_OPT_MAC_FAIL_THRESHOLD
 
 // Public PTA options can be modified using public PTA APIs
-#define PUBLIC_PTA_OPTIONS (0                                            \
+#define PUBLIC_PTA_OPTIONS (0U                                           \
                             | PUBLIC_PTA_OPT_RX_RETRY_TIMEOUT_MS         \
                             | PUBLIC_PTA_OPT_ACK_HOLDOFF                 \
                             | PUBLIC_PTA_OPT_ABORT_TX                    \
@@ -229,10 +229,18 @@
 #define PTA_GNT_GPIOCFG   PTA_GPIOCFG_INPUT
 #endif //!PTA_GNT_GPIOCFG
 
-// PTA PRIORITY signal (OUT): [optional]
-#ifndef PTA_PRI_GPIOCFG
-#define PTA_PRI_GPIOCFG    PTA_GPIOCFG_OUTPUT
-#endif //!PTA_PRI_GPIOCFG
+// PTA PRIORITY signal (OUT or OUT_DO when shared with other radios): [optional]
+#define PTA_PRI_GPIOCFG_NORMAL PTA_GPIOCFG_OUTPUT
+#if (PTA_PRI_ASSERTED == 1)
+#define PTA_PRI_GPIOCFG_SHARED PTA_GPIOCFG_WIRED_OR
+#else //!(PTA_PRI_ASSERTED == 1)
+#define PTA_PRI_GPIOCFG_SHARED PTA_GPIOCFG_WIRED_AND
+#endif //(PTA_PRI_ASSERTED == 1)
+#ifdef PTA_PRI_SHARED
+#define PTA_PRI_GPIOCFG    PTA_PRI_GPIOCFG_SHARED
+#else //!PTA_PRI_SHARED
+#define PTA_PRI_GPIOCFG    PTA_PRI_GPIOCFG_NORMAL
+#endif //PTA_PRI_SHARED
 
 #if     (defined(ENABLE_PTA) && (defined(PTA_REQ_GPIO) || defined(PTA_GNT_GPIO)))
 // Initial bootup configuration is to enable PTA
@@ -256,7 +264,7 @@
 // This mask is used for both requests and callbacks to
 // represent status.
 
-  #define PTA_REQ_OFF         0          // Negate request
+  #define PTA_REQ_OFF         0u         // Negate request
   #define PTA_REQ_ON          (1u << 0)  // Assert request
   #define PTA_REQ_HIPRI       (1u << 1)  // Request is hi-pri
   #define PTA_REQ_FORCE       (1u << 2)  // Force assertion immediately
@@ -297,7 +305,7 @@ typedef void (*halPtaCb_t)(halPtaReq_t ptaStatus);
 // This mask is used for both requests and callbacks to
 // represent status.
 
-  #define PTA_OPT_DISABLED         0           // Disable option
+  #define PTA_OPT_DISABLED         0u          // Disable option
   #define PTA_OPT_RX_RETRY_TIMEOUT_MS (0xffu)// Rx retry request timeout
   #define PTA_OPT_ACK_HOLDOFF      (1u << 8)   // Enable ack radio holdoff
   #define PTA_OPT_ABORT_TX         (1u << 9)   // Abort mid TX if grant is lost
@@ -384,5 +392,5 @@ halPtaReq_t halPtaFilterPassReq(void);
 
 #endif //__PTA_H__
 
-/**@} // END micro group
+/**@} END micro group
  */

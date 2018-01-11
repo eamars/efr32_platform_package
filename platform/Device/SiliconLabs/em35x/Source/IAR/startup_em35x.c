@@ -1,10 +1,10 @@
 /**************************************************************************//**
 * @file
 * @brief CMSIS Cortex-M3 Core Device Startup File for em35x
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * @section License
-* <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+* <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
 *******************************************************************************
 *
 * Permission is granted to anyone to use this software for any purpose,

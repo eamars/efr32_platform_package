@@ -18,24 +18,27 @@ options = {
             item_description="Button %n"
         ),
         "description": "Number of buttons available on board",
-        "allowedconflicts": ["BSP_LED", "BSP_BTL_BUTTON"]
+        "allowedconflicts": ["BSP_LED", "BSP_BTL_BUTTON"],
+        "longdescription": "Number of buttons physically present in hardware [0-8]"
     },
     "BSP_BUTTON_GPIO_DOUT": {
         "type": "enum",
-        "description": "DOUT value of button pins. High/low for pullup/pulldown, high for filter on input only mode.",
+        "description": "DOUT register value of button pins",
         "values": [
             types.EnumValue("HAL_GPIO_DOUT_LOW", "Low"),
             types.EnumValue("HAL_GPIO_DOUT_HIGH", "High")
         ],
+        "longdescription": "Set to high/low to enable pullup or pulldown respectively when in input mode with pull. Set to high to enable filter in input only mode.",
     },
     "BSP_BUTTON_GPIO_MODE": {
         "type": "enum",
-        "description": "GPIO mode of button pins",
+        "description": "MODE register value of button pins",
         "values": [
             types.EnumValue("HAL_GPIO_MODE_INPUT", "Input"),
             types.EnumValue("HAL_GPIO_MODE_INPUT_PULL", "Input with pullup/down"),
             types.EnumValue("HAL_GPIO_MODE_INPUT_PULL_FILTER", "Input with pullup/down and filter")
         ],
+        "longdescription": "Set the GPIO mode for the pins used for buttons.",
     },
     "HAL_BUTTON_COUNT": {
         "type": "uint8_t",
@@ -43,11 +46,13 @@ options = {
         "min": "0",
         "max": "255",
         "advanced": True,
+        "longdescription": "Cannot exceed number of buttons configured as available above.",
     },
     "HAL_BUTTON_ENABLE": {
         "type": "array",
-        "description": "Array of button indices to enable",
+        "description": "List of button indices to enable",
         "defaultValue": "0, 1",
         "advanced": True,
+        "longdescription": "Comma separated list of the buttons that should be enabled for this application. Example: Board has 4 buttons, but application only uses button 0 and 2. Configure the list of buttons to enable as \"0, 2\".",
     },
 }

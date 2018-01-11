@@ -2,7 +2,7 @@
  * @file rail_chip_specific.h
  * @brief This file contains the type definitions for EFR32 chip specific
  *        aspects of RAIL.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #ifndef __RAIL_CHIP_SPECIFIC_H_
@@ -62,9 +62,9 @@
  */
 
 /** EFR32 specific temperature calibration bit */
-#define RAIL_CAL_TEMP_VCO         (0x00000001)
+#define RAIL_CAL_TEMP_VCO         (0x00000001U)
 /** EFR32 specific IR calibration bit */
-#define RAIL_CAL_ONETIME_IRCAL    (0x00010000)
+#define RAIL_CAL_ONETIME_IRCAL    (0x00010000U)
 
 /** Mask to run temperature dependent calibrations */
 #define RAIL_CAL_TEMP             (RAIL_CAL_TEMP_VCO)
@@ -77,9 +77,9 @@
 /** Mask to run all possible calibrations for this chip */
 #define RAIL_CAL_ALL              (RAIL_CAL_TEMP | RAIL_CAL_ONETIME)
 /** Mask to run all pending calibrations */
-#define RAIL_CAL_ALL_PENDING      (0x00000000)
+#define RAIL_CAL_ALL_PENDING      (0x00000000U)
 /** Invalid calibration value */
-#define RAIL_CAL_INVALID_VALUE    (0xFFFFFFFF)
+#define RAIL_CAL_INVALID_VALUE    (0xFFFFFFFFU)
 
 /**
  * @struct RAIL_CalValues_t
@@ -310,5 +310,45 @@ typedef struct RAIL_PtiConfig {
 } RAIL_PtiConfig_t;
 
 /** @} */ // end of group PTI_EFR32
+
+// -----------------------------------------------------------------------------
+// Antenna Control
+// -----------------------------------------------------------------------------
+/**
+ * @addtogroup Antenna_Control_EFR32 EFR32
+ * @{
+ * @brief EFR32 Antenna Control functionality
+ * @ingroup Antenna
+ *
+ * These enums and structures are used with RAIL Antenna Control API. EFR32 supports
+ * up to two antennas and with configurable pin locations.
+ */
+
+/**
+ * @struct RAIL_AntennaConfig_t
+ * @brief Configuration for Antenna switch pins.
+ */
+typedef struct RAIL_AntennaConfig {
+  /** MODEM_ROUTEPEN fields */
+  /** Antenna 0 Pin Enable */
+  bool ant0PinEn;
+  /** Antenna 1 Pin Enable */
+  bool ant1PinEn;
+  /** MODEM_ROUTELOC1 fields */
+  /** Antenna 0 location for pin/port */
+  uint8_t ant0Loc;
+  /** Antenna 0 output GPIO port */
+  GPIO_Port_TypeDef ant0Port;
+  /** Antenna 0 output GPIO pin */
+  uint8_t ant0Pin;
+  /** Antenna 1 location for pin/port */
+  uint8_t ant1Loc;
+  /** Antenna 1 output GPIO port */
+  GPIO_Port_TypeDef ant1Port;
+  /** Antenna 1 output GPIO pin */
+  uint8_t ant1Pin;
+} RAIL_AntennaConfig_t;
+
+/** @} */ // end of group Antenna_Control_EFR32
 
 #endif

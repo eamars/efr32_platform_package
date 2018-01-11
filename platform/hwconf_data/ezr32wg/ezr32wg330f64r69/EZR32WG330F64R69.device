@@ -162,7 +162,7 @@
       <peripheral componentIdRef="ezr32.ezr32wg.button" displayName="Button" name="BUTTON" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.coex" displayName="Coexistence" name="COEX" revision="A" category=" Radio" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.extflash" displayName="SPI Flash" name="EXTFLASH" revision="A" category=" HAL" hidden="false"/>
-      <peripheral componentIdRef="ezr32.ezr32wg.ezradiopro" displayName="EZRadio Pro" name="EZRADIOPRO" revision="A" category=" Radio" hidden="false"/>
+      <peripheral componentIdRef="ezr32.ezr32wg.ezradiopro" displayName="EZRadioPro" name="EZRADIOPRO" revision="A" category=" Radio" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.i2csensor" displayName="I2C Sensor" name="I2CSENSOR" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.ioexp" displayName="I2C I/O Expander" name="IOEXP" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.led" displayName="LED" name="LED" revision="A" category=" HAL" hidden="false"/>
@@ -170,7 +170,7 @@
       <peripheral componentIdRef="ezr32.ezr32wg.spidisplay" displayName="SPI Display" name="SPIDISPLAY" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.spincp" displayName="SPI NCP" name="SPINCP" revision="A" category=" NCP" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.uartncp" displayName="UART NCP" name="UARTNCP" revision="A" category=" NCP" hidden="false"/>
-      <peripheral componentIdRef="ezr32.ezr32wg.vcom" displayName="Virtual COM" name="VCOM" revision="A" category=" Serial" hidden="false"/>
+      <peripheral componentIdRef="ezr32.ezr32wg.vcom" displayName="Virtual COM Port" name="VCOM" revision="A" category=" Serial" hidden="false"/>
       <peripheral componentIdRef="ezr32.ezr32wg.vuart" displayName="Virtual UART" name="VUART" revision="A" category=" Serial" hidden="false"/>
     </peripherals>
     <script uri="../EZR32WG.py">

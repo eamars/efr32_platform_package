@@ -18,9 +18,11 @@ options = {
     "BSP_I2CSENSOR_ENABLE": {
         "type": types.Pin(),
         "description": "Sensor enable pin",
+        "longdescription": "Pin for I2C sensor enable signal (typically used on Starter Kit)",
     },
     "BSP_I2CSENSOR_PERIPHERAL": {
         "type": types.Peripheral(filter=["I2C"], inherit_options=True, define_value_prefix='HAL_I2C_PORT_'),
-        "description": "I2C peripheral"
+        "description": "I2C peripheral",
+        "longdescription": "Select I2C peripheral",
     },
 }

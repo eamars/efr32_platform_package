@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file address_filter_ci.c
  * @brief This file implements the address filtering commands in RAIL test apps.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>

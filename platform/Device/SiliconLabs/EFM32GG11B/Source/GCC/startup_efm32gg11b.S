@@ -1,7 +1,7 @@
 /* @file startup_efm32gg11b.S
  * @brief startup file for Silicon Labs EFM32GG11B devices.
  *        For use with GCC for ARM Embedded Processors
- * @version 5.3.3
+ * @version 5.3.5
  * Date:    12 June 2014
  *
  */

@@ -4,7 +4,7 @@
  * @version 0.01.0
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2016 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2016 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -13,7 +13,8 @@
  *
  *
  ******************************************************************************/
-
+#ifndef SILABS_INTERRUPTS_EM3XX_H
+#define SILABS_INTERRUPTS_EM3XX_H
 ////////////////////////////////////////////////////////////////////////////////
 
 /** \name Global Interrupt Manipulation Macros
@@ -355,3 +356,4 @@ uint8_t rtosExitCritical(void);
 ////////////////////////////////////////////////////////////////////////////////
 //@}  // end of Global Interrupt Manipulation Macros
 ////////////////////////////////////////////////////////////////////////////////
+#endif // SILABS_INTERRUPTS_EM3XX_H

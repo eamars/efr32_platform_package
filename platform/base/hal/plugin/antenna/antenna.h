@@ -181,5 +181,5 @@ EmberStatus halToggleAntenna(void);
 
 #endif //__ANTENNA_H__
 
-/**@} // END micro group
+/**@} END micro group
  */

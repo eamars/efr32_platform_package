@@ -97,10 +97,8 @@ void emPhyTick(bool isrContext);
 // Radio power modes.
 enum {
   EMBER_RADIO_POWER_MODE_RX_ON,
-  EMBER_RADIO_POWER_MODE_ED_ON = EMBER_RADIO_POWER_MODE_RX_ON,
   EMBER_RADIO_POWER_MODE_OFF
 };
-
 typedef uint8_t RadioPowerMode;
 
 void emRadioInit(RadioPowerMode initialRadioPowerMode);
@@ -321,6 +319,7 @@ void emRadioSetPanId(uint16_t panId);
 uint8_t emPhyGetPhyChannel(uint8_t macPgChan);
 
 #if     MAC_HAS_CHANNEL_PAGES
+
   #define MAX_CHANNELS_PER_PAGE     27u // channels 0-26 // Must be < 32!
   #define CHANNEL_BITS              5u  // need 5 bits for 27 channels
 // Some macros for messing with single-byte-encoded MAC Page+Channel values
@@ -336,6 +335,7 @@ uint8_t emPhyGetChannelPageInUse(void);
 uint8_t emPhyGetChannelPageForChannel(uint8_t macPgChan);
 
 #else//!MAC_HAS_CHANNEL_PAGES
+
   #undef  MAC_HAS_CHANNEL_PAGES // Prevent some lame-o using #ifdef vs. #if
   #define MAX_CHANNELS_PER_PAGE     255u // channels 0-254
   #define CHANNEL_BITS              8u   // need 8 bits for 255 channels
@@ -349,7 +349,9 @@ uint8_t emPhyGetChannelPageForChannel(uint8_t macPgChan);
   #define emPhyGetChannelMask(macPage)              (0ul)
   #define emPhyGetChannelPageInUse()                (0)
   #define emPhyGetChannelPageForChannel(macPgChan)  (0)
+
 #endif//MAC_HAS_CHANNEL_PAGES
+
 #define PHY_INVALID_FREQ_HZ 0xFFFFFFFFul
 uint32_t emPhyGetChannelFreqHz(uint8_t macPgChan);
 
@@ -358,7 +360,6 @@ EmberStatus emSetPhyRadioChannel(uint8_t radioChannel);
 uint8_t emGetPhyRadioChannel(void);
 EmberStatus emSetPhyRadioPower(int8_t power);
 int8_t emGetPhyRadioPower(void);
-
 // Set floating point radio power
 EmberStatus emSetPhyRadioPowerFl(int16_t power);
 int16_t emGetPhyRadioPowerFl(void);
@@ -383,11 +384,9 @@ void emRadioSeedRandom(void);
 #ifndef  BOOTLOADER_PHY
 void emRadioEnableAddressMatching(uint8_t enable);
 uint8_t emRadioAddressMatchingEnabled(void);
-
 void emRadioEnableAutoAck(bool enable);
 bool emRadioAutoAckEnabled(void);
 bool emRadioHoldOffIsActive(void);
-
 #endif// BOOTLOADER_PHY
 
 void emRadioEnablePacketTrace(bool enable);
@@ -420,7 +419,6 @@ bool emRadioReceiveCompleteIntPending(bool acknowledgePending);
   && (defined(EMBER_STACK_IP))                                       \
       )
 void emRadioPowerFem(bool powerUp);
-
 #else
   #define emRadioPowerFem(powerUp) /* no-op */
 #endif
@@ -462,6 +460,10 @@ void emRadioPowerFem(bool powerUp);
 #else//!PHY_THIS
   #define PHY_THIS_ID 0
 #endif//PHY_THIS
+
+#ifndef EMBER_RADIO_POWER_MODE_ED_ON
+  #define EMBER_RADIO_POWER_MODE_ED_ON EMBER_RADIO_POWER_MODE_RX_ON
+#endif
 
 // The above per-PHY include file should define the following parameters
 // (with example values shown for two representative PHY possibilities):
@@ -553,7 +555,6 @@ extern uint32_t emPhySymbolsToUs(uint32_t symbols);
 #ifdef EMBER_TEST
 bool _radioReceive(uint8_t *packet, uint32_t rxSynctime, uint8_t linkQuality);
 void _radioTransmitComplete(void);
-
 #endif
 
 #ifndef EMBER_STACK_IP

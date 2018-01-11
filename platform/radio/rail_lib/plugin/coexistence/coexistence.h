@@ -1,7 +1,7 @@
 /**************************************************************************//**
  * @file coexistence.h
  * @brief This file contains the radio coexistence interface.
- * @copyright Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2017 Silicon Laboratories, Inc. www.silabs.com
  *****************************************************************************/
 
 #ifndef __COEXISTENCE_H__
@@ -59,6 +59,31 @@ typedef struct COEX_GpioConfig{
 } COEX_GpioConfig_t;
 
 /**
+ * @enum COEX_Events_t
+ * @brief COEX events bit mask.
+ */
+typedef enum COEX_Events {
+  /** Radio coexistence has been disabled */
+  COEX_EVENT_COEX_DISABLED = (1u << 0),
+  /** Request coexistence has been enabled */
+  COEX_EVENT_COEX_ENABLED = (1u << 1),
+  /** Request GPIO has been released */
+  COEX_EVENT_REQUEST_RELEASED = (1u << 2),
+  /** Request GPIO has been denied */
+  COEX_EVENT_REQUEST_DENIED = (1u << 3),
+  /** Grant GPIO has been released */
+  COEX_EVENT_GRANT_RELEASED = (1u << 4),
+  /** Priority GPIO is asserted */
+  COEX_EVENT_PRIORITY_ASSERTED = (1u << 5),
+  /** The radio is allowed to transmit */
+  COEX_EVENT_HOLDOFF_DISABLED = (1u << 6),
+  /** The radio is not allowed to transmit */
+  COEX_EVENT_HOLDOFF_ENABLED = (1u << 7),
+  /** The last transmit was aborted due to GRANT loss */
+  COEX_EVENT_TX_ABORTED = (1u << 8)
+} COEX_Events_t;
+
+/**
  * @enum COEX_Options_t
  * @brief COEX configuration options.
  */
@@ -74,7 +99,11 @@ typedef enum COEX_Options {
   /** Abort any TX in progress if GNT GPIO is released */
   COEX_OPTION_TX_ABORT = (1u << 7),
   /** Priority GPIO is shared */
-  COEX_OPTION_PRI_SHARED = (1u << 8)
+  COEX_OPTION_PRI_SHARED = (1u << 8),
+  /** Radio Holdoff is enabled */
+  COEX_OPTION_RHO_ENABLED = (1u << 9),
+  /** Coexistence is enabled */
+  COEX_OPTION_COEX_ENABLED = (1u << 10)
 } COEX_Options_t;
 
 /**
@@ -89,60 +118,61 @@ typedef enum COEX_Req {
   /** Request is hi-pri. */
   COEX_REQ_HIPRI = (1u << 1),
   /** Force assertion immediately. */
-  COEX_REQ_FORCE = (1u << 2)
+  COEX_REQ_FORCE = (1u << 2),
+  /** Callback when REQUEST asserted */
+  COEX_REQCB_REQUESTED = (1u << 3),
+  /** Callback when GRANT asserted */
+  COEX_REQCB_GRANTED = (1u << 4),
+  /** Callback when GRANT negated */
+  COEX_REQCB_NEGATED = (1u << 5),
+  /** Callback when REQUEST removed */
+  COEX_REQCB_OFF = (1u << 6)
 } COEX_Req_t;
 
 /**
- * @enum COEX_ReqMode_t
- * @brief COEX request mode radio enumeration.
+ * @typedef COEX_ReqCb_t
+ * @brief User provided callbacks for radio coexistence (COEX)
+ *        REQUEST and/or GRANT events.
  */
-typedef enum COEX_ReqMode {
-  /** Software triggered COEX request. */
-  COEX_REQ_MODE_SW = (1u << 0),
-  /** Transmit triggered COEX request. */
-  COEX_REQ_MODE_TX = (1u << 1),
-  /** Receive triggered COEX request. */
-  COEX_REQ_MODE_RX = (1u << 2),
-  /** ALL COEX request. */
-  COEX_REQ_MODE_ALL = COEX_REQ_MODE_RX
-                      | COEX_REQ_MODE_TX
-                      | COEX_REQ_MODE_SW
-} COEX_ReqMode_t;
+typedef void (*COEX_ReqCb_t)(COEX_Req_t coexStatus);
 
 /**
- * @struct COEX_RadioCallbacks_t
- * @brief User provided radio callbacks for radio coexistence (COEX)
+ * @struct COEX_ReqState_t
+ * @brief User provided callbacks for radio coexistence (COEX)
+ *
+ * This structure must be allocated in application global read-write memory
+ * that persists for the duration of the COEX request. It cannot be allocated
+ * in read-only memory or on the call stack.
  */
-typedef struct COEX_RadioCallbacks {
-  /**
-   * Radio hold off callback function.
-   *
-   * @param[in] enabled
-   *  true - the radio is not allowed to transmit
-   *  false - the radio is allowed to transmit
-   *
-   * Call this function in order to enable/disable radio transmits.
-   */
-  void (*holdOff)(bool enabled);
-  /**
-   * Abort TX in progress.
-   *
-   * Call this function in order to abort a transmission in progress.
-   */
-  void (*abortTx)(void);
-} COEX_RadioCallbacks_t;
+typedef struct COEX_ReqState {
+  struct COEX_ReqState *next;
+  volatile COEX_Req_t coexReq;
+  COEX_ReqCb_t cb;
+} COEX_ReqState_t;
+
+/**
+ * User provided random wait callback.
+ *
+ * @param delayMaskUs Value to mask random delay with.
+ *
+ * Wait a random period of time(0-0xFFFF microseconds)
+ */
+typedef void (*COEX_RandomDelayCallback_t)(uint16_t randomDelayMaskUs);
+
+/**
+ * User provided radio callback for radio coexistence (COEX).
+ *
+ * @param[in] events A bit mask of COEX events.
+ *
+ * See the \ref COEX_Events_t documentation for the list of COEX events.
+ */
+typedef void (*COEX_RadioCallback_t)(COEX_Events_t events);
 
 /**
  * @struct COEX_HalCallbacks_t
  * @brief User provided HAL callbacks for radio coexistence (COEX)
  */
 typedef struct COEX_HalCallbacks {
-  /**
-   * Wait a random period of time(0-0xFFFF microseconds).
-   *
-   * @param delayMaskUs Value to mask random delay with.
-   */
-  void (*randomDelay)(uint16_t delayMaskUs);
   /**
    * Set/clear the logical output of a GPIO.
    *
@@ -209,13 +239,17 @@ typedef struct COEX_HalCallbacks {
 /**
  * Request permission to transmit from COEX master.
  *
+ * @param[in] reqState Pointer to /ref COEX_ReqState_t structure.
+ *                     This structure should be zero initialized before it's first use.
  * @param[in] coexReq This parameter is either ON, OFF, PRIORITY or FORCED. PRIORITY AND FORCED can be
- *                   combined with ON and OFF.
- * @param[in] coexReqMode This mode can be SW, TX or RX.
+ *                    combined with ON and OFF.
+ * @param[in] cb Callback fired when REQUEST is asserted.
  *
  * @return This function returns the true if request was set, false otherwise.
  */
-bool COEX_SetRequest(COEX_Req_t coexReq, COEX_ReqMode_t coexReqMode);
+bool COEX_SetRequest(COEX_ReqState_t *reqState,
+                     COEX_Req_t coexReq,
+                     COEX_ReqCb_t cb);
 
 /**
  * Configure the COEX request GPIO.
@@ -326,7 +360,25 @@ void COEX_SetHalCallbacks(const COEX_HalCallbacks_t * callbacks);
  * @note This function does not create a local copy of callbacks.
  *   Callbacks should be allocated in persistent memory and not the call stack.
  */
-void COEX_SetRadioCallbacks(const COEX_RadioCallbacks_t * callbacks);
+void COEX_SetRadioCallback(COEX_RadioCallback_t callback);
+
+/**
+ * Set COEX random delay callback function pointers.
+ *
+ * @param[in] callbacks
+ *   Pointer to struct of radio callback function pointers.
+ *
+ * @note This function does not create a local copy of callbacks.
+ *   Callbacks should be allocated in persistent memory and not the call stack.
+ */
+void COEX_SetRandomDelayCallback(COEX_RandomDelayCallback_t callback);
+
+/**
+ * Notify COEX of radio power state.
+ *
+ * @param[in] powerUp radio is powered up if true; radio is powered down if false.
+ */
+void setCoexPowerState(bool powerUp);
 /**
  * @}
  * end of COEX_API

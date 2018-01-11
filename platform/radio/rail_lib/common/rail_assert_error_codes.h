@@ -1,11 +1,12 @@
 /***************************************************************************//**
  * @file rail_assert_error_codes.h
  * @brief Definition of error codes that occur in rail for use in
-      RAILCb_AssertFailed. This file is purely informational and optional -
-      it need not be included even if rail_assert libraries are included.
-
- * @copyright Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com
+ *   RAILCb_AssertFailed. This file is purely informational and optional -
+ *   it need not be included even if rail_assert libraries are included.
+ * @copyright Copyright 2017 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
+#ifndef __RAIL_ASSERT_ERROR_CODES_H__
+#define __RAIL_ASSERT_ERROR_CODES_H__
 
 #include "rail_types.h"
 
@@ -13,10 +14,6 @@
  * @addtogroup Assertions
  * @{
  */
-
-#ifndef _RAIL_ASSERT_ERROR_CODES_
-
-#define _RAIL_ASSERT_ERROR_CODES_
 
 /**
  * Enumeration of all possible error codes from RAIL_ASSERT
@@ -66,33 +63,34 @@ RAIL_ENUM(RAIL_AssertErrorCodes_t)
   RAIL_ASSERT_MULTIPROTOCOL_NO_EVENT, //40
   RAIL_ASSERT_FAILED_INVALID_INTERRUPT_ENABLED,
   RAIL_ASSERT_CONVERSION_CURVES_NOT_INITIALIZED,
+  RAIL_ASSERT_DIVISION_BY_ZERO,
+  RAIL_ASSERT_CANT_USE_HARDWARE,
 };
 
-/**
- * Use this define to create an array of error messages that map to the codes
- * in \ref RAIL_AssertErrorCodes_t. You can use these to print slightly more
- * detailed error strings related to a particular assert error code if desired.
- * For example, you could implement your assert failed callback as follows to
- * make use of this.
- *
- * @code{.c}
- * void RAILCb_AssertFailed(RAIL_Handle_t railHandle, uint32_t errorCode)
- * {
- *   static const char* railErrorMessages[] = RAIL_ASSERT_ERROR_MESSAGES;
- *   const char *errorMessage = "Unknown";
- *
- *   // If this error code is within the range of known error messages then use
- *   // the appropriate error message.
- *   if (errorCode < (sizeof(railErrorMessages) / sizeof(char*))) {
- *     errorMessage = railErrorMessages[errorCode];
- *   }
- *   printf(errorMessage);
- *
- *   // Reset the chip since an assert is a fatal error
- *   NVIC_SystemReset();
- * }
- * @endcode
- */
+/// Use this define to create an array of error messages that map to the codes
+/// in \ref RAIL_AssertErrorCodes_t. You can use these to print slightly more
+/// detailed error strings related to a particular assert error code if desired.
+/// For example, you could implement your assert failed callback as follows to
+/// make use of this.
+///
+/// @code{.c}
+/// void RAILCb_AssertFailed(RAIL_Handle_t railHandle, uint32_t errorCode)
+/// {
+///   static const char* railErrorMessages[] = RAIL_ASSERT_ERROR_MESSAGES;
+///   const char *errorMessage = "Unknown";
+///
+///   // If this error code is within the range of known error messages then use
+///   // the appropriate error message.
+///   if (errorCode < (sizeof(railErrorMessages) / sizeof(char*))) {
+///     errorMessage = railErrorMessages[errorCode];
+///   }
+///   printf(errorMessage);
+///
+///   // Reset the chip since an assert is a fatal error
+///   NVIC_SystemReset();
+/// }
+/// @endcode
+///
 #define RAIL_ASSERT_ERROR_MESSAGES {                                    \
     "Appended info missing from Rx packet",                             \
     "Payload bytes missing from Rx packet",                             \
@@ -137,9 +135,12 @@ RAIL_ENUM(RAIL_AssertErrorCodes_t)
     "Multiprotocol task started with no event to run",                  \
     "Invalid interrupt enabled",                                        \
     "Power conversion functions called before curves were initialized", \
+    "Division by zero",                                                 \
+    "Function cannot be called without access to the hardware",         \
 }
 
-#endif
 /**
  * @}
  */
+
+#endif  // __RAIL_ASSERT_ERROR_CODES_H__

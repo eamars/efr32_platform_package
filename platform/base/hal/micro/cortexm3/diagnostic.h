@@ -37,7 +37,7 @@ typedef struct {
 
 typedef struct {
   PGM_P file;
-  int line;
+  uint32_t line;
 } HalAssertInfoType;
 
 // note that assertInfo and dmaProt are written just before a forced reboot
@@ -436,7 +436,7 @@ typedef union {
   uint32_t word;
 } HalCrashAfsrType;
 
-#define NUM_RETURNS     6
+#define NUM_RETURNS     6U
 
 // Define the crash data structure
 typedef struct {
@@ -502,7 +502,7 @@ void halInternalSaveAssertInfo(void);
  * otherwise.
  */
 #define halResetWasCrash() \
-  (((1 << halGetResetInfo()) & RESET_CRASH_REASON_MASK) != 0)
+  (((1 << halGetResetInfo()) & RESET_CRASH_REASON_MASK) != 0U)
 
 /** @brief Returns the number of bytes used in the main stack.
  *

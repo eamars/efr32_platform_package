@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file sleep.c
  * @brief Energy Modes management driver.
- * @version 5.3.3
+ * @version 5.3.5
  * @details
  * This is a energy modes management module consisting of sleep.c and sleep.h
  * source files. The main purpose of the module is to ease energy
@@ -20,7 +20,7 @@
  *
  *******************************************************************************
  * # License
- * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * <b>Copyright 2016 Silicon Laboratories, Inc. www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -235,7 +235,7 @@ SLEEP_EnergyMode_t SLEEP_Sleep(void)
     if (NULL != sleepContext.restoreCallback) {
       flags = sleepContext.restoreCallback(modeEntered);
     }
-  } while (flags & SLEEP_FLAG_NO_CLOCK_RESTORE);
+  } while ((flags & SLEEP_FLAG_NO_CLOCK_RESTORE) > 0u);
 
   if (modeEntered == sleepEM2 || modeEntered == sleepEM3) {
     EMU_Restore();

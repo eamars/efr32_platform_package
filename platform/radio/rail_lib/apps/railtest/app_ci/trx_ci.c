@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file trx_ci.c
  * @brief This file implements the tx/rx commands for RAIL test applications.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <string.h>
 
@@ -30,16 +30,31 @@ void txWithOptions(int argc, char **argv)
   txOptionsPtr = &txOptions;
 }
 
+static char* configuredTxAntenna(RAIL_TxOptions_t txOptions)
+{
+  switch (txOptions & (RAIL_TX_OPTION_ANTENNA0 | RAIL_TX_OPTION_ANTENNA1)) {
+    case (RAIL_TX_OPTION_ANTENNA0 | RAIL_TX_OPTION_ANTENNA1):
+      return "Any";
+    case (RAIL_TX_OPTION_ANTENNA0):
+      return "Antenna0";
+    case (RAIL_TX_OPTION_ANTENNA1):
+      return "Antenna1";
+    default:
+      return "Any";
+  }
+}
+
 void configTxOptions(int argc, char **argv)
 {
   txOptions = ciGetUnsigned(argv[1]);
 
   txOptionsPtr = &txOptions;
 
-  responsePrint(argv[0], "waitForAck:%s,removeCrc:%s,syncWordId:%d",
+  responsePrint(argv[0], "waitForAck:%s,removeCrc:%s,syncWordId:%d,txAntenna:%s",
                 ((txOptions & RAIL_TX_OPTION_WAIT_FOR_ACK) ? "True" : "False"),
                 ((txOptions & RAIL_TX_OPTION_REMOVE_CRC) ? "True" : "False"),
-                (txOptions & RAIL_TX_OPTION_SYNC_WORD_ID) >> RAIL_TX_OPTION_SYNC_WORD_ID_SHIFT);
+                ((txOptions & RAIL_TX_OPTION_SYNC_WORD_ID) >> RAIL_TX_OPTION_SYNC_WORD_ID_SHIFT),
+                configuredTxAntenna(txOptions));
 }
 
 void txAtTime(int argc, char **argv)
@@ -188,6 +203,20 @@ void rxAt(int argc, char **argv)
   }
 }
 
+static char* configuredRxAntenna(RAIL_RxOptions_t rxOptions)
+{
+  switch (rxOptions & (RAIL_RX_OPTION_ANTENNA_AUTO)) {
+    case (RAIL_RX_OPTION_ANTENNA_AUTO):
+      return "Auto";
+    case (RAIL_RX_OPTION_ANTENNA0):
+      return "Antenna0";
+    case (RAIL_RX_OPTION_ANTENNA1):
+      return "Antenna1";
+    default:
+      return "Any";
+  }
+}
+
 void setRxOptions(int argc, char **argv)
 {
   RAIL_RxOptions_t rxOptions = ciGetUnsigned(argv[1]);
@@ -198,12 +227,13 @@ void setRxOptions(int argc, char **argv)
   if (status == RAIL_STATUS_NO_ERROR) {
     responsePrint(argv[0],
                   "storeCrc:%s,ignoreCrcErrors:%s,enableDualSync:%s,"
-                  "trackAborted:%s,removeAppendedInfo:%s",
+                  "trackAborted:%s,removeAppendedInfo:%s,Antenna:%s",
                   (rxOptions & RAIL_RX_OPTION_STORE_CRC) ? "True" : "False",
                   (rxOptions & RAIL_RX_OPTION_IGNORE_CRC_ERRORS) ? "True" : "False",
                   (rxOptions & RAIL_RX_OPTION_ENABLE_DUALSYNC) ? "True" : "False",
                   (rxOptions & RAIL_RX_OPTION_TRACK_ABORTED_FRAMES) ? "True" : "False",
-                  (rxOptions & RAIL_RX_OPTION_REMOVE_APPENDED_INFO) ? "True" : "False");
+                  (rxOptions & RAIL_RX_OPTION_REMOVE_APPENDED_INFO) ? "True" : "False",
+                  configuredRxAntenna(rxOptions));
   } else {
     responsePrintError(argv[0], 31, "RxOptions:Failed");
   }

@@ -1,10 +1,10 @@
 /**************************************************************************//**
  * @file efm32jg12b_lesense_ch.h
  * @brief EFM32JG12B_LESENSE_CH register and bit field definitions
- * @version 5.3.3
+ * @version 5.3.5
  ******************************************************************************
  * # License
- * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * <b>Copyright 2017 Silicon Laboratories, Inc. www.silabs.com</b>
  ******************************************************************************
  *
  * Permission is granted to anyone to use this software for any purpose,

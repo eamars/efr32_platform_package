@@ -18,6 +18,7 @@ options = {
                                  define_name_postfix="_APP",
                                  mode="uart"),
         "description": "Port for application serial communication",
+        "longdescription": "Select the port on which application prints are communicated (such as printf())",
     },
     "BSP_SERIAL_ASSERT_PORT": {
         "type": types.Peripheral(filter=["USART", "UART", "LEUART", "VUART"],
@@ -28,12 +29,14 @@ options = {
         "description": "Port for assert serial communication",
         "dependency": dep.Dependency(platform=dep.Platform.SERIES1, mcu_type=dep.McuType.RADIO),
         "advanced": True,
+        "longdescription": "Select the port on which asserts are communicated",
     },
     "HAL_SERIAL_RXWAKE_ENABLE": {
         "type": "boolean",
         "description": "Enable wake from activity on RX GPIO of application port",
         "dependency": dep.Dependency(platform=dep.Platform.SERIES1, mcu_type=dep.McuType.RADIO),
         "advanced": True,
+        "longdescription": "Enable wake up on Serial Activity",
     },
     "HAL_SERIAL_LEUART0_ENABLE": {
         "type": "boolean",

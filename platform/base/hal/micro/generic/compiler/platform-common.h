@@ -16,13 +16,14 @@
  *@{
  */
 
+#ifndef __PLATFORMCOMMON_H__
+#define __PLATFORMCOMMON_H__
+
 #ifndef PLATCOMMONOKTOINCLUDE
 //  This header should only be included by a PLATFORM_HEADER
   #error  platform-common.h should not be included directly
 #endif
 
-#ifndef __PLATFORMCOMMON_H__
-#define __PLATFORMCOMMON_H__
 ////////////////////////////////////////////////////////////////////////////////
 // Many of the common definitions must be explicitly enabled by the
 //  particular PLATFORM_HEADER being used
@@ -401,8 +402,8 @@ void halCommonMemPGMCopy(void* dest, const void PGM_NO_CONST *source, uint16_t b
  * @brief Returns true if t1 is greater than t2.  Can only account for 1 wrap
  * around of the variable before it is wrong.
  */
-#define MAX_INT32U_VALUE      (0xFFFFFFFFL)
-#define HALF_MAX_INT32U_VALUE (0x80000000L)
+#define MAX_INT32U_VALUE      (0xFFFFFFFFUL)
+#define HALF_MAX_INT32U_VALUE (0x80000000UL)
 #define timeGTorEqualInt32u(t1, t2) \
   (elapsedTimeInt32u(t2, t1) <= (HALF_MAX_INT32U_VALUE))
 

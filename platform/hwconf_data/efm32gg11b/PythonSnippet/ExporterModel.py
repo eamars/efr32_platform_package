@@ -7,7 +7,7 @@ available_module_names_list = []
 
 
 class Property(object):
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
         '''
         :param name: Name of the property (string)
         :param type: PropertyType describing the type of property
@@ -23,7 +23,8 @@ class Property(object):
         self.subcategory=''
         self.namespace = namespace
         self.id = '.'.join((str(namespace).upper(), self.name))
-        self.description = description
+        self.label = description
+        self.description = long_description
         self.defaultvalue = ''
         self.transient = False
         self.parent = None
@@ -71,8 +72,8 @@ class StringProperty(Property):
     '''
     Property which can take on a string value
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.id = '.'.join((str(namespace).upper(), self.name, 'STRING'))
 
     def set_namespace(self, namespace):
@@ -83,8 +84,8 @@ class ArrayProperty(Property):
     '''
     Property which can take on an array value
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.id = '.'.join((str(namespace).upper(), self.name, 'ARRAY'))
 
     def set_namespace(self, namespace):
@@ -95,8 +96,8 @@ class IntegerProperty(Property):
     '''
     Property which can take on integer values
     '''
-    def __init__(self, name, description, min, max, default, namespace='', visible=False, readonly=False, define_name=None):
-        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, min, max, default, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.min = int(min)
         self.max = int(max)
         self.defaultvalue = int(default)
@@ -125,8 +126,8 @@ class EnumProperty(Property):
     '''
     Property allowing a selection from a list of options
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.values = {}
         self.id = '.'.join((str(namespace).upper(), self.name, 'ENUM'))
 
@@ -145,8 +146,8 @@ class EnumProperty(Property):
 
 
 class ModeProperty(EnumProperty):
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        Property.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.values = {}
         self.id = '.'.join((str(namespace).upper(), self.name, 'ENUM'))
 
@@ -155,8 +156,8 @@ class BoolProperty(EnumProperty):
     '''
     Property allowing you to select a binary setting
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.id = '.'.join((str(namespace).upper(), self.name, 'BOOL'))
 
         self.add_enum('False', define_value="0")
@@ -176,8 +177,8 @@ class ModuleProperty(EnumProperty):
     '''
     Property allowing you to select a peripheral available on the current chip
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None):
-        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.id = '.'.join((str(namespace).upper(), self.name, 'MOD'))
         self.allowedModules = []
         self.inherit_options = False
@@ -215,8 +216,8 @@ class PinProperty(EnumProperty):
     '''
     Property allowing you to select any GPIO pin available
     '''
-    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, disabled_label=None):
-        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, namespace='', visible=False, readonly=False, define_name=None, disabled_label=None, long_description=None):
+        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.referenced_module = None
         self.referenced_route = None
         self.em4 = False
@@ -255,8 +256,8 @@ class PRSChannelProperty(EnumProperty):
     """
     Property allowing you to select PRS channel available from the PRS module
     """
-    def __init__(self, name, description, channel_count, custom_name="", namespace='', visible=False, readonly=False, define_name=None):
-        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name)
+    def __init__(self, name, description, channel_count, custom_name="", namespace='', visible=False, readonly=False, define_name=None, long_description=None):
+        EnumProperty.__init__(self, name, description, namespace=namespace, visible=visible, readonly=readonly, define_name=define_name, long_description=long_description)
         self.add_enum("Disabled")
         self.channel_count = channel_count
         self.custom_name = custom_name
@@ -524,7 +525,7 @@ class Module(object):
             prop_obj = PRSChannelProperty(opts['type'].define, opts['description'], prs_chan_count,
                                           custom_name=opts['type'].custom_name, visible=True)
             extra_properties.append(StringProperty("prs_disabled_chn_{}_pin".format(opts['type'].custom_name if opts['type'].custom_name else ""), "PRS channel output pin",
-                                                   visible=True, readonly=True))
+                                                   visible=True, readonly=True, long_description="No PRS channel selected"))
             if dep.Dependency(platform=dep.Platform.SERIES0).applies_to_family(family):
                 # Make PRS dropdown readonly on Series 0, since changing it will affect unrelated modules that
                 # also use PRS. Users will have to use PORTIO view to select PRS location.
@@ -570,6 +571,8 @@ class Module(object):
                 prop_obj.set_readonly(opts['readonly'])
             if opts.get('defaultValue') is not None:
                 prop_obj.defaultvalue = opts['defaultValue']
+            if opts.get('longdescription') is not None:
+                prop_obj.description = opts['longdescription']
             elif opts.get("default") is not None:
                 prop_obj.defaultvalue = opts['default']
             if opts.get('subcategory') is not None:

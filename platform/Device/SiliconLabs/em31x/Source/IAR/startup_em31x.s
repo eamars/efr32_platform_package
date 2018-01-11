@@ -1,7 +1,7 @@
 ;/**************************************************************************//**
 ; * @file     startup_em31x.s
 ; * @brief    CMSIS Cortex-M3 Core Device Startup File for em31x
-; * @version 5.3.3
+; * @version 5.3.5
 ; * @date     30. January 2012
 ; *
 ; * @note

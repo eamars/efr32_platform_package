@@ -45,11 +45,11 @@ typedef uint8_t EmberStatus;
  * desired mode for system timekeeping.  Because preprocessor logic
  * is used to check validity, these have to be #defines and not an enum.
  */
-#define OSC32K_DISABLE 0 // Use 10 kHz int RC (same as not defining ENABLE_OSC32K)
-#define OSC32K_CRYSTAL 1 // 32.768 kHz Crystal oscillator on PC6 and PC7
-#define OSC32K_SINE_1V 2 // 32.768 kHz Sine wave 0-1V analog on PC7
-#define OSC32K_DIGITAL 3 // 32.768 kHz Digital clock (0-Vdd square wave) on PC7
-#define OSC32K_CHOICES 4 // Must be last
+#define OSC32K_DISABLE 0U // Use 10 kHz int RC (same as not defining ENABLE_OSC32K)
+#define OSC32K_CRYSTAL 1U // 32.768 kHz Crystal oscillator on PC6 and PC7
+#define OSC32K_SINE_1V 2U // 32.768 kHz Sine wave 0-1V analog on PC7
+#define OSC32K_DIGITAL 3U // 32.768 kHz Digital clock (0-Vdd square wave) on PC7
+#define OSC32K_CHOICES 4U // Must be last
 
 /**
  * @brief Some registers and variables require identifying GPIO by
@@ -57,12 +57,12 @@ typedef uint8_t EmberStatus;
  * Port A-F pins into a single number.
  */
 //@{
-#define PORTA_PIN(y) ((0 << 3) | (y))
-#define PORTB_PIN(y) ((1 << 3) | (y))
-#define PORTC_PIN(y) ((2 << 3) | (y))
-#define PORTD_PIN(y) ((3 << 3) | (y))
-#define PORTE_PIN(y) ((4 << 3) | (y))
-#define PORTF_PIN(y) ((5 << 3) | (y))
+#define PORTA_PIN(y) ((0U << 3U) | (y))
+#define PORTB_PIN(y) ((1U << 3U) | (y))
+#define PORTC_PIN(y) ((2U << 3U) | (y))
+#define PORTD_PIN(y) ((3U << 3U) | (y))
+#define PORTE_PIN(y) ((4U << 3U) | (y))
+#define PORTF_PIN(y) ((5U << 3U) | (y))
 //@}
 
 /**
@@ -479,7 +479,7 @@ void halCommonDelayMilliseconds(uint16_t ms);
  *
  * @sa ::SleepModes
  */
-void halSleepWithOptions(SleepModes sleepMode, WakeMask gpioWakeBitMask);
+void halSleepWithOptions(SleepModes sleepMode, WakeMask wakeMask);
 
 /**
  * @brief Uses the system timer to enter ::SLEEPMODE_WAKETIMER for
@@ -618,5 +618,5 @@ extern uint8_t const halInternalEventScxIrqn[2];
 
 #endif //__EM3XX_MICRO_COMMON_H__
 
-/**@} // END micro group
+/**@} END micro group
  */

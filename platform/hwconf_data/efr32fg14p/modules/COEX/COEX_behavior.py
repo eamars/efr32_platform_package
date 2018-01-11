@@ -22,6 +22,7 @@ class COEX(ExporterModel.Module):
         self.get_property("HAL_COEX_RETRYRX_ENABLE").set_readonly(True)
         self.get_property("HAL_COEX_RETRYRX_TIMEOUT").set_readonly(True)
         self.get_property("HAL_COEX_RETRYRX_HIPRI").set_readonly(True)
+        self.get_property("HAL_COEX_PRI_SHARED").set_readonly(True)
         self.get_property("HAL_COEX_TX_HIPRI").set_readonly(True)
         self.get_property("HAL_COEX_RX_HIPRI").set_readonly(True)
         self.get_property("HAL_COEX_TX_ABORT").set_readonly(True)
@@ -37,7 +38,7 @@ class COEX(ExporterModel.Module):
 
     @staticmethod
     def setREQ_readonly(studio_mod, readonly, state):
-        # assert level, shared, req_window, and retry enable are all directly dependent on REQ
+        # assert level, req_shared, req_window, and retry enable are all directly dependent on REQ
         RuntimeModel.set_property_readonly("BSP_COEX_REQ_ASSERT_LEVEL", readonly, module=studio_mod, state=state)
         RuntimeModel.set_property_readonly("HAL_COEX_REQ_SHARED", readonly, module=studio_mod, state=state)
         RuntimeModel.set_property_readonly("HAL_COEX_REQ_WINDOW", readonly, module=studio_mod, state=state)
@@ -65,8 +66,9 @@ class COEX(ExporterModel.Module):
 
     @staticmethod
     def setPRI_readonly(studio_mod, readonly, state):
-        # assert level, tx_hipri, rx_hipri are all directly dependent on PRI
+        # assert level, pri_shared, tx_hipri, rx_hipri are all directly dependent on PRI
         RuntimeModel.set_property_readonly("BSP_COEX_PRI_ASSERT_LEVEL", readonly, module=studio_mod, state=state)
+        RuntimeModel.set_property_readonly("HAL_COEX_PRI_SHARED", readonly, module=studio_mod, state=state)
         RuntimeModel.set_property_readonly("HAL_COEX_TX_HIPRI", readonly, module=studio_mod, state=state)
         RuntimeModel.set_property_readonly("HAL_COEX_RX_HIPRI", readonly, module=studio_mod, state=state)
 

@@ -62,10 +62,10 @@
  * #define CREATOR_name 16bit_value
  * #ifdef DEFINETYPES
  *    typedef data_type type
- * #endif //DEFINETYPES
+ * #endif
  * #ifdef DEFINETOKENS
  *    DEFINE_*_TOKEN(name, type, ... ,defaults)
- * #endif //DEFINETOKENS
+ * #endif
  * @endcode
  *
  * The defined CREATOR is used as a distinct identifier tag for the token.
@@ -161,7 +161,7 @@
  *     uint8_t reportInterval;
  *     uint16_t calibrationValue;
  *   } tokTypeSensorParameters;
- * #endif //DEFINETYPES
+ * #endif
  * #ifdef DEFINETOKENS
  *   DEFINE_BASIC_TOKEN(SENSOR_NAME,
  *                      tokTypeSensorName,
@@ -169,7 +169,7 @@
  *   DEFINE_BASIC_TOKEN(SENSOR_PARAMETERS,
  *                      tokTypeSensorParameters,
  *                      {{0x01,0x02,0x03,0x04,0x05},5,0x0000})
- * #endif //DEFINETOKENS
+ * #endif
  * @endcode
  *
  * Here is an example of how to use the two application tokens:
@@ -365,5 +365,5 @@ uint8_t getTokenArraySize(uint16_t creator);
 
 #endif // __TOKEN_H__
 
-/**@} // END token group
+/**@} END token group
  */

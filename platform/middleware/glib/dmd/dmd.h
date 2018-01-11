@@ -1,7 +1,7 @@
 /*************************************************************************//**
  * @file dmd.h
  * @brief Dot Matrix Display interface
- * @version 5.3.3
+ * @version 5.3.5
  ******************************************************************************
  * # License
  * <b>Copyright 2015 Silicon Labs, http://www.silabs.com</b>

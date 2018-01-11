@@ -1,4 +1,10 @@
 ================ Revision history ============================================
+5.3.5:
+ - No changes.
+
+5.3.4:
+ - Changes to move code towards MISRAC 2012 compliance.
+
 5.3.3:
  - New part header/system files for all Gecko families.
  - Added support for new members of EFR32FG14, EFR32MG13 and EFR32BG13 families.

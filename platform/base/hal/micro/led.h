@@ -105,7 +105,7 @@ void halClearLed(HalBoardLed led);
  */
 void halStackIndicateActivity(bool turnOn);
 
-/** @} // END addtogroup
+/** @} END addtogroup
  */
 
 #endif // __LED_H__

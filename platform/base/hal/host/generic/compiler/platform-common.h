@@ -378,8 +378,8 @@ void halCommonMemPGMCopy(void* dest, void PGM *source, uint16_t bytes);
  * @brief Returns true if t1 is greater than t2.  Can only account for 1 wrap
  * around of the variable before it is wrong.
  */
-#define MAX_INT32U_VALUE      (0xFFFFFFFFL)
-#define HALF_MAX_INT32U_VALUE (0x80000000L)
+#define MAX_INT32U_VALUE      (0xFFFFFFFFUL)
+#define HALF_MAX_INT32U_VALUE (0x80000000UL)
 #define timeGTorEqualInt32u(t1, t2) \
   (elapsedTimeInt32u(t2, t1) <= (HALF_MAX_INT32U_VALUE))
 

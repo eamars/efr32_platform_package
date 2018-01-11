@@ -73,6 +73,7 @@ class Framework(Enum):
     THREAD = "thread"
     CONNECT = "connect"
     RAIL = "rail"
+    FLEX = "flex"
     BLE = "BLE"
     BOOTLOADER = "BOOTLOADER"
     NONE = "NONE"

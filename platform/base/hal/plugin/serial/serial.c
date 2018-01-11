@@ -3,7 +3,7 @@
  * @brief Serial Layer, legacy support
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -765,8 +765,6 @@ EmberStatus emberSerialReadByte(uint8_t port, uint8_t *dataByte)
   halInternalUartFlowControl(port);
 
   if ((q->used > 0) && (emSerialRxQueueWraps[port] > 0)) {
-    //cstat !ATH-div-0-pos
-    //cstat !MISRAC2012-Rule-1.3_f
     ATOMIC_LITE(
       *dataByte = FIFO_DEQUEUE(q, emSerialRxQueueWraps[port]);
       )
@@ -807,7 +805,7 @@ EmberStatus emberSerialReadData(uint8_t port,
 
       default:
         // only store number of bytes read if the caller provided a non-NULL pointer
-        if (bytesRead) {
+        if (bytesRead != 0U) {
           *bytesRead = bytesReadInternal;
         }
         return status;
@@ -815,7 +813,7 @@ EmberStatus emberSerialReadData(uint8_t port,
   }
 
   // only store number of bytes read if the caller provided a non-NULL pointer
-  if (bytesRead) {
+  if (bytesRead != 0U) {
     *bytesRead = bytesReadInternal;
   }
 
@@ -855,7 +853,7 @@ EmberStatus emberSerialReadDataTimeout(uint8_t port,
 
       default:
         // only store number of bytes read if the caller provided a non-NULL pointer
-        if (bytesRead) {
+        if (bytesRead != 0U) {
           *bytesRead = bytesReadInternal;
         }
         return status;
@@ -863,7 +861,7 @@ EmberStatus emberSerialReadDataTimeout(uint8_t port,
   }
 
   // only store number of bytes read if the caller provided a non-NULL pointer
-  if (bytesRead) {
+  if (bytesRead != 0U) {
     *bytesRead = bytesReadInternal;
   }
 
@@ -885,7 +883,7 @@ EmberStatus emberSerialReadPartialLine(uint8_t port, char *data, uint8_t max, ui
     err = emberSerialReadByte(port, &ch);
 
     // no new serial port char?, keep looping
-    if (err) {
+    if (err != EMBER_SUCCESS) {
       return err;
     }
 
@@ -1053,8 +1051,6 @@ EmberStatus emberSerialWriteString(uint8_t port, PGM_P string)
           #endif
           return EMBER_SERIAL_TX_OVERFLOW;
         }
-        //cstat !ATH-div-0-pos
-        //cstat !MISRAC2012-Rule-1.3_f
         ATOMIC_LITE(
           if (q->used == 0) {
           kickStartTx = true;
@@ -1109,7 +1105,7 @@ EmberStatus emberSerialWriteData(uint8_t port, uint8_t *data, uint8_t length)
       EmSerialFifoQueue *q = (EmSerialFifoQueue *)emSerialTxQueues[port];
       bool kickStartTx = false;
 
-      while (length--) {
+      while (length-- != 0U) {
         while (!getOutputFifoSpace(q, port, 0)) {
           if (kickStartTx) {
             halInternalStartUartTx(port);
@@ -1124,8 +1120,6 @@ EmberStatus emberSerialWriteData(uint8_t port, uint8_t *data, uint8_t length)
           #endif
           return EMBER_SERIAL_TX_OVERFLOW;
         }
-        //cstat !ATH-div-0-pos
-        //cstat !MISRAC2012-Rule-1.3_f
         ATOMIC_LITE(
           if (q->used == 0) {
           kickStartTx = true;
@@ -1258,8 +1252,6 @@ EmberStatus emberSerialWriteBuffer(uint8_t port,
       #else // AVR_ATMEGA
       //If we are using the xap2b/cortexm3, non power-of-2 queue sizes are
       //supported and therefore we use a mod with the queue size
-      // The queue size cannot be zero so ignore cstat here
-      //cstat !MISRAC2012-Rule-1.3_f !ATH-div-0-pos
       q->head = ((q->head + 1) % emSerialTxQueueSizes[port]);
       #endif // !AVR_ATMEGA
       ATOMIC_LITE(
@@ -1287,8 +1279,9 @@ EmberStatus emberSerialWaitSend(uint8_t port)  // waits for all byte to be writt
 #ifdef EM_ENABLE_SERIAL_FIFO
     case EMBER_SERIAL_FIFO: {
       EmSerialFifoQueue *q = (EmSerialFifoQueue *)emSerialTxQueues[port];
-      while (q->used)
+      while (q->used != 0U) {
         simulatedSerialTimePasses();
+      }
       break;
     }
 #endif
@@ -1345,7 +1338,7 @@ EmberStatus emberSerialGuaranteedPrintf(uint8_t port, PGM_P formatString, ...)
 #ifdef EM_ENABLE_SERIAL_FIFO
     case EMBER_SERIAL_FIFO: {
       EmSerialFifoQueue *q = (EmSerialFifoQueue *)emSerialTxQueues[port];
-      if (q->used) {
+      if (q->used != 0U) {
         halInternalStartUartTx(port);
       }
       break;
@@ -1354,7 +1347,7 @@ EmberStatus emberSerialGuaranteedPrintf(uint8_t port, PGM_P formatString, ...)
 #ifdef EM_ENABLE_SERIAL_BUFFER
     case EMBER_SERIAL_BUFFER: {
       EmSerialBufferQueue *q = (EmSerialBufferQueue *)emSerialTxQueues[port];
-      if (q->used) {
+      if (q->used != 0U) {
         halInternalStartUartTx(port);
       }
       break;
@@ -1451,8 +1444,6 @@ void emberSerialBufferTick(void)
           #else // AVR_ATMEGA
           //If we are using the xap2b/cortexm3, non power-of-2 queue sizes are
           //supported and therefore we use a mod with the queue size
-          // The queue size cannot be zero so ignore cstat here.
-          //cstat !MISRAC2012-Rule-1.3_f !ATH-div-0-pos
           deadIndex = (deadIndex + 1) % emSerialTxQueueSizes[port];
           #endif // !AVR_ATMEGA
         }

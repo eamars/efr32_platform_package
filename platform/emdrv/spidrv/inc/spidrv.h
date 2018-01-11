@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file spidrv.h
  * @brief SPIDRV API definition.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file

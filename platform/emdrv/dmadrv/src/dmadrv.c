@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file dmadrv.c
  * @brief DMADRV API implementation.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -848,7 +848,7 @@ Ecode_t DMADRV_TransferDone(unsigned int channelId, bool *done)
     iflag = DMA->IF;
     )
 
-  if ( (remaining == 0) && (iflag & (1 << channelId) ) ) {
+  if ( (remaining == 0) && (iflag & (1 << channelId)) ) {
     *done = true;
   } else {
     *done = false;
@@ -909,7 +909,7 @@ Ecode_t DMADRV_TransferRemainingCount(unsigned int channelId,
     iflag = DMA->IF;
     )
 
-  if ( (remain == 0) && (iflag & (1 << channelId) ) ) {
+  if ( (remain == 0) && (iflag & (1 << channelId)) ) {
     *remaining = 0;
   } else {
     *remaining = 1 + remain;
@@ -943,7 +943,7 @@ void LDMA_IRQHandler(void)
   /* Check for LDMA error */
   if ( pending & LDMA_IF_ERROR ) {
     /* Loop here to enable the debugger to see what has happened */
-    while (1) {
+    while (true) {
       /* Wait forever. */
     }
   }
@@ -1051,7 +1051,7 @@ static Ecode_t StartTransfer(DmaMode_t             mode,
        || (buf0 == NULL)
        || (buf1 == NULL)
        || (len > DMADRV_MAX_XFER_COUNT)
-       || ( (mode == dmaModePingPong) && (buf2 == NULL) ) ) {
+       || ((mode == dmaModePingPong) && (buf2 == NULL)) ) {
     return ECODE_EMDRV_DMADRV_PARAM_ERROR;
   }
 
@@ -1184,7 +1184,7 @@ static Ecode_t StartTransfer(DmaMode_t             mode,
        || (buf0 == NULL)
        || (buf1 == NULL)
        || (len > DMADRV_MAX_XFER_COUNT)
-       || ( (mode == dmaModePingPong) && (buf2 == NULL) ) ) {
+       || ((mode == dmaModePingPong) && (buf2 == NULL)) ) {
     return ECODE_EMDRV_DMADRV_PARAM_ERROR;
   }
 
@@ -1209,8 +1209,8 @@ static Ecode_t StartTransfer(DmaMode_t             mode,
   }
   xfer.ldmaReqSel    = peripheralSignal;
   desc->xfer.xferCnt = len - 1;
-  desc->xfer.dstAddr = (uint32_t)buf0;
-  desc->xfer.srcAddr = (uint32_t)buf1;
+  desc->xfer.dstAddr = (uint32_t)(uint8_t *)buf0;
+  desc->xfer.srcAddr = (uint32_t)(uint8_t *)buf1;
   desc->xfer.size    = size;
 
   if ( mode == dmaModePingPong ) {
@@ -1222,11 +1222,11 @@ static Ecode_t StartTransfer(DmaMode_t             mode,
     dmaXfer[channelId].desc[1] = *desc;
     /* Refer to "ping" descriptor. */
     dmaXfer[channelId].desc[1].xfer.linkAddr = -4;
-    dmaXfer[channelId].desc[1].xfer.srcAddr = (uint32_t)buf2;
+    dmaXfer[channelId].desc[1].xfer.srcAddr = (uint32_t)(uint8_t *)buf2;
 
     if ( direction == dmaDirectionPeripheralToMem ) {
-      dmaXfer[channelId].desc[1].xfer.dstAddr = (uint32_t)buf1;
-      desc->xfer.srcAddr = (uint32_t)buf2;
+      dmaXfer[channelId].desc[1].xfer.dstAddr = (uint32_t)(uint8_t *)buf1;
+      desc->xfer.srcAddr = (uint32_t)(uint8_t *)buf2;
     }
   }
 

@@ -14,5 +14,6 @@ options = {
     "BSP_BATTERYMON_TX_ACTIVE": {
         "type": types.PRSChannelLocation("BSP_BATTERYMON_TX_ACTIVE", custom_name="BATTERYMON_TX_ACTIVE"),
         "description": "Battery monitor TX active PRS channel",
+        "longdescription": "Signal to trigger reading the supply voltage when TX is active (current consumption is highest)"
     },
 }

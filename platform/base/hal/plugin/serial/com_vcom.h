@@ -4,7 +4,7 @@
  * @version 0.1.0
  *******************************************************************************
  * @section License
- * <b>Copyright 2017 Silicon Laboratories, Inc, http://www.silabs.com</b>
+ * <b>Copyright 2017 Silicon Laboratories, Inc, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -144,6 +144,48 @@
 #define HAL_USART2_RXSTART        HAL_SERIAL_APP_RXSTART
 #define HAL_USART2_RXSTOP         HAL_SERIAL_APP_RXSTOP
 #define HAL_USART2_TX_QUEUE_SIZE  HAL_SERIAL_APP_TX_QUEUE_SIZE
+#elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_USART3
+#undef BSP_USART3_CTS_PIN
+#undef BSP_USART3_CTS_PORT
+#undef BSP_USART3_RTS_PIN
+#undef BSP_USART3_RTS_PORT
+#undef BSP_USART3_RX_PIN
+#undef BSP_USART3_RX_PORT
+#undef BSP_USART3_TX_PIN
+#undef BSP_USART3_TX_PORT
+#define BSP_USART3_CTS_PIN     BSP_SERIAL_APP_CTS_PIN
+#define BSP_USART3_CTS_PORT    BSP_SERIAL_APP_CTS_PORT
+#define BSP_USART3_RTS_PIN     BSP_SERIAL_APP_RTS_PIN
+#define BSP_USART3_RTS_PORT    BSP_SERIAL_APP_RTS_PORT
+#define BSP_USART3_RX_PIN      BSP_SERIAL_APP_RX_PIN
+#define BSP_USART3_RX_PORT     BSP_SERIAL_APP_RX_PORT
+#define BSP_USART3_TX_PIN      BSP_SERIAL_APP_TX_PIN
+#define BSP_USART3_TX_PORT     BSP_SERIAL_APP_TX_PORT
+#if defined(_USART_ROUTELOC0_MASK)
+  #undef BSP_USART3_CTS_LOC
+  #undef BSP_USART3_RTS_LOC
+  #undef BSP_USART3_RX_LOC
+  #undef BSP_USART3_TX_LOC
+  #define BSP_USART3_CTS_LOC     BSP_SERIAL_APP_CTS_LOC
+  #define BSP_USART3_RTS_LOC     BSP_SERIAL_APP_RTS_LOC
+  #define BSP_USART3_RX_LOC      BSP_SERIAL_APP_RX_LOC
+  #define BSP_USART3_TX_LOC      BSP_SERIAL_APP_TX_LOC
+#else
+  #undef BSP_USART3_ROUTE_LOC
+  #define BSP_USART3_ROUTE_LOC   BSP_SERIAL_APP_ROUTE_LOC
+#endif
+#undef HAL_USART3_BAUD_RATE
+#undef HAL_USART3_FLOW_CONTROL
+#undef HAL_USART3_RX_QUEUE_SIZE
+#undef HAL_USART3_RXSTART
+#undef HAL_USART3_RXSTOP
+#undef HAL_USART3_TX_QUEUE_SIZE
+#define HAL_USART3_BAUD_RATE      HAL_SERIAL_APP_BAUD_RATE
+#define HAL_USART3_FLOW_CONTROL   HAL_SERIAL_APP_FLOW_CONTROL
+#define HAL_USART3_RX_QUEUE_SIZE  HAL_SERIAL_APP_RX_QUEUE_SIZE
+#define HAL_USART3_RXSTART        HAL_SERIAL_APP_RXSTART
+#define HAL_USART3_RXSTOP         HAL_SERIAL_APP_RXSTOP
+#define HAL_USART3_TX_QUEUE_SIZE  HAL_SERIAL_APP_TX_QUEUE_SIZE
 #elif BSP_SERIAL_APP_PORT == HAL_SERIAL_PORT_LEUART0
 #undef BSP_LEUART0_CTS_PIN
 #undef BSP_LEUART0_CTS_PORT

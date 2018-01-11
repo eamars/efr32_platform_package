@@ -2,7 +2,7 @@
  * @file app_main.c
  * @brief This is the base test application. It handles basic RAIL configuration
  * as well as transmit, receive, and various debug modes.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include <stdio.h>
@@ -120,6 +120,7 @@ const char* eventNames[] = {
   "RX_ACK_TIMEOUT",
   "RX_FIFO_ALMOST_FULL",
   "RX_PACKET_RECEIVED",
+  "RX_PREAMBLE_LOST",
   "RX_PREAMBLE_DETECT",
   "RX_SYNC1_DETECT",
   "RX_SYNC2_DETECT",
@@ -341,6 +342,8 @@ int main(void)
                   (((EMU->EM4CTRL & EMU_EM4CTRL_EM4STATE)
                     == EMU_EM4CTRL_EM4STATE_EM4S) ? 's' : 'h'),
                   RAIL_IsRfSensed(railHandle) ? "Yes" : "No");
+    // Always turn off RfSense when waking back up from EM4
+    (void) RAIL_StartRfSense(railHandle, RAIL_RFSENSE_OFF, 0, NULL);
   }
   printf("> ");
   ciInitState(&ciState, ciBuffer, sizeof(ciBuffer), commands);
@@ -526,6 +529,9 @@ static void RAILCb_Event(RAIL_Handle_t railHandle, RAIL_Events_t events)
   }
   if (events & RAIL_EVENT_RX_TIMING_LOST) {
     counters.timingLost++;
+  }
+  if (events & RAIL_EVENT_RX_PREAMBLE_LOST) {
+    counters.preambleLost++;
   }
   if (events & RAIL_EVENT_RX_PREAMBLE_DETECT) {
     counters.preambleDetect++;
@@ -915,7 +921,7 @@ void printPacket(char *cmdName,
   // If this is an Rx packet print the appended info
   if (packetData != NULL) {
     responsePrint(cmdName,
-                  "len:%d,timeUs:%u,crc:%s,rssi:%d,lqi:%d,phy:%d,isAck:%s,syncWordId:%d,payload:%s",
+                  "len:%d,timeUs:%u,crc:%s,rssi:%d,lqi:%d,phy:%d,isAck:%s,syncWordId:%d,antenna:%d,payload:%s",
                   packetData->dataLength,
                   packetData->appendedInfo.timeReceived.packetTime,
                   (packetData->appendedInfo.crcPassed) ? "Pass" : "Fail",
@@ -924,6 +930,7 @@ void printPacket(char *cmdName,
                   packetData->appendedInfo.subPhyId,
                   packetData->appendedInfo.isAck ? "True" : "False",
                   packetData->appendedInfo.syncWordId,
+                  packetData->appendedInfo.antennaId,
                   packetPrintBuffer);
   } else {
     responsePrint(cmdName, "len:%d,payload:%s", dataLength, packetPrintBuffer);

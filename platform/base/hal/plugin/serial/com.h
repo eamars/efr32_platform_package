@@ -4,7 +4,7 @@
  * @version 0.01.0
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -66,7 +66,7 @@ typedef enum COM_Port {
 #pragma anon_unions
 #endif
 typedef struct {
-  union uartdrvinit {
+  union {
     UARTDRV_InitUart_t uartinit;
     UARTDRV_InitLeuart_t leuartinit;
   } uartdrvinit;
@@ -150,8 +150,8 @@ typedef COM_HandleData_t * COM_Handle_t;
 
 #define COM_INITUART(initdata) ((COM_Init_t) initdata)
 
-void COM_InternalPowerDown();
-void COM_InternalPowerUp();
+void COM_InternalPowerDown(void);
+void COM_InternalPowerUp(void);
 bool COM_InternalTxIsIdle(COM_Port_t port);
 bool COM_InternalRxIsPaused(COM_Port_t port);
 bool COM_InternalTxIsPaused(COM_Port_t port);
@@ -190,6 +190,6 @@ Ecode_t COM_GuaranteedPrintf(COM_Port_t port, PGM_P formatString, ...);
 Ecode_t COM_WaitSend(COM_Port_t port);
 void COM_FlushRx(COM_Port_t port);
 bool COM_Unused(uint8_t port);
-void COM_RxGpioWakeInit();
+void COM_RxGpioWakeInit(void);
 
 #endif //__COM_H__

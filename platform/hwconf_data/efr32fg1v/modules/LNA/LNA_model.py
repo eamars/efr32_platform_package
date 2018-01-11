@@ -17,9 +17,11 @@ options = {
     "BSP_LNA_TXRX": {
         "type": types.PRSChannelLocation("BSP_LNA_TXRX", custom_name="LNA_TXRX"),
         "description": "External LNA TX/RX PRS channel",
+        "longdescription": "PRS channel for TX/RX LNA control",
     },
     "BSP_LNA_SLEEP": {
         "type": types.PRSChannelLocation("BSP_LNA_SLEEP", custom_name="LNA_SLEEP"),
         "description": "External LNA sleep PRS channel",
+        "longdescription": "PRS channel for external LNA sleep control",
     },
 }

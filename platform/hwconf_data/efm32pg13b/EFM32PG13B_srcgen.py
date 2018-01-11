@@ -410,6 +410,13 @@ def generate_peripheral(exp_module,
             else:
                 is_str_prop = False
 
+            # Handle integer properties that should have literal suffixes
+            if isinstance(prop, ExporterModel.IntegerProperty):
+                if prop.min >= 0:
+                    def_value = str(def_value) + 'U'
+                if prop.max >= 65535:
+                    def_value = str(def_value) + 'L'
+
             # Putting the define strings into define_list
             peripheral_props.append({"region": def_region, "label": def_label, "def_value": str(def_value),
                                      "is_array": is_array, "is_str_prop": is_str_prop})
@@ -705,7 +712,7 @@ def print_defines_from_list(def_list):
         if "pin_name" in define:
             pin_name = define["pin_name"]
 
-            pin_num = pin_name[2:]
+            pin_num = pin_name[2:] + 'U'
             port = "gpioPort" + pin_name[1]
 
             print_define(region, label + "_PIN", pin_num, longest_label_length, is_array, is_str_prop)
@@ -713,6 +720,11 @@ def print_defines_from_list(def_list):
 
         if "loc" in define:
             loc = define["loc"]
+            try:
+                int(loc)
+                loc = str(loc) + 'U'
+            except ValueError:
+                pass
             print_define(region, label + "_LOC", loc, longest_label_length, is_array, is_str_prop)
 
         if "def_value" in define:

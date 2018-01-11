@@ -4,7 +4,7 @@
  * @version 0.01.0
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -91,7 +91,6 @@ static void rxGpioIntDisable(void);
 // buffer queues, which includes a struct typedef. Since it is always used
 // in a standalone fashion, this expansion will not interfere with any other
 // logic and does not require enclosing parentheses
-//cstat -MISRAC2012-Rule-20.7
 // -------------------------------------------------------------------------
 #ifdef COM_VCP_ENABLE
 //add VCP support
@@ -175,8 +174,6 @@ DEFINE_FIFO_QUEUE(COM_LEUART1_RX_QUEUE_SIZE, comFifoQueueRxLeuart1)
 DEFINE_FIFO_QUEUE(COM_LEUART1_TX_QUEUE_SIZE, comFifoQueueTxLeuart1)
 #endif
 // -------------------------------------------------------------------------
-// Re-enable enclosing parentheses CSTAT rule
-//cstat +MISRAC2012-Rule-20.7
 // -------------------------------------------------------------------------
 // --------------------------------
 // COM handle array indexes
@@ -558,7 +555,8 @@ static void txBuffer(COM_Port_t port, uint8_t *data, uint16_t length)
     if (comhandle->txCatchUp) {
       txCatchUp(comhandle);
     } else if (UARTDRV_Transmit(comhandle->uarthandle, data, length, txCallback) != EMBER_SUCCESS) {
-      while (UARTDRV_Transmit(comhandle->uarthandle, data, length, txCallback) != EMBER_SUCCESS) ;
+      while (UARTDRV_Transmit(comhandle->uarthandle, data, length, txCallback) != EMBER_SUCCESS) {
+      }
     }
   }
 #endif
@@ -590,6 +588,7 @@ static inline bool checkValidVcpPort(COM_Port_t port)
 #if defined(COM_UART_ENABLE)
 static inline bool checkValidLeuartPort(COM_Port_t port)
 {
+#if (defined(COM_LEUART0_ENABLE) || defined(COM_LEUART1_ENABLE))
   switch (port) {
 #ifdef COM_LEUART0_ENABLE
     case COM_LEUART0:
@@ -604,6 +603,9 @@ static inline bool checkValidLeuartPort(COM_Port_t port)
     default:
       return false;
   }
+#else
+  return false;
+#endif
 }
 
 static inline bool checkValidUartPort(COM_Port_t port)
@@ -1015,7 +1017,7 @@ void USART3_RX_IRQHandler(void)
 #endif
 
 /* "power down" COM by switching from DMA to UART byte interrupts */
-void COM_InternalPowerDown()
+void COM_InternalPowerDown(void)
 {
 #if (LDMA_COUNT > 0)
   if (LDMA->IEN != 0) {
@@ -1054,7 +1056,7 @@ void COM_InternalPowerDown()
 }
 
 /* "power up" COM by switching back to DMA interrupts */
-void COM_InternalPowerUp()
+void COM_InternalPowerUp(void)
 {
   #ifdef COM_USART0_ENABLE
   USART_IntClear(USART0, USART_IF_RXDATAV);
@@ -1721,7 +1723,8 @@ Ecode_t COM_WaitSend(COM_Port_t port)
 
 #if defined(COM_VCP_ENABLE)
   if (checkValidVcpPort(port)) {
-    while (comhandle->txQueue->used > 0) ;
+    while (comhandle->txQueue->used > 0) {
+    }
   }
 #endif
 #if defined(COM_UART_ENABLE)
@@ -1730,7 +1733,8 @@ Ecode_t COM_WaitSend(COM_Port_t port)
            || (UARTDRV_GetTransmitDepth(comhandle->uarthandle) > 0)
            || !((UARTDRV_GetPeripheralStatus(comhandle->uarthandle) & UARTDRV_STATUS_TXC)
                 && (UARTDRV_GetPeripheralStatus(comhandle->uarthandle) & UARTDRV_STATUS_TXIDLE)
-                )) ;
+                )) {
+    }
   }
 #endif
 
@@ -1794,10 +1798,10 @@ void COM_RxGpioWakeInit(void)
 
 #else // defined (COM_VCP_ENABLE) || defined (COM_UART_ENABLE)
 // COM API stubs if no COM ports are enabled
-void COM_InternalPowerDown()
+void COM_InternalPowerDown(void)
 {
 }
-void COM_InternalPowerUp()
+void COM_InternalPowerUp(void)
 {
 }
 bool COM_InternalTxIsIdle(COM_Port_t port)
@@ -1917,7 +1921,7 @@ bool COM_Unused(uint8_t port)
 {
   return true;
 }
-void COM_RxGpioWakeInit()
+void COM_RxGpioWakeInit(void)
 {
 }
 

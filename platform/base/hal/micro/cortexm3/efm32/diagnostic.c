@@ -364,7 +364,7 @@ void halPrintCrashSummary(uint8_t port)
     sp = c->mainSP;
     used = c->mainSPUsed;
     stackBegin = (uint32_t)c->mainStackBottom;
-    stackEnd = (uint32_t)_CSTACK_SEGMENT_END;
+    stackEnd = (uint32_t)(uint8_t *)_CSTACK_SEGMENT_END;
   }
 
   mode = (uint8_t *)((c->LR & 8) ? "Thread" : "Handler");
@@ -376,7 +376,7 @@ void halPrintCrashSummary(uint8_t port)
                               " (out of %u bytes total)",
                         (uint16_t)used, pct, stack, (uint16_t)size);
   if ( !(c->LR & 4) && (used == size - 4 * RESETINFO_WORDS)
-       && (c->mainStackBottom < (uint32_t) _RESETINFO_SEGMENT_END)) {
+       && (c->mainStackBottom < (uint32_t)(uint8_t *)_RESETINFO_SEGMENT_END)) {
     // Here the stack overlaps the RESETINFO region and when we checked
     // stack usage we avoided checking that region because we'd already
     // started using it -- so if we found the stack almost full to that
@@ -394,12 +394,12 @@ void halPrintCrashSummary(uint8_t port)
   if (c->intActive.word[0] || c->intActive.word[1]) {
     emberSerialPrintf(port, "Interrupts active (or pre-empted and stacked):");
     for (bit = 0; bit < 32; bit++) {
-      if ((c->intActive.word[0] & (1 << bit)) && *intActiveBits[bit] ) {
+      if ((c->intActive.word[0] & (1 << bit)) && (*intActiveBits[bit] != '\0')) {
         emberSerialPrintf(port, " %p", intActiveBits[bit]);
       }
     }
     for (bit = 0; bit < (sizeof(intActiveBits) / sizeof(intActiveBits[0])) - 32; bit++) {
-      if ((c->intActive.word[1] & (1 << bit)) && *intActiveBits[bit + 32] ) {
+      if ((c->intActive.word[1] & (1 << bit)) && (*intActiveBits[bit + 32] != '\0')) {
         emberSerialPrintf(port, " %p", intActiveBits[bit + 32]);
       }
     }
@@ -473,7 +473,7 @@ void halPrintCrashDetails(uint8_t port)
         emberSerialPrintfLine(port, "Illegal access address: %4x", c->faultAddress);
       }
       for (bit = SCB_CFSR_MEMFAULTSR_Pos; bit < (SCB_CFSR_MEMFAULTSR_Pos + 8); bit++) {
-        if ((c->cfsr.word & (1 << bit)) && *cfsrBits[bit] ) {
+        if ((c->cfsr.word & (1 << bit)) && (*cfsrBits[bit] != '\0')) {
           emberSerialPrintfLine(port, "CFSR.%p", cfsrBits[bit]);
         }
       }
@@ -492,7 +492,7 @@ void halPrintCrashDetails(uint8_t port)
                               c->faultAddress);
       }
       for (bit = SCB_CFSR_BUSFAULTSR_Pos; bit < SCB_CFSR_USGFAULTSR_Pos; bit++) {
-        if (((c->cfsr.word >> bit) & 1U) && *cfsrBits[bit] ) {
+        if (((c->cfsr.word >> bit) & 1U) && (*cfsrBits[bit] != '\0')) {
           emberSerialPrintfLine(port, "CFSR.%p", cfsrBits[bit]);
         }
       }
@@ -508,7 +508,7 @@ void halPrintCrashDetails(uint8_t port)
       for (bit = SCB_CFSR_USGFAULTSR_Pos;
            (bit < numFaults) && (bit < (sizeof(c->cfsr.word) * 8));
            bit++) {
-        if (((c->cfsr.word >> bit) & 1U) && *cfsrBits[bit] ) {
+        if (((c->cfsr.word >> bit) & 1U) && (*cfsrBits[bit] != '\0')) {
           emberSerialPrintfLine(port, "CFSR.%p", cfsrBits[bit]);
         }
       }
@@ -533,19 +533,24 @@ void halPrintCrashData(uint8_t port)
   uint32_t *data = (uint32_t *)&halResetInfo.crash.R0;
   char const *name = nameStrings;
   char const *separator;
-  uint8_t i;
+  uint8_t i = 0;
 
-  for (i = 0; *name; i++) {
+  while (*name != '\0') {
     emberSerialPrintf(port, "%p = %4x", name, *data++);
-    while (*name++) {
-    }                   // intentionally empty while loop body
+    // increment pointer to end of name
+    while (*name != '\0') {
+      name++;
+    }
+    // increment past null pointer for next name
+    name++;
 
     /*lint -save -e448 */
-    separator = (*name && ((i & 3) != 3)) ? ", " : "\r\n";
+    separator = ((*name != '\0') && ((i & 3) != 3)) ? ", " : "\r\n";
 
     /*lint -restore */
     emberSerialPrintf(port, separator);
     emberSerialWaitSend(port);
+    i++;
   }
 }
 

@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file app_trx.h
  * @brief RAILTEST transmit and receive
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 typedef struct BerStatus{
   uint32_t bytesTotal; /**< Number of bytes to receive */

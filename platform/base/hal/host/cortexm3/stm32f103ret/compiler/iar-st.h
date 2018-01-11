@@ -340,5 +340,5 @@ void halInternalAssertFailed(const char * filename, int linenumber);
 
 #endif // __IAR_ST_H__
 
-/**@} //END addtogroup
+/**@}END addtogroup
  */

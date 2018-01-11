@@ -1,14 +1,14 @@
 // -----------------------------------------------------------------------------
-// @file hal-config-gpio.c
-// @brief HAL config gpio initialization
-//
-// @section License
-// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
-//
-// This file is licensed under the Silabs License Agreement. See the file
-// "Silabs_License_Agreement.txt" for details. Before using this software for
-// any purpose, you must agree to the terms of that agreement.
-//
+/// @file hal-config-gpio.c
+/// @brief HAL config gpio initialization
+///
+/// @section License
+/// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
+///
+/// This file is licensed under the Silabs License Agreement. See the file
+/// "Silabs_License_Agreement.txt" for details. Before using this software for
+/// any purpose, you must agree to the terms of that agreement.
+///
 // -----------------------------------------------------------------------------
 //
 #include PLATFORM_HEADER
@@ -27,7 +27,7 @@ uint32_t halConfigGpioActive;
 #define GPIOSETBIT(reg, bit)      reg |= GPIOBIT(bit)
 
 #if (HAL_GPIO_MAX == 0)
-void halConfigInitGpio()
+void halConfigInitGpio(void)
 {
 }
 void halConfigPowerDownGpio(void)
@@ -52,7 +52,8 @@ bool halConfigUnregisterGpio(GPIO_Port_TypeDef port, uint8_t pin)
 #else
 static tGpioArray halConfigGpio[HAL_GPIO_MAX];
 
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Locate index of an active GPIO
  *
@@ -90,11 +91,12 @@ static bool halConfigFindGpio(GPIO_Port_TypeDef port, uint8_t pin, int8_t *index
   }
   return false;
 }
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Initialize HAL_GPIO state
  ******************************************************************************/
-void halConfigInitGpio()
+void halConfigInitGpio(void)
 {
   // Clear GPIO state
   halConfigGpioActive = 0;
@@ -110,7 +112,8 @@ void halConfigInitGpio()
 #endif
 }
 
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Power down GPIO. Sets all registered GPIO to disabled mode
  ******************************************************************************/
@@ -127,7 +130,8 @@ void halConfigPowerDownGpio()
   }
 }
 
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Power up GPIO. Sets all registered GPIO to assigned mode/output
  ******************************************************************************/
@@ -144,7 +148,8 @@ void halConfigPowerUpGpio()
   }
 }
 
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Register GPIO for powerup/powerdown configuration. If GPIO is already
  *   registered, current configuration will be overwritten
@@ -198,7 +203,8 @@ bool halConfigRegisterGpio(GPIO_Port_TypeDef port,
   return false;
 }
 
-/***************************************************************************//**
+/******************************************************************************/
+/**
  * @brief
  *   Unregister GPIO. Will diable automatic powerup/powerdown configuration.
  *

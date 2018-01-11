@@ -1,17 +1,17 @@
 // -----------------------------------------------------------------------------
-// @file
-// @brief Radio coexistence EFR32 utilities
-//
-// @author Silicon Laboratories Inc.
-// @version 1.0.0
-//
-// @section License
-// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
-//
-// This file is licensed under the Silabs License Agreement. See the file
-// "Silabs_License_Agreement.txt" for details. Before using this software for
-// any purpose, you must agree to the terms of that agreement.
-//
+/// @file
+/// @brief Radio coexistence EFR32 utilities
+///
+/// @author Silicon Laboratories Inc.
+/// @version 1.0.0
+///
+/// @section License
+/// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
+///
+/// This file is licensed under the Silabs License Agreement. See the file
+/// "Silabs_License_Agreement.txt" for details. Before using this software for
+/// any purpose, you must agree to the terms of that agreement.
+///
 // -----------------------------------------------------------------------------
 #include "em_core.h"
 #include "coexistence/coexistence-efr32.h"
@@ -54,8 +54,6 @@ static COEX_EFR32_GpioConfig_t rhoCfg = {
 #endif //HAL_CONFIG
 
 #define GPIO_FLAG(x) (1ul << x)
-
-extern uint16_t RFRAND_GetPseudoRandom(void);
 
 static void (*reqCallback)(void) = NULL;
 static void (*gntCallback)(void) = NULL;
@@ -100,10 +98,10 @@ static void enableGpioInt(COEX_GpioHandle_t gpioHandle,
                           bool *wasAsserted)
 {
   COEX_EFR32_GpioConfig_t *gpio = (COEX_EFR32_GpioConfig_t*)gpioHandle;
-  COEX_GpioConfig_t *railGpio = &(gpio->config);
+  COEX_GpioConfig_t *coexGpio = &(gpio->config);
 
-  bool intAsserted = railGpio->options & COEX_GPIO_OPTION_INT_ASSERTED;
-  bool intDeasserted = railGpio->options & COEX_GPIO_OPTION_INT_DEASSERTED;
+  bool intAsserted = (coexGpio->options & COEX_GPIO_OPTION_INT_ASSERTED) != 0U;
+  bool intDeasserted = (coexGpio->options & COEX_GPIO_OPTION_INT_DEASSERTED) != 0U;
 
   if (enabled) {
     // Disable triggering and clear any stale events
@@ -137,17 +135,17 @@ static void setGpio(COEX_GpioHandle_t gpioHandle, bool enabled)
   }
 }
 
-static void configGpio(COEX_GpioHandle_t gpioHandle, COEX_GpioConfig_t *railGpio)
+static void configGpio(COEX_GpioHandle_t gpioHandle, COEX_GpioConfig_t *coexGpio)
 {
   COEX_EFR32_GpioConfig_t *gpio = (COEX_EFR32_GpioConfig_t*)gpioHandle;
-  bool defaultAsserted = railGpio->options & COEX_GPIO_OPTION_DEFAULT_ASSERTED;
-  gpio->config = *railGpio;
+  bool defaultAsserted = (coexGpio->options & COEX_GPIO_OPTION_DEFAULT_ASSERTED) != 0U;
+  gpio->config = *coexGpio;
 
   // Only configure GPIO if it was not set up prior
   if (getGpioConfig(gpio) == gpioModeDisabled) {
-    if (railGpio->options & COEX_GPIO_OPTION_SHARED) {
+    if ((coexGpio->options & COEX_GPIO_OPTION_SHARED) != 0U) {
       gpio->mode = gpio->polarity ? gpioModeWiredOr : gpioModeWiredAnd;
-    } else if (railGpio->options & COEX_GPIO_OPTION_OUTPUT) {
+    } else if ((coexGpio->options & COEX_GPIO_OPTION_OUTPUT) != 0U) {
       gpio->mode = gpioModePushPull;
     } else {
       gpio->mode = gpioModeInputPull;
@@ -155,8 +153,6 @@ static void configGpio(COEX_GpioHandle_t gpioHandle, COEX_GpioConfig_t *railGpio
     setGpioConfig(gpio);
     setGpio(gpio, defaultAsserted);
   }
-  // Here we sense asserted state is opposite of its current output state.
-  gpio->polarity = (defaultAsserted == (bool)(!!GPIO_PinOutGet(gpio->port, gpio->pin)));
 }
 
 static void setGpioFlag(COEX_GpioHandle_t gpioHandle, bool enabled)
@@ -182,16 +178,7 @@ static bool isGpioInSet(COEX_GpioHandle_t gpioHandle)
   return !!GPIO_PinInGet(gpio->port, gpio->pin) == !!gpio->polarity;
 }
 
-static void randomDelay(uint16_t randomDelayMaskUs)
-{
-  uint32_t startTime = RAIL_GetTime();
-  uint16_t delay = RFRAND_GetPseudoRandom() & randomDelayMaskUs;
-
-  while ((uint16_t)(RAIL_GetTime() - startTime) > delay) ;
-}
-
 static const COEX_HalCallbacks_t coexHalCallbacks = {
-  .randomDelay = &randomDelay,
   .setGpio = &setGpio,
   .setGpioFlag = &setGpioFlag,
   .enableGpioInt = &enableGpioInt,
@@ -251,15 +238,18 @@ void COEX_EFR32_Init(void)
   #endif //BSP_COEX_REQ_PORT
   #ifdef BSP_COEX_RHO_PORT
   COEX_EFR32_ConfigRadioHoldOff(&rhoCfg);
+  options |= COEX_OPTION_RHO_ENABLED;
   #endif //BSP_COEX_RHO_PORT
   #ifdef BSP_COEX_PRI_PORT
   COEX_EFR32_ConfigPriority(&ptaPriCfg);
   #endif //BSP_COEX_PRI_PORT
   #ifdef BSP_COEX_GNT_PORT
   COEX_EFR32_ConfigGrant(&ptaGntCfg);
+  options |= COEX_OPTION_COEX_ENABLED;
   #endif //BSP_COEX_GNT_PORT
   #ifdef HAL_COEX_REQ_BACKOFF
   options |= COEX_OPTION_MAX_REQ_BACKOFF_MASK;
+  options |= COEX_OPTION_COEX_ENABLED;
   #endif //HAL_COEX_REQ_BACKOFF
   #ifdef HAL_COEX_REQ_SHARED
   options |= COEX_OPTION_REQ_SHARED;

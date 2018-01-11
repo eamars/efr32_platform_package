@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file uartdrv.h
  * @brief UARTDRV API definition.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
- * <b>Copyright 2016 Silicon Laboratories, Inc, http://www.silabs.com</b>
+ * <b>Copyright 2016 Silicon Laboratories, Inc, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -40,19 +40,19 @@ extern "C" {
  ******************************************************************************/
 
 #define ECODE_EMDRV_UARTDRV_OK                (ECODE_OK)                              ///< Success return value.
-#define ECODE_EMDRV_UARTDRV_WAITING           (ECODE_EMDRV_UARTDRV_BASE | 0x00000001) ///< Operation is waiting in queue.
-#define ECODE_EMDRV_UARTDRV_ILLEGAL_HANDLE    (ECODE_EMDRV_UARTDRV_BASE | 0x00000002) ///< Illegal UART handle.
-#define ECODE_EMDRV_UARTDRV_PARAM_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x00000003) ///< Illegal input parameter.
-#define ECODE_EMDRV_UARTDRV_BUSY              (ECODE_EMDRV_UARTDRV_BASE | 0x00000004) ///< The UART port is busy.
-#define ECODE_EMDRV_UARTDRV_ILLEGAL_OPERATION (ECODE_EMDRV_UARTDRV_BASE | 0x00000005) ///< Illegal operation on UART port.
-#define ECODE_EMDRV_UARTDRV_IDLE              (ECODE_EMDRV_UARTDRV_BASE | 0x00000008) ///< No UART transfer in progress.
-#define ECODE_EMDRV_UARTDRV_ABORTED           (ECODE_EMDRV_UARTDRV_BASE | 0x00000009) ///< UART transfer has been aborted.
-#define ECODE_EMDRV_UARTDRV_QUEUE_FULL        (ECODE_EMDRV_UARTDRV_BASE | 0x0000000A) ///< UART operation queue is full.
-#define ECODE_EMDRV_UARTDRV_QUEUE_EMPTY       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000B) ///< UART operation queue is empty.
-#define ECODE_EMDRV_UARTDRV_PARITY_ERROR      (ECODE_EMDRV_UARTDRV_BASE | 0x0000000C) ///< UART parity error frame. Data is ignored.
-#define ECODE_EMDRV_UARTDRV_FRAME_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000D) ///< UART frame error. Data is ignored.
-#define ECODE_EMDRV_UARTDRV_DMA_ALLOC_ERROR   (ECODE_EMDRV_UARTDRV_BASE | 0x0000000E) ///< Unable to allocated DMA channels.
-#define ECODE_EMDRV_UARTDRV_CLOCK_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000F) ///< Unable to set desired baudrate.
+#define ECODE_EMDRV_UARTDRV_WAITING           (ECODE_EMDRV_UARTDRV_BASE | 0x00000001U) ///< Operation is waiting in queue.
+#define ECODE_EMDRV_UARTDRV_ILLEGAL_HANDLE    (ECODE_EMDRV_UARTDRV_BASE | 0x00000002U) ///< Illegal UART handle.
+#define ECODE_EMDRV_UARTDRV_PARAM_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x00000003U) ///< Illegal input parameter.
+#define ECODE_EMDRV_UARTDRV_BUSY              (ECODE_EMDRV_UARTDRV_BASE | 0x00000004U) ///< The UART port is busy.
+#define ECODE_EMDRV_UARTDRV_ILLEGAL_OPERATION (ECODE_EMDRV_UARTDRV_BASE | 0x00000005U) ///< Illegal operation on UART port.
+#define ECODE_EMDRV_UARTDRV_IDLE              (ECODE_EMDRV_UARTDRV_BASE | 0x00000008U) ///< No UART transfer in progress.
+#define ECODE_EMDRV_UARTDRV_ABORTED           (ECODE_EMDRV_UARTDRV_BASE | 0x00000009U) ///< UART transfer has been aborted.
+#define ECODE_EMDRV_UARTDRV_QUEUE_FULL        (ECODE_EMDRV_UARTDRV_BASE | 0x0000000AU) ///< UART operation queue is full.
+#define ECODE_EMDRV_UARTDRV_QUEUE_EMPTY       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000BU) ///< UART operation queue is empty.
+#define ECODE_EMDRV_UARTDRV_PARITY_ERROR      (ECODE_EMDRV_UARTDRV_BASE | 0x0000000CU) ///< UART parity error frame. Data is ignored.
+#define ECODE_EMDRV_UARTDRV_FRAME_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000DU) ///< UART frame error. Data is ignored.
+#define ECODE_EMDRV_UARTDRV_DMA_ALLOC_ERROR   (ECODE_EMDRV_UARTDRV_BASE | 0x0000000EU) ///< Unable to allocated DMA channels.
+#define ECODE_EMDRV_UARTDRV_CLOCK_ERROR       (ECODE_EMDRV_UARTDRV_BASE | 0x0000000FU) ///< Unable to set desired baudrate.
 
 // UARTDRV status codes
 #define UARTDRV_STATUS_RXEN     (1 << 0)  ///< Receiver is enabled
@@ -231,7 +231,7 @@ typedef struct {
 /// not modify the contents of this handle, and should not depend on its values.
 typedef struct UARTDRV_HandleData{
   /// @cond DO_NOT_INCLUDE_WITH_DOXYGEN
-  union peripheral {
+  union {
     USART_TypeDef * uart;
     LEUART_TypeDef * leuart;
   } peripheral;
@@ -260,7 +260,6 @@ typedef struct UARTDRV_HandleData{
   bool                       hasTransmitted;    // Whether the handle has transmitted data
   UARTDRV_FlowControlType_t  fcType;            // Flow control mode
   UARTDRV_UartType_t         type;              // Type of UART
-  void * parent;                                // Add by Ran Bao on 14/Dec/2017
   /// @endcond
 } UARTDRV_HandleData_t;
 

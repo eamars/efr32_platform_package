@@ -2,7 +2,7 @@
  * @file 154_rx_ci.c
  * @brief This file implements commands for configuring 802.15.4 options
  * relevant to receiving packets
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>

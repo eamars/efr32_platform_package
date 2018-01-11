@@ -144,6 +144,8 @@ void halInternalSleep(SleepModes sleepMode)
     sleepMode = SLEEPMODE_WAKETIMER;
   } else if (sleepMode == SLEEPMODE_HIBERNATE) {
     sleepMode = SLEEPMODE_NOTIMER;
+  } else {
+    // MISRA requires ..else if.. to have terminating else.
   }
 
   //This code assumes all wake source registers are properly configured.
@@ -167,17 +169,17 @@ void halInternalSleep(SleepModes sleepMode)
 #endif
 
   //PB2 is also CMHV_WAKESEL_SC1.  Set this wake source if PB2's GPIO wake is set.
-  if (GPIO->WAKE[1] & GPIO_WAKE_Px2) {
+  if ((GPIO->WAKE[1] & GPIO_WAKE_Px2) != 0U) {
     CMHV->WAKESEL |= CMHV_WAKESEL_SC1;
   }
 
   //PA2 is also CMHV_WAKESEL_SC2.  Set this wake source if PA2's GPIO wake is set.
-  if (GPIO->WAKE[0] & GPIO_WAKE_Px2) {
+  if ((GPIO->WAKE[0] & GPIO_WAKE_Px2) != 0U) {
     CMHV->WAKESEL |= CMHV_WAKESEL_SC2;
   }
 
   //The CMHV_WAKESEL_IRQD source can come from any pin based on IRQD's sel register.
-  if (gpioWakeSel & BIT(GPIO->IRQDSEL)) {
+  if ((gpioWakeSel & BIT(GPIO->IRQDSEL)) != 0U) {
     CMHV->WAKESEL |= CMHV_WAKESEL_IRQD;
   }
 
@@ -200,13 +202,13 @@ void halInternalSleep(SleepModes sleepMode)
       //NOTE: This mode assumes the caller has configured the *entire*
       //      sleep timer properly.
 
-      if (EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_WRAP) {
+      if ((EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_WRAP) != 0U) {
         CMHV->WAKESEL |= CMHV_WAKESEL_SLEEPTMRWRAP;
       }
-      if (EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_CMPB) {
+      if ((EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_CMPB) != 0U) {
         CMHV->WAKESEL |= CMHV_WAKESEL_SLEEPTMRCMPB;
       }
-      if (EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_CMPA) {
+      if ((EVENT_SLEEPTMR->CFG & EVENT_SLEEPTMR_CFG_CMPA) != 0U) {
         CMHV->WAKESEL |= CMHV_WAKESEL_SLEEPTMRCMPA;
       }
     //fall into SLEEPMODE_MAINTAINTIMER's sleep code:
@@ -387,7 +389,7 @@ void halInternalSleep(SleepModes sleepMode)
         GPIO_IN_SAVED.events.portF = GPIO->P[5].IN;
       #endif
         //reset the power up events by writing 1 to all bits.
-        CMHV->PWRUPEVENT = 0xFFFFFFFF;
+        CMHV->PWRUPEVENT = 0xFFFFFFFFU;
 
 
 
@@ -497,25 +499,25 @@ void halInternalSleep(SleepModes sleepMode)
         {
           uint32_t wakeSourceInterruptMask = 0;
 
-          if (GPIO->WAKE[1] & GPIO_WAKE_Px0 /*PB0*/) {
+          if ((GPIO->WAKE[1] & GPIO_WAKE_Px0 /*PB0*/) != 0U) {
             wakeSourceInterruptMask |= (1 << IRQA_IRQn);
 
 
 
           }
-          if (GPIO->WAKE[1] & GPIO_WAKE_Px6 /*PB6*/) {
+          if ((GPIO->WAKE[1] & GPIO_WAKE_Px6 /*PB6*/) != 0U) {
             wakeSourceInterruptMask |= (1 << IRQB_IRQn);
 
 
 
           }
-          if (gpioWakeSel & BIT(GPIO->IRQCSEL)) {
+          if ((gpioWakeSel & BIT(GPIO->IRQCSEL)) != 0U) {
             wakeSourceInterruptMask |= (1 << IRQC_IRQn);
 
 
 
           }
-          if (gpioWakeSel & BIT(GPIO->IRQDSEL)) {
+          if ((gpioWakeSel & BIT(GPIO->IRQDSEL)) != 0U) {
             wakeSourceInterruptMask |= (1 << IRQD_IRQn);
 
 
@@ -529,7 +531,7 @@ void halInternalSleep(SleepModes sleepMode)
 
 
           }
-          if (CMHV->WAKESEL & CMHV_WAKESEL_CORE) {
+          if ((CMHV->WAKESEL & CMHV_WAKESEL_CORE) != 0U) {
             wakeSourceInterruptMask |= (1 << DEBUG_IRQn);
 
 
@@ -588,7 +590,7 @@ void halInternalSleep(SleepModes sleepMode)
           while ((CMHV->CSYSPWRUPACKSTATUS) && (!(CMHV->PWRUPEVENT & wakeSel))) {
           }
           //if there was a wake event, allow CSYSPWRUPACK and skip sleep
-          if (CMHV->PWRUPEVENT & wakeSel) {
+          if ((CMHV->PWRUPEVENT & wakeSel) != 0U) {
             CMHV->CSYSPWRUPACKINHIBIT = _CMHV_CSYSPWRUPACKINHIBIT_RESETVALUE;
             skipSleep = true;
           }
@@ -795,7 +797,7 @@ void halInternalSleep(SleepModes sleepMode)
         SCB->VTOR = SCB_VTOR_SAVED;
 
         //WAKE_CORE/INT_DEBUG and INT_IRQx is cleared by INT_PENDCLR below
-        NVIC->ICPR[0] = 0xFFFFFFFF;
+        NVIC->ICPR[0] = 0xFFFFFFFFU;
 
         //Now that we're awake, normal interrupts are operational again
         //Take a snapshot of the new GPIO state and the EVENT register to

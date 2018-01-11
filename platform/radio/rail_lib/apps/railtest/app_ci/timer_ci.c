@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file timer_ci.c
  * @brief This file is for testing the RAIL timer interface.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>

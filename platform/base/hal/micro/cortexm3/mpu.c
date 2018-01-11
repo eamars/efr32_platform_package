@@ -85,11 +85,11 @@ void halInternalSetMPUGuardRegionStart(uint32_t baseAddress)
 
   // Clear the lower 5 bits of the base address to be sure that it's
   // properly aligned
-  baseAddress &= 0xFFFFFFE0;
+  baseAddress &= 0xFFFFFFE0U;
 
   // If the base address is below the reset info then something weird is
   // going on so just turn off the guard region
-  if (baseAddress < (uint32_t)_RESETINFO_SEGMENT_END) {
+  if (baseAddress < (uint32_t)(uint8_t *)_RESETINFO_SEGMENT_END) {
     attr = GUARD_REGION_ATTR_DIS;
   }
 

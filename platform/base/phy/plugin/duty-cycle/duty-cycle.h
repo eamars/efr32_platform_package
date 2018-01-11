@@ -49,7 +49,7 @@ typedef enum {
   EM_PHY_DC_MODE_DIALOG,        // 3 LBT RDC, Tx w/o LBT,       no TX_OFF
   EM_PHY_DC_MODE_LBTX,          // 4 LBT RDC, Tx w/  LBT,       no TX_OFF
   EM_PHY_DC_MODE_LBT,           // 5 LBT RDC, Tx w/  LBT,      min TX_OFF
-  EM_PHY_DC_MODE_UNCHANGED,     // 6 Don't change the mode
+  EM_PHY_DC_MODE_UNCHANGED = 6, // 6 Don't change the mode
   EM_PHY_DC_MODE_ITEMS = EM_PHY_DC_MODE_UNCHANGED // Must be last
 } EmPhyDcMode;
 
@@ -94,7 +94,6 @@ enum {
   EM_PHY_DC_EXT_STATUS_LBT_TIMEDOUT,        // 6 (TX_CCA_FAIL)
   EM_PHY_DC_EXT_STATUS_VALUES               // Must be last
 };
-
 typedef uint8_t EmPhyDcExtendedStatus;
 
 //-- Public APIs

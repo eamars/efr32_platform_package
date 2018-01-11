@@ -11,7 +11,7 @@
 #include "hal/micro/cortexm3/micro-common.h"
 #include "plugin/adc/adc.h"
 
-#if (NUM_ADC_USERS > 8)
+#if (NUM_ADC_USERS > 8U)
   #error NUM_ADC_USERS must not be greater than 8, or uint8_t variables in adc-em3xx.c must be changed
 #endif
 
@@ -29,15 +29,15 @@ static uint16_t adcStaticConfig;
 void halAdcSetClock(bool slow)
 {
   if (slow) {
-    adcStaticConfig |= _ADC_CFG_1MHZCLK_MASK;
+    adcStaticConfig |= (uint16_t)_ADC_CFG_1MHZCLK_MASK;
   } else {
-    adcStaticConfig &= ~_ADC_CFG_1MHZCLK_MASK;
+    adcStaticConfig &= (uint16_t)(~_ADC_CFG_1MHZCLK_MASK);
   }
 }
 
 bool halAdcGetClock(void)
 {
-  return (bool)(adcStaticConfig & _ADC_CFG_1MHZCLK_MASK);
+  return ((adcStaticConfig & _ADC_CFG_1MHZCLK_MASK) != 0U);
 }
 
 // Define a channel field that combines _ADC_CFG_MUXP_MASK and _ADC_CFG_MUXN_MASK
@@ -50,14 +50,14 @@ void halAdcIsr(void)
   uint8_t conversion = adcPendingConversion; //fix 'volatile' warning; costs no flash
 
   // make sure data is ready and the desired conversion is valid
-  if ((EVENT_ADC->FLAG & EVENT_ADC_FLAG_ULDFULL)
+  if (((EVENT_ADC->FLAG & EVENT_ADC_FLAG_ULDFULL) != 0U)
       && (conversion < NUM_ADC_USERS)) {
     adcReadings[conversion] = adcData;
     adcReadingValid |= BIT(conversion); // mark the reading as valid
     // setup the next conversion if any
-    if (adcPendingRequests) {
+    if ((adcPendingRequests) != 0U) {
       for (i = 0; i < NUM_ADC_USERS; i++) {
-        if (BIT(i) & adcPendingRequests) {
+        if ((BIT(i) & adcPendingRequests) != 0U) {
           adcPendingConversion = i;     // set pending conversion
           adcPendingRequests ^= BIT(i); //clear request: conversion is starting
           ADC->CFG = adcConfig[i];
@@ -84,9 +84,9 @@ ADCUser startNextConversion(void)
   ATOMIC(
     halCommonEnableVreg1v8();
     // start the next requested conversion if any
-    if (adcPendingRequests && !(ADC->CFG & ADC_CFG_ENABLE)) {
+    if ((adcPendingRequests != 0U) && ((ADC->CFG & ADC_CFG_ENABLE) == 0U)) {
     for (i = 0; i < NUM_ADC_USERS; i++) {
-      if ( BIT(i) & adcPendingRequests) {
+      if ((BIT(i) & adcPendingRequests) != 0U) {
         adcPendingConversion = i;       // set pending conversion
         adcPendingRequests ^= BIT(i);   // clear request
         ADC->CFG = adcConfig[i];         // set the configuration to desired
@@ -108,7 +108,7 @@ void halInternalInitAdc(void)
   adcPendingRequests = 0;
   adcPendingConversion = NUM_ADC_USERS;
   adcCalibrated = false;
-  adcStaticConfig = _ADC_CFG_1MHZCLK_MASK | _ADC_CFG_ENABLE_MASK; // init config: 1MHz, low voltage
+  adcStaticConfig = (uint16_t)(_ADC_CFG_1MHZCLK_MASK | _ADC_CFG_ENABLE_MASK); // init config: 1MHz, low voltage
 
   // set all adcReadings as invalid
   adcReadingValid = 0;
@@ -135,18 +135,18 @@ EmberStatus halStartAdcConversion(ADCUser id,
                                   ADCChannelType channel,
                                   ADCRateType rate)
 {
-  if (reference != ADC_REF_INT) {
-    return EMBER_ERR_FATAL;
+  if (reference != (ADCReferenceType) ADC_REF_INT) {
+    return (EmberStatus) EMBER_ERR_FATAL;
   }
 
   // save the chosen configuration for this user
-  adcConfig[id] = (((rate << _ADC_CFG_PERIOD_SHIFT) & _ADC_CFG_PERIOD_MASK)
-                   | ((channel << ADC_CHAN_BIT) & ADC_CHAN_MASK)
-                   | adcStaticConfig);
+  adcConfig[id] = (uint16_t)(((rate << (uint8_t)_ADC_CFG_PERIOD_SHIFT) & _ADC_CFG_PERIOD_MASK)
+                             | ((channel << (uint8_t)ADC_CHAN_BIT) & ADC_CHAN_MASK)
+                             | adcStaticConfig);
 
   // if the user already has a pending request, overwrite params
-  if (adcPendingRequests & BIT(id)) {
-    return EMBER_ADC_CONVERSION_DEFERRED;
+  if ((adcPendingRequests & BIT(id)) != 0U) {
+    return (EmberStatus) EMBER_ADC_CONVERSION_DEFERRED;
   }
 
   ATOMIC(
@@ -156,13 +156,13 @@ EmberStatus halStartAdcConversion(ADCUser id,
     adcReadingValid &= ~BIT(id);
     )
   if (startNextConversion() == id) {
-    return EMBER_ADC_CONVERSION_BUSY;
+    return (EmberStatus) EMBER_ADC_CONVERSION_BUSY;
   } else {
-    return EMBER_ADC_CONVERSION_DEFERRED;
+    return (EmberStatus) EMBER_ADC_CONVERSION_DEFERRED;
   }
 }
 
-#define NVIC_ENABLED_IRQ(IRQn) ((NVIC->ISER[(uint32_t)(IRQn) >> 5] & (1 << ((uint32_t)(IRQn) & 0x1F))) ? 1 : 0)
+#define NVIC_ENABLED_IRQ(IRQn) ((NVIC->ISER[(uint32_t)(IRQn) >> 5] & (1 << ((uint32_t)(IRQn) & 0x1F))) ? 1U : 0U)
 
 EmberStatus halRequestAdcData(ADCUser id, uint16_t *value)
 {
@@ -170,7 +170,7 @@ EmberStatus halRequestAdcData(ADCUser id, uint16_t *value)
   //otherwise the ADC ISR cannot be serviced.
   bool intsAreOff = (INTERRUPTS_ARE_OFF()
                      || !NVIC_ENABLED_IRQ(ADC_IRQn)
-                     || !(EVENT_ADC->CFG & EVENT_ADC_CFG_ULDFULL));
+                     || ((EVENT_ADC->CFG & EVENT_ADC_CFG_ULDFULL) == 0U));
   EmberStatus stat;
 
   ATOMIC(
@@ -186,13 +186,13 @@ EmberStatus halRequestAdcData(ADCUser id, uint16_t *value)
     if (BIT(id) & adcReadingValid) {
     *value = adcReadings[id];
     adcReadingValid ^= BIT(id);
-    stat = EMBER_ADC_CONVERSION_DONE;
+    stat = (EmberStatus) EMBER_ADC_CONVERSION_DONE;
   } else if (adcPendingRequests & BIT(id)) {
-    stat = EMBER_ADC_CONVERSION_DEFERRED;
+    stat = (EmberStatus) EMBER_ADC_CONVERSION_DEFERRED;
   } else if (adcPendingConversion == id) {
-    stat = EMBER_ADC_CONVERSION_BUSY;
+    stat = (EmberStatus) EMBER_ADC_CONVERSION_BUSY;
   } else {
-    stat = EMBER_ADC_NO_CONVERSION_PENDING;
+    stat = (EmberStatus) EMBER_ADC_NO_CONVERSION_PENDING;
   }
     )
   return stat;
@@ -203,38 +203,38 @@ EmberStatus halReadAdcBlocking(ADCUser id, uint16_t *value)
   EmberStatus stat;
 
   do {
-    stat = halRequestAdcData(id, value);
-    if (stat == EMBER_ADC_NO_CONVERSION_PENDING) {
+    stat = (EmberStatus) halRequestAdcData(id, value);
+    if (stat == (EmberStatus) EMBER_ADC_NO_CONVERSION_PENDING) {
       break;
     }
-  } while (stat != EMBER_ADC_CONVERSION_DONE);
-  return stat;
+  } while (stat != (EmberStatus) EMBER_ADC_CONVERSION_DONE);
+  return (EmberStatus) stat;
 }
 
 EmberStatus halAdcCalibrate(ADCUser id)
 {
   EmberStatus stat;
 
-  halStartAdcConversion(id,
-                        ADC_REF_INT,
-                        ADC_SOURCE_GND_VREF2,
-                        ADC_CONVERSION_TIME_US_4096);
-  stat = halReadAdcBlocking(id, (uint16_t *)(&Nvss));
-  if (stat == EMBER_ADC_CONVERSION_DONE) {
-    halStartAdcConversion(id,
-                          ADC_REF_INT,
-                          ADC_SOURCE_VREG2_VREF2,
-                          ADC_CONVERSION_TIME_US_4096);
-    stat = halReadAdcBlocking(id, (uint16_t *)(&Nvdd));
+  (void) halStartAdcConversion(id,
+                               ADC_REF_INT,
+                               ADC_SOURCE_GND_VREF2,
+                               ADC_CONVERSION_TIME_US_4096);
+  stat = (EmberStatus) halReadAdcBlocking(id, (uint16_t *)(&Nvss));
+  if (stat == (EmberStatus) EMBER_ADC_CONVERSION_DONE) {
+    (void) halStartAdcConversion(id,
+                                 ADC_REF_INT,
+                                 ADC_SOURCE_VREG2_VREF2,
+                                 ADC_CONVERSION_TIME_US_4096);
+    stat = (EmberStatus) halReadAdcBlocking(id, (uint16_t *)(&Nvdd));
   }
-  if (stat == EMBER_ADC_CONVERSION_DONE) {
+  if (stat == (EmberStatus) EMBER_ADC_CONVERSION_DONE) {
     Nvdd -= Nvss;
     adcCalibrated = true;
   } else {
     adcCalibrated = false;
-    stat = EMBER_ERR_FATAL;
+    stat = (EmberStatus) EMBER_ERR_FATAL;
   }
-  return stat;
+  return (EmberStatus) stat;
 }
 
 // Use the ratio of the sample reading to the of VDD_PADSA/2, a 'known'
@@ -249,13 +249,13 @@ int32_t halConvertValueToVolts(uint16_t value)
   int32_t nvalue;
 
   if (!adcCalibrated) {
-    halAdcCalibrate(ADC_USER_LQI);
+    (void) halAdcCalibrate(ADC_USER_LQI);
   }
   if (adcCalibrated) {
-    assert(Nvdd);
-    nvalue = value - Nvss;
+    assert((Nvdd != 0));
+    nvalue = (int32_t)value - Nvss;
     // Convert input value (minus ground) to a fraction of VDD/2.
-    N = ((nvalue << 16) + Nvdd / 2) / Nvdd;
+    N = (int32_t)(((nvalue << 16) + Nvdd / 2) / Nvdd);
     // Calculate voltage with: V = (N * Vreg/2) / (2^16)
     // Mutiplying by Vreg/2*10 makes the result units of 100 uVolts
     // (in fixed point E-4 which allows for 13.5 bits vs millivolts

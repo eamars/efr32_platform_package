@@ -1,13 +1,12 @@
 /**************************************************************************//**
  * @file coexistence_efr32.h
  * @brief This file contains the EFR32 radio coexistence interface.
- * @copyright Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2017 Silicon Laboratories, Inc. www.silabs.com
  *****************************************************************************/
 
 #ifndef __COEXISTENCE_EFR32_H__
 #define __COEXISTENCE_EFR32_H__
 
-#include "rail.h"
 #include "coexistence/coexistence.h"
 #include "em_gpio.h"
 #include "gpiointerrupt.h"
@@ -32,7 +31,6 @@ typedef struct COEX_EFR32_GpioConfig {
   COEX_GpioConfig_t config;
 } COEX_EFR32_GpioConfig_t;
 
-void COEX_EFR32_SetCallbacks(RAIL_Handle_t railHandle);
 void COEX_EFR32_Init(void);
 bool COEX_EFR32_ConfigRequest(COEX_EFR32_GpioConfig_t *gpioConfig);
 bool COEX_EFR32_ConfigRadioHoldOff(COEX_EFR32_GpioConfig_t *gpioConfig);

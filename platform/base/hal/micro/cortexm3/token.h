@@ -271,4 +271,4 @@ void halInternalGetIdxTokenPtr(void *ptr, uint16_t ID, uint8_t index, uint8_t le
 
 #endif // __PLAT_TOKEN_H__
 
-/**@} // END token group */
+/**@} END token group */

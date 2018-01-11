@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file em_msc.c
  * @brief Flash controller (MSC) Peripheral API
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
- * <b>Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * <b>Copyright 2016 Silicon Laboratories, Inc. www.silabs.com</b>
  *******************************************************************************
  *
  * Permission is granted to anyone to use this software for any purpose,
@@ -838,14 +838,16 @@ MSC_Status_TypeDef MSC_MassErase(void)
   MSC->WRITECMD = MSC_WRITECMD_ERASEMAIN0;
 
   /* Waiting for erase to complete */
-  while ((MSC->STATUS & MSC_STATUS_BUSY)) ;
+  while ((MSC->STATUS & MSC_STATUS_BUSY) != 0U) {
+  }
 
 #if ((FLASH_SIZE >= (512 * 1024)) && defined(_MSC_WRITECMD_ERASEMAIN1_MASK))
   /* Erase second 512K block */
   MSC->WRITECMD = MSC_WRITECMD_ERASEMAIN1;
 
   /* Waiting for erase to complete */
-  while ((MSC->STATUS & MSC_STATUS_BUSY)) ;
+  while ((MSC->STATUS & MSC_STATUS_BUSY) != 0U) {
+  }
 #endif
 
   /* Restore mass erase lock */

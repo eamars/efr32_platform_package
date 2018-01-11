@@ -43,14 +43,14 @@ extern void emRadioSleep(void);
 //------------------------------------------------------------------------------
 // Functions
 
+// Cause a usage fault by executing a special UNDEFINED instruction.
+// The high byte (0xDE) is reserved to be undefined - the low byte (0x42)
+// is arbitrary and distiguishes a failed assert from other usage faults.
+// the fault handler with then decode this, grab the filename and linenumber
+// parameters from R0 and R1 and save the information for display after
+// a reset
 static void halInternalAssertFault(PGM_P filename, int linenumber)
 {
-  // Cause a usage fault by executing a special UNDEFINED instruction.
-  // The high byte (0xDE) is reserved to be undefined - the low byte (0x42)
-  // is arbitrary and distiguishes a failed assert from other usage faults.
-  // the fault handler with then decode this, grab the filename and linenumber
-  // parameters from R0 and R1 and save the information for display after
-  // a reset
   asm ("DC16 0DE42h");
 }
 
@@ -67,10 +67,10 @@ void halInternalAssertFailed(PGM_P filename, int linenumber)
   #endif
 
   #if !defined(EMBER_ASSERT_OUTPUT_DISABLED)
-  emberSerialGuaranteedPrintf(EMBER_ASSERT_SERIAL_PORT,
-                              "\r\n[ASSERT:%p:%d]\r\n",
-                              filename,
-                              linenumber);
+  (void) emberSerialGuaranteedPrintf(EMBER_ASSERT_SERIAL_PORT,
+                                     "\r\n[ASSERT:%p:%d]\r\n",
+                                     filename,
+                                     linenumber);
   #endif
 
   #if defined (__ICCARM__)
@@ -154,7 +154,7 @@ uint16_t halInternalCrashHandler(void)
 
   // If we're running FreeRTOS and this is a process stack then add
   // extra diagnostic information
-  if (freeRTOS && (c->LR & 4)) {
+  if ((freeRTOS != 0) && (c->LR & 4)) {
     // FreeRTOS doesn't provide the diagnostic functions we need
     // so for now just lie to get some diagnostics
     // stackBottom = (uint32_t*)xTaskGetCurrentTaskStackBottom();
@@ -178,8 +178,8 @@ uint16_t halInternalCrashHandler(void)
     // See if fault was due to a failed assert. This is indicated by
     // a usage fault caused by executing a reserved instruction.
     if ( c->icsr.bits.VECTACTIVE == USAGE_FAULT_VECTOR_INDEX
-         && ((void *)c->PC >= (void*)_TEXT_SEGMENT_BEGIN)
-         && ((void *)c->PC < (void*)_TEXT_SEGMENT_END)
+         && ((uint16_t *)c->PC >= (uint16_t *)_TEXT_SEGMENT_BEGIN)
+         && ((uint16_t *)c->PC < (uint16_t *)_TEXT_SEGMENT_END)
          && *(uint16_t *)(c->PC) == ASSERT_USAGE_OPCODE ) {
       // Copy halInternalAssertFailed() arguments into data member specific
       // to asserts.
@@ -207,8 +207,8 @@ uint16_t halInternalCrashHandler(void)
   // to include halResetInfo in the stack assessment when crashing
   // to avoid a self-fulfilling prophesy of a full stack!  BugzId:13403
   uint32_t safeStackBottom = c->mainStackBottom;
-  if (safeStackBottom < (uint32_t) _RESETINFO_SEGMENT_END) {
-    safeStackBottom = (uint32_t) _RESETINFO_SEGMENT_END;
+  if (safeStackBottom < (uint32_t)(uint16_t *)_RESETINFO_SEGMENT_END) {
+    safeStackBottom = (uint32_t)(uint16_t *)_RESETINFO_SEGMENT_END;
   }
   c->mainSPUsed = halInternalGetMainStackBytesUsed((uint32_t*)safeStackBottom);
 
@@ -219,10 +219,12 @@ uint16_t halInternalCrashHandler(void)
   // Search the stack downward for probable return addresses. A probable
   // return address is a value in the CODE segment that also has bit 0 set
   // (since we're in Thumb mode).
-  for (i = 0, s = stackTop; s > sEnd; ) {
+  i = 0;
+  s = stackTop;
+  while (s > sEnd) {
     data = *(--s);
-    if (((void *)data >= (void*)_TEXT_SEGMENT_BEGIN)
-        && ((void *)data < (void*)_TEXT_SEGMENT_END)
+    if (((uint16_t *)data >= (uint16_t *)_TEXT_SEGMENT_BEGIN)
+        && ((uint16_t *)data < (uint16_t *)_TEXT_SEGMENT_END)
         && (data & 1)) {
       // Only record the first occurrence of a return - other copies could
       // have been in registers that then were pushed.
@@ -242,7 +244,7 @@ uint16_t halInternalCrashHandler(void)
   }
   // Shuffle the returns array so returns[0] has last probable return found.
   // If there were fewer than NUM_RETURNS, unused entries will contain zero.
-  while (i--) {
+  while (i-- != 0U) {
     data = c->returns[0];
     for (j = 0; j < NUM_RETURNS - 1; j++ ) {
       c->returns[j] = c->returns[j + 1];

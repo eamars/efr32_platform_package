@@ -66,7 +66,7 @@ enum
 /** @brief Be sure to update ::NUM_ADC_USERS if additional users are added
  * to the ::ADCUser list.
  */
-#define NUM_ADC_USERS 3 // make sure to update if the above is adjusted
+#define NUM_ADC_USERS 3U // make sure to update if the above is adjusted
 
 /** @brief A type for the channel enumeration
  */
@@ -227,5 +227,5 @@ bool halAdcGetClock(void);
 
 #endif // __ADC_H__
 
-/** @} // END addtogroup
+/** @} END addtogroup
  */

@@ -87,6 +87,14 @@ typedef signed long long int64s;
 typedef unsigned long PointerType;
 //@} \\END MASTER VARIABLE TYPES
 
+/**
+ * @brief Denotes that this platform supports 64-bit data-types.
+ */
+#define HAL_HAS_INT64
+
+/**
+ * @brief Use the Master Program Memory Declarations from platform-common.h
+ */
 #define _HAL_USE_COMMON_PGM_
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -183,7 +191,7 @@ void rtosResetWatchdog(void);
  */
 #define SIGNED_ENUM
 
-#define STACK_FILL_VALUE  0xCDCDCDCD
+#define STACK_FILL_VALUE  0xCDCDCDCDU
 #ifdef RAMEXE
 //If the whole build is running out of RAM, as chosen by the RAMEXE build
 //define, then define RAMFUNC to nothing since it's not needed.

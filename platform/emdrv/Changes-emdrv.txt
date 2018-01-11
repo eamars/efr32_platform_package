@@ -1,4 +1,10 @@
 ================ Revision history ============================================
+5.3.5:
+ - No changes.
+
+5.3.4:
+ - Changes to move code towards MISRAC 2012 compliance.
+
 5.3.3:
  - No changes.
 

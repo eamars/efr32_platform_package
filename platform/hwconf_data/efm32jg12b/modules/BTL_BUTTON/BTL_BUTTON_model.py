@@ -12,7 +12,8 @@ enable = {
 options = {
     "BSP_BTL_BUTTON": {
         "type": types.Pin(),
-        "description": "Bootloader entry button",
-        "allowedconflicts": ["BSP_LED", "BSP_BUTTON"]
+        "description": "Bootloader entry pin",
+        "allowedconflicts": ["BSP_LED", "BSP_BUTTON"],
+        "longdescription": "Device is forced to stay in bootloader when signal is high/low as configured in bootloader"
     },
 }

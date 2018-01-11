@@ -1089,7 +1089,7 @@ on a chip which has that peripheral, while other modules might be stack-specific
 <tr>
 <th align="center"><a href="#antenna-diversity"><strong>Antenna Diversity</strong></a></th>
 <th align="center"><a href="#coexistence"><strong>Coexistence</strong></a></th>
-<th align="center"><a href="#ezradio-pro"><strong>EZRadio Pro</strong></a></th>
+<th align="center"><a href="#ezradiopro"><strong>EZRadioPro</strong></a></th>
 <th align="center"><a href="#external-lna"><strong>External LNA</strong></a></th>
 </tr>
 </thead>
@@ -1100,7 +1100,7 @@ on a chip which has that peripheral, while other modules might be stack-specific
 <thead>
 <tr>
 <th align="center"><a href="#serial"><strong>Serial</strong></a></th>
-<th align="center"><a href="#virtual-com"><strong>Virtual COM</strong></a></th>
+<th align="center"><a href="#virtual-com-port"><strong>Virtual COM Port</strong></a></th>
 <th align="center"><a href="#virtual-uart"><strong>Virtual UART</strong></a></th>
 </tr>
 </thead>
@@ -1110,8 +1110,8 @@ on a chip which has that peripheral, while other modules might be stack-specific
 <table>
 <thead>
 <tr>
-<th align="center"><a href="#lightbulb-pwm"><strong>Lightbulb PWM</strong></a></th>
-<th align="center"><a href="#lightbulb-color-pwm"><strong>Lightbulb Color PWM</strong></a></th>
+<th align="center"><a href="#pwm-lightbulb"><strong>PWM Lightbulb</strong></a></th>
+<th align="center"><a href="#color-pwm-lightbulb"><strong>Color PWM Lightbulb</strong></a></th>
 </tr>
 </thead>
 
@@ -1276,7 +1276,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_DCDC_BYPASS</td>
 <td>[0, 1]</td>
 <td>SERIES1</td>
-<td>Override DCDC mode to bypass mode (when board is configured for DCDC)</td>
+<td>Bypass DCDC</td>
 </tr>
 </tbody>
 </table>
@@ -1423,13 +1423,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_I2C_MASTER</td>
 <td>[0, 1]</td>
 <td>None</td>
-<td>Master/Slave</td>
+<td>I2C Master</td>
 </tr>
 <tr>
 <td>HAL_I2C_MAX_BUS_FREQ</td>
 <td>uint32_t</td>
 <td>None</td>
-<td>I2C max bus frequency</td>
+<td>Bus frequency</td>
 </tr>
 <tr>
 <td>HAL_I2C_SLAVE_ADDRESS</td>
@@ -1454,43 +1454,43 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_LEUART_RX_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>LEUART RX pin</td>
+<td>RX pin</td>
 </tr>
 <tr>
 <td>BSP_LEUART_RX_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>LEUART RX port</td>
+<td>RX port</td>
 </tr>
 <tr>
 <td>BSP_LEUART_RX_LOC</td>
 <td>_LEUART_ROUTELOC0_RXLOC_LOCn</td>
 <td>SERIES1</td>
-<td>LEUART RX location</td>
+<td>RX location</td>
 </tr>
 <tr>
 <td>BSP_LEUART_TX_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>LEUART TX pin</td>
+<td>TX pin</td>
 </tr>
 <tr>
 <td>BSP_LEUART_TX_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>LEUART TX port</td>
+<td>TX port</td>
 </tr>
 <tr>
 <td>BSP_LEUART_TX_LOC</td>
 <td>_LEUART_ROUTELOC0_TXLOC_LOCn</td>
 <td>SERIES1</td>
-<td>LEUART TX location</td>
+<td>TX location</td>
 </tr>
 <tr>
 <td>HAL_LEUART_BAUD_RATE</td>
 <td>uint32_t</td>
 <td>None</td>
-<td>LEUART baud rate (must be less than refFreq/oversampling)</td>
+<td>Baud rate</td>
 </tr>
 <tr>
 <td>HAL_LEUART_ENABLE</td>
@@ -1502,31 +1502,31 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_LEUART_FLOW_CONTROL</td>
 <td>HAL_LEUART_FLOW_CONTROL_NONE, HAL_LEUART_FLOW_CONTROL_SW, HAL_LEUART_FLOW_CONTROL_HW</td>
 <td>None</td>
-<td>LEUART flow control mode (LEUART)</td>
+<td>Flow control mode</td>
 </tr>
 <tr>
 <td>HAL_LEUART_RXSTART</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>LEUART release flow control threshold (must be a multiple of HAL_LEUART_RXSTOP)</td>
+<td>Release flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_LEUART_RXSTOP</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>LEUART assert flow control threshold</td>
+<td>Flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_LEUART_RX_QUEUE_SIZE</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>LEUART RX buffer size (must be a multiple of HAL_LEUART_RXSTOP)</td>
+<td>RX buffer size</td>
 </tr>
 <tr>
 <td>HAL_LEUART_TX_QUEUE_SIZE</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>LEUART TX buffer size</td>
+<td>TX buffer size</td>
 </tr>
 </tbody>
 </table>
@@ -1545,7 +1545,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_PA_2P4_LOWPOWER</td>
 <td>[0, 1]</td>
 <td>SERIES1, RADIO</td>
-<td>Use low power 2.4GHz PA</td>
+<td>Use low power PA on 2.4 GHz</td>
 </tr>
 <tr>
 <td>HAL_PA_CURVE_HEADER</td>
@@ -1563,13 +1563,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_PA_POWER</td>
 <td>uint8_t</td>
 <td>SERIES1, RADIO</td>
-<td>Raw power units</td>
+<td>Output power (raw units)</td>
 </tr>
 <tr>
 <td>HAL_PA_RAMP</td>
 <td>uint16_t</td>
 <td>SERIES1, RADIO</td>
-<td>Desired ramp time (us)</td>
+<td>Ramp time (us)</td>
 </tr>
 <tr>
 <td>HAL_PA_VOLTAGE</td>
@@ -1594,55 +1594,55 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_PTI_DCLK_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DCLK pin</td>
+<td>DCLK pin</td>
 </tr>
 <tr>
 <td>BSP_PTI_DCLK_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DCLK port</td>
+<td>DCLK port</td>
 </tr>
 <tr>
 <td>BSP_PTI_DCLK_LOC</td>
 <td>_FRC_ROUTELOC0_DCLKLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DCLK location</td>
+<td>DCLK location</td>
 </tr>
 <tr>
 <td>BSP_PTI_DFRAME_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DFRAME pin</td>
+<td>DFRAME pin</td>
 </tr>
 <tr>
 <td>BSP_PTI_DFRAME_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DFRAME port</td>
+<td>DFRAME port</td>
 </tr>
 <tr>
 <td>BSP_PTI_DFRAME_LOC</td>
 <td>_FRC_ROUTELOC0_DFRAMELOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DFRAME location</td>
+<td>DFRAME location</td>
 </tr>
 <tr>
 <td>BSP_PTI_DOUT_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DOUT pin</td>
+<td>DOUT pin</td>
 </tr>
 <tr>
 <td>BSP_PTI_DOUT_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DOUT port</td>
+<td>DOUT port</td>
 </tr>
 <tr>
 <td>BSP_PTI_DOUT_LOC</td>
 <td>_FRC_ROUTELOC0_DOUTLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>PTI DOUT location</td>
+<td>DOUT location</td>
 </tr>
 <tr>
 <td>HAL_PTI_BAUD_RATE</td>
@@ -1758,43 +1758,43 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_UART_RX_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>UART RX pin</td>
+<td>RX pin</td>
 </tr>
 <tr>
 <td>BSP_UART_RX_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>UART RX port</td>
+<td>RX port</td>
 </tr>
 <tr>
 <td>BSP_UART_RX_LOC</td>
 <td>_UART_ROUTELOC0_RXLOC_LOCn</td>
 <td>SERIES1</td>
-<td>UART RX location</td>
+<td>RX location</td>
 </tr>
 <tr>
 <td>BSP_UART_TX_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>UART TX pin</td>
+<td>TX pin</td>
 </tr>
 <tr>
 <td>BSP_UART_TX_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>UART TX port</td>
+<td>TX port</td>
 </tr>
 <tr>
 <td>BSP_UART_TX_LOC</td>
 <td>_UART_ROUTELOC0_TXLOC_LOCn</td>
 <td>SERIES1</td>
-<td>UART TX location</td>
+<td>TX location</td>
 </tr>
 <tr>
 <td>HAL_UART_BAUD_RATE</td>
 <td>uint32_t</td>
 <td>None</td>
-<td>UART baud rate (must be less than refFreq/oversampling)</td>
+<td>Baud rate</td>
 </tr>
 <tr>
 <td>HAL_UART_ENABLE</td>
@@ -1806,31 +1806,31 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_UART_FLOW_CONTROL</td>
 <td>HAL_UART_FLOW_CONTROL_NONE, HAL_UART_FLOW_CONTROL_SW, HAL_UART_FLOW_CONTROL_HW, HAL_UART_FLOW_CONTROL_HWUART</td>
 <td>None</td>
-<td>UART flow control mode</td>
+<td>Flow control mode</td>
 </tr>
 <tr>
 <td>HAL_UART_RXSTART</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>UART release flow control threshold (must be a multiple of HAL_UART_RXSTOP)</td>
+<td>Release flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_UART_RXSTOP</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>UART assert flow control threshold</td>
+<td>Flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_UART_RX_QUEUE_SIZE</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>UART RX buffer size (must be a multiple of HAL_UART_RXSTOP)</td>
+<td>RX buffer size</td>
 </tr>
 <tr>
 <td>HAL_UART_TX_QUEUE_SIZE</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>UART TX buffer size</td>
+<td>TX buffer size</td>
 </tr>
 </tbody>
 </table>
@@ -1993,7 +1993,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_USART_BAUD_RATE</td>
 <td>uint32_t</td>
 <td>None</td>
-<td>Baud rate (must be less than refFreq/oversampling)</td>
+<td>Baud rate</td>
 </tr>
 <tr>
 <td>HAL_USART_ENABLE</td>
@@ -2005,7 +2005,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_USART_FLOW_CONTROL</td>
 <td>HAL_USART_FLOW_CONTROL_NONE, HAL_USART_FLOW_CONTROL_SW, HAL_USART_FLOW_CONTROL_HW, HAL_USART_FLOW_CONTROL_HWUART</td>
 <td>None</td>
-<td>Flow control mode (UART)</td>
+<td>Flow control mode</td>
 </tr>
 <tr>
 <td>HAL_USART_FREQUENCY</td>
@@ -2017,19 +2017,19 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_USART_RXSTART</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>Release flow control threshold (must be a multiple of HAL_USART_RXSTOP)</td>
+<td>Release flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_USART_RXSTOP</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>Assert flow control threshold</td>
+<td>Flow control threshold</td>
 </tr>
 <tr>
 <td>HAL_USART_RX_QUEUE_SIZE</td>
 <td>uint16_t</td>
 <td>None</td>
-<td>RX buffer size (must be a multiple of HAL_USART_RXSTOP)</td>
+<td>RX buffer size</td>
 </tr>
 <tr>
 <td>HAL_USART_TX_QUEUE_SIZE</td>
@@ -2075,13 +2075,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_BTL_BUTTON_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>Bootloader entry button pin</td>
+<td>Bootloader entry pin</td>
 </tr>
 <tr>
 <td>BSP_BTL_BUTTON_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>Bootloader entry button port</td>
+<td>Bootloader entry port</td>
 </tr>
 <tr>
 <td>HAL_BTL_BUTTON_ENABLE</td>
@@ -2124,13 +2124,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_BUTTON_GPIO_DOUT</td>
 <td>HAL_GPIO_DOUT_LOW, HAL_GPIO_DOUT_HIGH</td>
 <td>None</td>
-<td>DOUT value of button pins. High/low for pullup/pulldown, high for filter on input only mode.</td>
+<td>DOUT register value of button pins</td>
 </tr>
 <tr>
 <td>BSP_BUTTON_GPIO_MODE</td>
 <td>HAL_GPIO_MODE_INPUT, HAL_GPIO_MODE_INPUT_PULL, HAL_GPIO_MODE_INPUT_PULL_FILTER</td>
 <td>None</td>
-<td>GPIO mode of button pins</td>
+<td>MODE register value of button pins</td>
 </tr>
 <tr>
 <td>BSP_BUTTON_PRESENT</td>
@@ -2148,7 +2148,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_BUTTON_ENABLE</td>
 <td>array</td>
 <td>None</td>
-<td>Array of button indices to enable</td>
+<td>List of button indices to enable</td>
 </tr>
 </tbody>
 </table>
@@ -2203,13 +2203,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_EXTFLASH_HOLD_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>SPI Flash hold pin</td>
+<td>Hold pin</td>
 </tr>
 <tr>
 <td>BSP_EXTFLASH_HOLD_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>SPI Flash hold port</td>
+<td>Hold port</td>
 </tr>
 <tr>
 <td>BSP_EXTFLASH_INTERNAL</td>
@@ -2263,13 +2263,13 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_EXTFLASH_WP_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>SPI Flash write protect pin</td>
+<td>Write Protect pin</td>
 </tr>
 <tr>
 <td>BSP_EXTFLASH_WP_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>SPI Flash write protect port</td>
+<td>Write Protect port</td>
 </tr>
 </tbody>
 </table>
@@ -2470,7 +2470,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_LED_ENABLE</td>
 <td>array</td>
 <td>None</td>
-<td>Array of LED indices to initialize</td>
+<td>List of LED indices to initialize</td>
 </tr>
 </tbody>
 </table>
@@ -2525,7 +2525,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_SPIDISPLAY_DISPLAY</td>
 <td>HAL_DISPLAY_SHARP_LS013B7DH03, HAL_DISPLAY_SHARP_LS013B7DH06</td>
 <td>not efm32g</td>
-<td>Use display</td>
+<td>Display type</td>
 </tr>
 <tr>
 <td>BSP_SPIDISPLAY_ENABLE_PIN</td>
@@ -2627,7 +2627,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_SPIDISPLAY_USART</td>
 <td>HAL_SPI_PORT_USARTn</td>
 <td>not efm32g</td>
-<td>USART to use for display</td>
+<td>USART port</td>
 </tr>
 <tr>
 <td>HAL_SPIDISPLAY_ENABLE</td>
@@ -2639,7 +2639,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_SPIDISPLAY_EXTCOMIN_CALLBACK</td>
 <td>string</td>
 <td>not efm32g</td>
-<td>EXTCOMIN callback register function</td>
+<td>EXTCOMIN callback registration function</td>
 </tr>
 <tr>
 <td>HAL_SPIDISPLAY_EXTCOMIN_USE_CALLBACK</td>
@@ -2756,31 +2756,31 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_SPINCP_NHOSTINT_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>SPI NCP nHOST_INT pin</td>
+<td>nHOST_INT pin</td>
 </tr>
 <tr>
 <td>BSP_SPINCP_NHOSTINT_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>SPI NCP nHOST_INT port</td>
+<td>nHOST_INT port</td>
 </tr>
 <tr>
 <td>BSP_SPINCP_NWAKE_PIN</td>
 <td>0-15</td>
 <td>None</td>
-<td>SPI NCP nWAKE pin</td>
+<td>nWAKE pin</td>
 </tr>
 <tr>
 <td>BSP_SPINCP_NWAKE_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>None</td>
-<td>SPI NCP nWAKE port</td>
+<td>nWAKE port</td>
 </tr>
 <tr>
 <td>BSP_SPINCP_USART_PORT</td>
 <td>HAL_SPI_PORT_USARTn</td>
 <td>None</td>
-<td>SPI NCP USART port</td>
+<td>USART port</td>
 </tr>
 </tbody>
 </table>
@@ -2871,7 +2871,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_UARTNCP_USART_PORT</td>
 <td>['HAL_SERIAL_PORT_USARTn', 'HAL_SERIAL_PORT_UARTn', 'HAL_SERIAL_PORT_LEUARTn']</td>
 <td>None</td>
-<td>UART NCP USART port</td>
+<td>UART port</td>
 </tr>
 </tbody>
 </table>
@@ -2935,79 +2935,79 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_COEX_GNT_ASSERT_LEVEL</td>
 <td>1, 0</td>
 <td>RADIO</td>
-<td>Grant assert signal level</td>
+<td>GRANT assert signal level</td>
 </tr>
 <tr>
 <td>BSP_COEX_GNT_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>Grant pin</td>
+<td>GRANT signal pin</td>
 </tr>
 <tr>
 <td>BSP_COEX_GNT_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>Grant port</td>
+<td>GRANT signal port</td>
 </tr>
 <tr>
 <td>BSP_COEX_PRI_ASSERT_LEVEL</td>
 <td>1, 0</td>
 <td>RADIO</td>
-<td>Priority assert signal level</td>
+<td>PRIORITY assert signal level</td>
 </tr>
 <tr>
 <td>BSP_COEX_PRI_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>Priority pin</td>
+<td>PRIORITY signal pin</td>
 </tr>
 <tr>
 <td>BSP_COEX_PRI_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>Priority port</td>
+<td>PRIORITY signal port</td>
 </tr>
 <tr>
 <td>BSP_COEX_REQ_ASSERT_LEVEL</td>
 <td>1, 0</td>
 <td>RADIO</td>
-<td>Request assert signal level</td>
+<td>REQUEST assert signal level</td>
 </tr>
 <tr>
 <td>BSP_COEX_REQ_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>Request pin</td>
+<td>REQUEST signal pin</td>
 </tr>
 <tr>
 <td>BSP_COEX_REQ_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>Request port</td>
+<td>REQUEST signal port</td>
 </tr>
 <tr>
 <td>BSP_COEX_RHO_ASSERT_LEVEL</td>
 <td>1, 0</td>
 <td>RADIO</td>
-<td>Radio hold off assert signal level</td>
+<td>RHO assert signal level</td>
 </tr>
 <tr>
 <td>BSP_COEX_RHO_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>Radio hold off pin</td>
+<td>RHO signal pin</td>
 </tr>
 <tr>
 <td>BSP_COEX_RHO_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>Radio hold off port</td>
+<td>RHO signal port</td>
 </tr>
 <tr>
 <td>HAL_COEX_ACKHOLDOFF</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Disable ACKing when GNT deasserted, RHO asserted, or REQ not secured (shared REQ only)</td>
+<td>Disable ACKing when GRANT deasserted, RHO asserted, or REQUEST not secured (shared REQUEST only)</td>
 </tr>
 <tr>
 <td>HAL_COEX_ENABLE</td>
@@ -3016,62 +3016,68 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>Enable radio coexistence</td>
 </tr>
 <tr>
+<td>HAL_COEX_PRI_SHARED</td>
+<td>[0, 1]</td>
+<td>RADIO</td>
+<td>Enable PRIORITY shared mode</td>
+</tr>
+<tr>
 <td>HAL_COEX_REQ_BACKOFF</td>
 <td>uint8_t</td>
 <td>RADIO</td>
-<td>Max backoff after REQ deassert</td>
+<td>Max REQUEST backoff mask [0-255]</td>
 </tr>
 <tr>
 <td>HAL_COEX_REQ_SHARED</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Configure REQ signal for shared mode</td>
+<td>Enable REQUEST shared mode</td>
 </tr>
 <tr>
 <td>HAL_COEX_REQ_WINDOW</td>
 <td>uint16_t</td>
 <td>RADIO</td>
-<td>Microseconds between asserting REQUEST and starting RX/TX (BLE only)</td>
+<td>Assert time between REQUEST and RX/TX start (us) [BLE only]</td>
 </tr>
 <tr>
 <td>HAL_COEX_RETRYRX_ENABLE</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Receive retry REQ</td>
+<td>Enable REQUEST receive retry</td>
 </tr>
 <tr>
 <td>HAL_COEX_RETRYRX_HIPRI</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Receive retry REQ high PRI</td>
+<td>REQUEST receive retry assert PRIORITY</td>
 </tr>
 <tr>
 <td>HAL_COEX_RETRYRX_TIMEOUT</td>
 <td>uint8_t</td>
 <td>RADIO</td>
-<td>Receive retry REQ timeout (ms)</td>
+<td>REQUEST receive retry timeout(ms)</td>
 </tr>
 <tr>
 <td>HAL_COEX_RX_HIPRI</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Assert high PRI when receiving a packet</td>
+<td>Assert PRIORITY when receiving packet</td>
 </tr>
 <tr>
 <td>HAL_COEX_TX_ABORT</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Abort transmission mid-packet if GNT is lost</td>
+<td>Abort transmission mid-packet if GRANT is lost</td>
 </tr>
 <tr>
 <td>HAL_COEX_TX_HIPRI</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Assert high PRI when transmitting a packet</td>
+<td>Assert PRIORITY when transmitting packet</td>
 </tr>
 </tbody>
 </table>
-<h4 id="ezradio-pro">EZRadio Pro</h4>
+<h4 id="ezradiopro">EZRadioPro</h4>
 <table>
 <thead>
 <tr>
@@ -3086,37 +3092,37 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_EZRADIOPRO_CLK_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>EZRadio Pro CLK pin</td>
+<td>EZRadioPro CLK pin</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_CLK_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>EZRadio Pro CLK port</td>
+<td>EZRadioPro CLK port</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_CLK_LOC</td>
 <td>_USART_ROUTELOC0_CLKLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>EZRadio Pro CLK location</td>
+<td>EZRadioPro CLK location</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_CS_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>EZRadio Pro CS pin</td>
+<td>EZRadioPro CS pin</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_CS_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>EZRadio Pro CS port</td>
+<td>EZRadioPro CS port</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_CS_LOC</td>
 <td>_USART_ROUTELOC0_CSLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>EZRadio Pro CS location</td>
+<td>EZRadioPro CS location</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_INT_PIN</td>
@@ -3134,37 +3140,37 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_EZRADIOPRO_MISO_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>EZRadio Pro MISO pin</td>
+<td>EZRadioPro MISO pin</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_MISO_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>EZRadio Pro MISO port</td>
+<td>EZRadioPro MISO port</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_MISO_LOC</td>
 <td>_USART_ROUTELOC0_RXLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>EZRadio Pro MISO location</td>
+<td>EZRadioPro MISO location</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_MOSI_PIN</td>
 <td>0-15</td>
 <td>RADIO</td>
-<td>EZRadio Pro MOSI pin</td>
+<td>EZRadioPro MOSI pin</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_MOSI_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>RADIO</td>
-<td>EZRadio Pro MOSI port</td>
+<td>EZRadioPro MOSI port</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_MOSI_LOC</td>
 <td>_USART_ROUTELOC0_TXLOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>EZRadio Pro MOSI location</td>
+<td>EZRadioPro MOSI location</td>
 </tr>
 <tr>
 <td>BSP_EZRADIOPRO_SDN_PIN</td>
@@ -3182,7 +3188,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_EZRADIOPRO_USART</td>
 <td>HAL_SPI_PORT_USARTn</td>
 <td>RADIO</td>
-<td>USART connected to the EZRadio Pro</td>
+<td>USART port</td>
 </tr>
 <tr>
 <td>HAL_EZRADIOPRO_ENABLE</td>
@@ -3194,7 +3200,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>HAL_EZRADIOPRO_SHUTDOWN_SLEEP</td>
 <td>[0, 1]</td>
 <td>RADIO</td>
-<td>Shutdown EZRadio Pro when sleeping</td>
+<td>Shutdown radio when MCU is sleeping</td>
 </tr>
 </tbody>
 </table>
@@ -3490,7 +3496,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 </tr>
 </tbody>
 </table>
-<h4 id="virtual-com">Virtual COM</h4>
+<h4 id="virtual-com-port">Virtual COM Port</h4>
 <table>
 <thead>
 <tr>
@@ -3548,7 +3554,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 </table>
 <h2 id="pwm-modules">PWM modules</h2>
 <p><a href="#hal-configuration-reference-document"><strong>Back to top</strong></a></p>
-<h4 id="lightbulb-pwm">Lightbulb PWM</h4>
+<h4 id="pwm-lightbulb">PWM Lightbulb</h4>
 <table>
 <thead>
 <tr>
@@ -3563,73 +3569,73 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_BULBPWM_CC0_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 0 pin</td>
+<td>PWM Lightbulb Compare/Capture Channel 0 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC0_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 0 port</td>
+<td>PWM Lightbulb Compare/Capture Channel 0 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC0_LOC</td>
 <td>_TIMER_ROUTELOC0_CC0LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 0 location</td>
+<td>PWM Lightbulb Compare/Capture Channel 0 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC1_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 1 pin</td>
+<td>PWM Lightbulb Compare/Capture Channel 1 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC1_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 1 port</td>
+<td>PWM Lightbulb Compare/Capture Channel 1 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC1_LOC</td>
 <td>_TIMER_ROUTELOC0_CC1LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 1 location</td>
+<td>PWM Lightbulb Compare/Capture Channel 1 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC2_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 2 pin</td>
+<td>PWM Lightbulb Compare/Capture Channel 2 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC2_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 2 port</td>
+<td>PWM Lightbulb Compare/Capture Channel 2 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC2_LOC</td>
 <td>_TIMER_ROUTELOC0_CC2LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb PWM Compare/Capture Channel 2 location</td>
+<td>PWM Lightbulb Compare/Capture Channel 2 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC3_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb PWM Compare/Capture Channel 3 pin</td>
+<td>PWM Lightbulb Compare/Capture Channel 3 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC3_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb PWM Compare/Capture Channel 3 port</td>
+<td>PWM Lightbulb Compare/Capture Channel 3 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_CC3_LOC</td>
 <td>_TIMER_ROUTELOC0_CC3LOC_LOCn</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb PWM Compare/Capture Channel 3 location</td>
+<td>PWM Lightbulb Compare/Capture Channel 3 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_TIMER</td>
@@ -3669,7 +3675,7 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 </tr>
 </tbody>
 </table>
-<h4 id="lightbulb-color-pwm">Lightbulb Color PWM</h4>
+<h4 id="color-pwm-lightbulb">Color PWM Lightbulb</h4>
 <table>
 <thead>
 <tr>
@@ -3684,73 +3690,73 @@ BSP_UART0_TX_PIN for UART0). This is valid for all of the defines in the core pe
 <td>BSP_BULBPWM_COLOR_CC0_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 0 pin</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 0 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC0_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 0 port</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 0 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC0_LOC</td>
 <td>_TIMER_ROUTELOC0_CC0LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 0 location</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 0 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC1_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 1 pin</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 1 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC1_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 1 port</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 1 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC1_LOC</td>
 <td>_TIMER_ROUTELOC0_CC1LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 1 location</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 1 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC2_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 2 pin</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 2 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC2_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 2 port</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 2 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC2_LOC</td>
 <td>_TIMER_ROUTELOC0_CC2LOC_LOCn</td>
 <td>SERIES1, RADIO</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 2 location</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 2 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC3_PIN</td>
 <td>0-15</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 3 pin</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 3 pin</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC3_PORT</td>
 <td>GPIO_Port_TypeDef</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 3 port</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 3 port</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_CC3_LOC</td>
 <td>_TIMER_ROUTELOC0_CC3LOC_LOCn</td>
 <td>SERIES1, RADIO, TIMER1</td>
-<td>Lightbulb Color PWM Compare/Capture Channel 3 location</td>
+<td>Color PWM Lightbulb Compare/Capture Channel 3 location</td>
 </tr>
 <tr>
 <td>BSP_BULBPWM_COLOR_TIMER</td>

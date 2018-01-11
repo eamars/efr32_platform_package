@@ -6,7 +6,7 @@
 // @version 1.0.0
 //
 // @section License
-// <b>(C) Copyright 2014 Silicon Laboratories, http://www.silabs.com</b>
+// <b>(C) Copyright 2014 Silicon Laboratories, www.silabs.com</b>
 //
 // This file is licensed under the Silabs License Agreement. See the file
 // "Silabs_License_Agreement.txt" for details. Before using this software for
@@ -62,10 +62,8 @@ extern void halStackRadioHoldOffPowerUp(void);   // fwd ref
 #ifdef PHY_RAIL
 #include "../plugin/pa-conversions/pa_conversions_efr32.h"
 #if HAL_PA_VOLTAGE == 3300
-//cstat !MISRAC2012-Rule-20.7
 RAIL_DECLARE_TX_POWER_VBAT_CURVES(RAIL_PiecewiseSegments, RAIL_CurvesSg, RAIL_Curves24Hp, RAIL_Curves24Lp);
 #else
-//cstat !MISRAC2012-Rule-20.7
 RAIL_DECLARE_TX_POWER_DCDC_CURVES(RAIL_PiecewiseSegments, RAIL_CurvesSg, RAIL_Curves24Hp, RAIL_Curves24Lp);
 #endif
 #endif
@@ -78,8 +76,8 @@ WEAK(void halStackRadioHoldOffPowerUp(void)) {
 WEAK(bool halGetRadioHoldOff(void)) {
   return false;
 }
-WEAK(EmberStatus halSetRadioHoldOff(bool enabled)) {
-  return (enabled ? EMBER_BAD_ARGUMENT : EMBER_SUCCESS);
+WEAK(EmberStatus halSetRadioHoldOff(bool enable)) {
+  return (enable ? EMBER_BAD_ARGUMENT : EMBER_SUCCESS);
 }
 #endif //!RHO_GPIO
 
@@ -93,7 +91,7 @@ WEAK(EmberStatus halPtaSetOptions(HalPtaOptions options)) {
 WEAK(EmberStatus halPtaSetBool(HalPtaOptions option, bool value)) {
   return EMBER_ERR_FATAL;
 }
-WEAK(EmberStatus halPtaSetEnable(bool enabled)) {
+WEAK(EmberStatus halPtaSetEnable(bool enable)) {
   return EMBER_ERR_FATAL;
 }
 WEAK(bool halPtaIsEnabled(void)) {
@@ -367,13 +365,15 @@ uint8_t halGetEm2xxResetInfo(void)
 static uint32_t closestPowerOfTwo(uint32_t duration)
 {
   //for duration 0 , this would return 0
-  duration--;
-  duration |= duration >> 1;
-  duration |= duration >> 2;
-  duration |= duration >> 4;
-  duration |= duration >> 8;
-  duration |= duration >> 16;
-  duration++;
+  if (duration > 0u) {
+    duration--;
+    duration |= duration >> 1;
+    duration |= duration >> 2;
+    duration |= duration >> 4;
+    duration |= duration >> 8;
+    duration |= duration >> 16;
+    duration++;
+  }
   return duration;
 }
 

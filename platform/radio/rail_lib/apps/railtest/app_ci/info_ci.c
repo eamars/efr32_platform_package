@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file info_ci.c
  * @brief This file implements informational commands for RAIL test applications.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <string.h>
 #include "command_interpreter.h"

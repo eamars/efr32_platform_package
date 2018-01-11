@@ -8,7 +8,7 @@
  *
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2017 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2017 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * Permission is granted to anyone to use this software for any purpose,
@@ -41,13 +41,13 @@
 #include "pa_conversions_efr32.h"
 #include "rail_chip_specific.h"
 
-const RAIL_TxPowerCurves_t *txPower24HpCurves;
+static const RAIL_TxPowerCurves_t *txPower24HpCurves;
 
-const RAIL_TxPowerCurves_t *txPowerSgCurves;
+static const RAIL_TxPowerCurves_t *txPowerSgCurves;
 
-const int16_t *txPower24LpCurves;
+static const int16_t *txPower24LpCurves;
 
-uint8_t piecewiseSegments;
+static uint8_t piecewiseSegments;
 
 // This macro is defined when Silicon Labs builds this into the library as WEAK
 // to ensure it can be overriden by customer versions of these functions. It
@@ -114,7 +114,7 @@ RAIL_TxPowerLevel_t RAIL_ConvertDbmToRaw(RAIL_Handle_t railHandle,
   }
 
   uint32_t powerLevel;
-  int32_t powerIndex;
+  int16_t powerIndex;
 
   RAIL_TxPowerCurveSegment_t const * powerParams;
   RAIL_TxPowerCurves_t const * paParams
@@ -139,6 +139,7 @@ RAIL_TxPowerLevel_t RAIL_ConvertDbmToRaw(RAIL_Handle_t railHandle,
     // Prevent the "- 200" below from underflowing
     // an int32_t.
     power = INT16_MIN + 200;
+  } else {
   }
   // Map the power value to a 0 - 7 powerIndex value
   // 0 -> 20dBm - 16dBm; 1 -> 16dBm - 12dBm, etc...
@@ -244,6 +245,7 @@ RAIL_TxPower_t RAIL_ConvertRawToDbm(RAIL_Handle_t railHandle,
                               ? RAIL_TX_POWER_LEVEL_HP_MAX
                               : RAIL_TX_POWER_LEVEL_SUBGIG_MAX)) {
       return powerCurves->maxPower;
+    } else {
     }
 
     /*! Figure out which parameter to use based on the power level */

@@ -1,10 +1,10 @@
 /**************************************************************************//**
  * @file startup_efr32mg12p.c
  * @brief CMSIS Compatible EFR32MG12P startup file in C for IAR EWARM
- * @version 5.3.3
+ * @version 5.3.5
  ******************************************************************************
  * # License
- * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>
+ * <b>Copyright 2017 Silicon Laboratories, Inc. www.silabs.com</b>
  ******************************************************************************
  *
  * Permission is granted to anyone to use this software for any purpose,

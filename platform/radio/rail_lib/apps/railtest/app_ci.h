@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file app_ci.h
  * @brief This is the header file for common RAIL test application commands.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #ifndef __APP_CI_H__
@@ -58,7 +58,7 @@
   COMMAND_ENTRY("setTxDelay", "w", setTxDelay, "[delay] Set the inter-packet delay in milliseconds for repeated Tx"),                                                                                          \
   COMMAND_ENTRY("getTxDelay", "", getTxDelay, "Get the inter-packet delay in milliseconds for repeated Tx"),                                                                                                   \
   COMMAND_ENTRY("setTxPayload", "vu*", setTxPayload, "[offset byte0 byte1 ...] Set the packet bytes to be sent"),                                                                                              \
-  COMMAND_ENTRY("setTxLength", "v", setTxLength, "[length] Set the number of bytes to transmit for fixed length packets"),                                                                                     \
+  COMMAND_ENTRY("setTxLength", "v", setTxLength, "[length] Set the number of bytes to load into the FIFO before transmitting. Actual packet length may vary based on radio configuration"),                    \
   COMMAND_ENTRY("printTxPacket", "", printTxPacket, "Print the current Tx data and length"),                                                                                                                   \
   COMMAND_ENTRY("peek", "v*", peekRx, "[number of bytes] [offset] Peek at the start of receive buffer."),                                                                                                      \
   COMMAND_ENTRY("getTime", "", getTime, "Get the current time from the RAIL timebase in microseconds"),                                                                                                        \

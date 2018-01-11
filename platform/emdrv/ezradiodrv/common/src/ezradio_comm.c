@@ -1,10 +1,10 @@
 /**************************************************************************//**
 * @file ezradio_comm.c
 * @brief This file contains the EZRadio communication layer.
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * # License
-* <b>(C) Copyright 2015 Silicon Labs, http://www.silabs.com</b>
+* <b>(C) Copyright 2015 Silicon Labs, www.silabs.com</b>
 *******************************************************************************
 *
 * Permission is granted to anyone to use this software for any purpose,

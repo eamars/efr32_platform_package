@@ -334,5 +334,5 @@ bool halInternalGetCtuneToken(uint16_t *startupCtune, uint16_t *steadyCtune);
 
 #endif //__EFM32_MICRO_COMMON_H__
 
-/**@} // END micro group
+/**@} END micro group
  */

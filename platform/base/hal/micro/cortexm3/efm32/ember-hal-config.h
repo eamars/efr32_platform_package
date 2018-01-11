@@ -1,14 +1,14 @@
 // -----------------------------------------------------------------------------
-// @file ember-hal-config.h
-// @brief HAL configuration legacy ember support header
-//
-// @section License
-// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
-//
-// This file is licensed under the Silabs License Agreement. See the file
-// "Silabs_License_Agreement.txt" for details. Before using this software for
-// any purpose, you must agree to the terms of that agreement.
-//
+/// @file ember-hal-config.h
+/// @brief HAL configuration legacy ember support header
+///
+/// @section License
+/// <b>(C) Copyright 2017 Silicon Laboratories, http://www.silabs.com</b>
+///
+/// This file is licensed under the Silabs License Agreement. See the file
+/// "Silabs_License_Agreement.txt" for details. Before using this software for
+/// any purpose, you must agree to the terms of that agreement.
+///
 // -----------------------------------------------------------------------------
 #ifndef EMBER_HAL_CONFIG_H
 #define EMBER_HAL_CONFIG_H
@@ -97,6 +97,9 @@
   #endif
   #if HAL_COEX_REQ_SHARED
     #define PTA_REQ_SHARED  HAL_COEX_REQ_SHARED
+  #endif
+  #if HAL_COEX_PRI_SHARED
+    #define PTA_PRI_SHARED  HAL_COEX_PRI_SHARED
   #endif
   #if HAL_COEX_RETRYRX_ENABLE
     #define PTA_RX_RETRY_REQ HAL_COEX_RETRYRX_ENABLE

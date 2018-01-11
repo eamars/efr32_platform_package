@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file hal_efr.c
  * @brief This file contains EFR32 specific HAL code to handle chip startup.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include <stdint.h>
@@ -362,81 +362,81 @@ const debugSignal_t* halGetDebugSignals(uint32_t *size)
  * Define the pins that are supported for debugging on the EFR32. This includes
  * PF2, PF3, PF4, PF5, PC10, and PC11. Along with these pins there are specific
  * PRS channels that will be used to output debug information on these pins.
- * This is allo for debug and very specific to the EFR32.
+ * This is all for debug and very specific to the EFR32.
  */
 static const debugPin_t debugPins[] = {
   {
-    .name = "PC10", // Dumbo/Jumbo/Nerio - EXP_HEADER15, WSTK_P12
+    .name = "PC10", // EFR32xG1/EFR32xG12/EFR32xG13 - EXP_HEADER15, WSTK_P12
     .prsChannel = 9, // PRS 0/12 9/15 10/4 11/3
     .prsLocation = 15,
     .gpioPort = gpioPortC,
     .gpioPin = 10
   },
   {
-    .name = "PC11", // Dumbo/Jumbo/Nerio - EXP_HEADER16, WSTK_P13
+    .name = "PC11", // EFR32xG1/EFR32xG12/EFR32xG13 - EXP_HEADER16, WSTK_P13
     .prsChannel = 10, // PRS 0/13 9/16 10/5 11/4
     .prsLocation = 5,
     .gpioPort = gpioPortC,
     .gpioPin = 11
   },
   {
-    .name = "PF2", // Dumbo/Nerio - WSTK_P28 (SWO)
+    .name = "PF2", // EFR32xG1/EFR32xG13 - WSTK_P28 (SWO)
     .prsChannel = 0, // PRS 0/2 1/1 2/0 3/7
     .prsLocation = 2,
     .gpioPort = gpioPortF,
     .gpioPin = 2
   },
   {
-    .name = "PF3", // Dumbo/Nerio - EXP_HEADER13, WSTK_10 (TDI) [Jumbo PC9]
+    .name = "PF3", // EFR32xG1/EFR32xG13 - EXP_HEADER13, WSTK_10 (TDI) [EFR32xG12 PC9]
     .prsChannel = 1, // PRS 0/3 1/2 2/1 3/0
     .prsLocation = 2,
     .gpioPort = gpioPortF,
     .gpioPin = 3
   },
   {
-    .name = "PF4", // Dumbo/Nerio - EXP_HEADER11, WSTK_P8 (LED0) [Jumbo PD12]
+    .name = "PF4", // EFR32xG1/EFR32xG13 - EXP_HEADER11, WSTK_P8 (LED0) [EFR32xG12 PD12]
     .prsChannel = 2, // PRS 0/4 1/3 2/2 3/1
     .prsLocation = 2,
     .gpioPort = gpioPortF,
     .gpioPin = 4
   },
   {
-    .name = "PF5", // Dumbo/Nerio - WSTK_P32 (LED1)
+    .name = "PF5", // EFR32xG1/EFR32xG13 - WSTK_P32 (LED1)
     .prsChannel = 3, // PRS 0/5 1/4 2/3 3/2
     .prsLocation = 2,
     .gpioPort = gpioPortF,
     .gpioPin = 5
   },
   {
-    .name = "PC9", // Jumbo - EXP_HEADER13, WSTK_P10 [Dumbo/Nerio PF3]
+    .name = "PC9", // EFR32xG12 - EXP_HEADER13, WSTK_P10 [EFR32xG1/EFR32xG13 PF3]
     .prsChannel = 11, // PRS 0/11 9/14 10/3 11/2
     .prsLocation = 2,
     .gpioPort = gpioPortC,
     .gpioPin = 9
   },
   {
-    .name = "PD9", // Jumbo - EXP_HEADER5, WSTK_P2 [Dumbo/Nerio PA3 (VCOM_CTS)]
+    .name = "PD9", // EFR32xG12 - EXP_HEADER5, WSTK_P2 [EFR32xG1/EFR32xG13 PA3 (VCOM_CTS)]
     .prsChannel = 3, // PRS 3/8 4/0 5/6 6/11
     .prsLocation = 8,
     .gpioPort = gpioPortD,
     .gpioPin = 9
   },
   {
-    .name = "PD10", // Jumbo - EXP_HEADER7, WSTK_P4 [Dumbo/Nerio PF6 (BUTTON0)]
+    .name = "PD10", // EFR32xG12 - EXP_HEADER7, WSTK_P4 [EFR32xG1/EFR32xG13 PF6 (BUTTON0)]
     .prsChannel = 4, // PRS 3/9 4/1 5/0 6/12
     .prsLocation = 1,
     .gpioPort = gpioPortD,
     .gpioPin = 10
   },
   {
-    .name = "PD11", // Jumbo - EXP_HEADER9, WSTK_P6 [Dumbo/Nerio PF7 (BUTTON1)]
+    .name = "PD11", // EFR32xG12 - EXP_HEADER9, WSTK_P6 [EFR32xG1/EFR32xG13 PF7 (BUTTON1)]
     .prsChannel = 5, // PRS 3/10 4/2 5/1 6/13
     .prsLocation = 1,
     .gpioPort = gpioPortD,
     .gpioPin = 11
   },
   {
-    .name = "PD12", // Jumbo - EXP_HEADER11, WSTK_P8 [Dumbo/Nerio PF4 (LED0)]
+    .name = "PD12", // EFR32xG12 - EXP_HEADER11, WSTK_P8 [EFR32xG1/EFR32xG13 PF4 (LED0)]
     .prsChannel = 6, // PRS 3/11 4/3 5/2 6/14
     .prsLocation = 14,
     .gpioPort = gpioPortD,

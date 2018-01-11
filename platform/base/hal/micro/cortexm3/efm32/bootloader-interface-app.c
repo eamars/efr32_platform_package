@@ -62,10 +62,10 @@ static bool bootloaderIsCommonBootloader(void)
 static void verifyMainBootloaderVersion(uint32_t version)
 {
   // Assert that the main bootloader table pointer points to main flash or bootloader flash
-  assert(((uint32_t)mainBootloaderTable & 0xFFFF0000) == 0x0
-         || ((uint32_t)mainBootloaderTable & 0xFFFF0000) == 0x0FE10000);
+  assert(((uint32_t)mainBootloaderTable & 0xFFFF0000U) == 0x0U
+         || ((uint32_t)mainBootloaderTable & 0xFFFF0000U) == 0x0FE10000U);
   // Assert that the main bootloader table pointer points inside the bootloader
-  assert(((uint32_t)mainBootloaderTable & 0x0000FFFF) < 0x4000);
+  assert(((uint32_t)mainBootloaderTable & 0x0000FFFFU) < 0x4000U);
 
   assert(mainBootloaderTable->header.version >= version);
 }

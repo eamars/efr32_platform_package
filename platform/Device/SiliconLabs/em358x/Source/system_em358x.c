@@ -2,14 +2,14 @@
 * @file     system_em358x.c
 * @brief    CMSIS Cortex-M3 Device Peripheral Access Layer Source File for
 *           Device em358x
-* @version 5.3.3
+* @version 5.3.5
 * @date     23. November 2012
 *
 * @note
 *
 ******************************************************************************
 * @section License
-* <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+* <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
 *******************************************************************************
 *
 * Permission is granted to anyone to use this software for any purpose,

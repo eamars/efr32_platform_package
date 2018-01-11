@@ -3,6 +3,7 @@ from . import halconfig_dependency as dep
 
 name = "ANTDIV"
 displayname = "Antenna Diversity"
+description = "Antenna Diversity"
 compatibility = dep.Dependency(mcu_type=dep.McuType.RADIO)  # = all
 category = " Radio"
 studio_module = {
@@ -17,9 +18,11 @@ options = {
     "BSP_ANTDIV_SEL": {
         "type": types.Pin(),
         "description": "Antenna select",
+        "longdescription": "Pin used to control external antenna switch",
     },
     "BSP_ANTDIV_NSEL": {
         "type": types.Pin(),
         "description": "Complementary antenna select",
+        "longdescription": "Pin for inverted external antenna signal",
     },
 }

@@ -1,4 +1,11 @@
 ================ Revision history ============================================
+5.3.5:
+ - em_vdac: Fixed bug when fetching GAINERRTRIM calibration value.
+ - em_cmu: Fixed bug when tuning HFXO for external clock usage.
+
+5.3.4:
+ - Changes to move code towards MISRAC 2012 compliance.
+
 5.3.3
  - em_cmu: 48 MHz HFRCO band selectable for devices that support it.
  - em_emu: Added macro guards for BU mode functionality for series 0 devices.
@@ -9,12 +16,12 @@
 5.3.1
  - em_opamp: Corrected reload of default calibration trims in OPAMP_Enable()
    for Series 0.
- - em_core: Fixed invalid parameter in CORE_YIELD_CRITICAL and 
-   CORE_YIELD_ATOMIC macros.            
+ - em_core: Fixed invalid parameter in CORE_YIELD_CRITICAL and
+   CORE_YIELD_ATOMIC macros.
 
 5.3.0
  - em_chip: Updated PLFRCO tuning values.
- - em_can: Fixed ID filter mask bug. 
+ - em_can: Fixed ID filter mask bug.
  - em_gpio: Doc updates.
  - em_gpio: Fixed bug in GPIO pin validation to enable PD9 on BGM121 modules.
  - em_ldma: Added missing signals for EFM32GG11.

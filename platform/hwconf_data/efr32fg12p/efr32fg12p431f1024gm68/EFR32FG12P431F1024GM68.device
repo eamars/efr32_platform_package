@@ -169,13 +169,13 @@
       <peripheral componentIdRef="efr32.efr32fg12p.antdiv" displayName="Antenna Diversity" name="ANTDIV" revision="A" category=" Radio" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.batterymon" displayName="Battery Monitor" name="BATTERYMON" revision="A" category="Third Party" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.btl_button" displayName="Bootloader Entry" name="BTL_BUTTON" revision="A" category=" HAL" hidden="false"/>
-      <peripheral componentIdRef="efr32.efr32fg12p.bulbpwm" displayName="Lightbulb PWM" name="BULBPWM" revision="A" category="PWM" hidden="false"/>
-      <peripheral componentIdRef="efr32.efr32fg12p.bulbpwm_color" displayName="Lightbulb Color PWM" name="BULBPWM_COLOR" revision="A" category="PWM" hidden="false"/>
+      <peripheral componentIdRef="efr32.efr32fg12p.bulbpwm" displayName="PWM Lightbulb" name="BULBPWM" revision="A" category="PWM" hidden="false"/>
+      <peripheral componentIdRef="efr32.efr32fg12p.bulbpwm_color" displayName="Color PWM Lightbulb" name="BULBPWM_COLOR" revision="A" category="PWM" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.button" displayName="Button" name="BUTTON" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.coex" displayName="Coexistence" name="COEX" revision="A" category=" Radio" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.cs5463" displayName="CS5463 Power Meter" name="CS5463" revision="A" category="Third Party" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.extflash" displayName="SPI Flash" name="EXTFLASH" revision="A" category=" HAL" hidden="false"/>
-      <peripheral componentIdRef="efr32.efr32fg12p.ezradiopro" displayName="EZRadio Pro" name="EZRADIOPRO" revision="A" category=" Radio" hidden="false"/>
+      <peripheral componentIdRef="efr32.efr32fg12p.ezradiopro" displayName="EZRadioPro" name="EZRADIOPRO" revision="A" category=" Radio" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.i2csensor" displayName="I2C Sensor" name="I2CSENSOR" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.ioexp" displayName="I2C I/O Expander" name="IOEXP" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.led" displayName="LED" name="LED" revision="A" category=" HAL" hidden="false"/>
@@ -185,7 +185,7 @@
       <peripheral componentIdRef="efr32.efr32fg12p.spidisplay" displayName="SPI Display" name="SPIDISPLAY" revision="A" category=" HAL" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.spincp" displayName="SPI NCP" name="SPINCP" revision="A" category=" NCP" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.uartncp" displayName="UART NCP" name="UARTNCP" revision="A" category=" NCP" hidden="false"/>
-      <peripheral componentIdRef="efr32.efr32fg12p.vcom" displayName="Virtual COM" name="VCOM" revision="A" category=" Serial" hidden="false"/>
+      <peripheral componentIdRef="efr32.efr32fg12p.vcom" displayName="Virtual COM Port" name="VCOM" revision="A" category=" Serial" hidden="false"/>
       <peripheral componentIdRef="efr32.efr32fg12p.vuart" displayName="Virtual UART" name="VUART" revision="A" category=" Serial" hidden="false"/>
     </peripherals>
     <script uri="../EFR32FG12P.py">

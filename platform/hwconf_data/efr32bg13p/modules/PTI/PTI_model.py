@@ -22,22 +22,26 @@ options = {
         "description": "PTI baud rate",
         "min": "0",
         "max": "4294967295",
-        "defaultValue": "1600000"
+        "defaultValue": "1600000",
+        "longdescription": "",
     },
     "BSP_PTI_DCLK": {
         "type": types.Pin(signal="DCLK"),
-        "description": "PTI DCLK",
+        "description": "DCLK pin",
         "mode": "HAL_PTI_MODE_SPI",
+        "longdescription": "Select pin for the DCLK signal",
     },
     "BSP_PTI_DFRAME": {
         "type": types.Pin(signal="DFRAME"),
-        "description": "PTI DFRAME",
+        "description": "DFRAME pin",
         "mode": ["HAL_PTI_MODE_SPI", "HAL_PTI_MODE_UART"],
+        "longdescription": "Select pin for the DFRAME signal",
     },
     "BSP_PTI_DOUT": {
         "type": types.Pin(signal="DOUT"),
-        "description": "PTI DOUT",
-        "mode": ["HAL_PTI_MODE_SPI", "HAL_PTI_MODE_UART", "HAL_PTI_MODE_UART_ONEWIRE"]
+        "description": "DOUT pin",
+        "mode": ["HAL_PTI_MODE_SPI", "HAL_PTI_MODE_UART", "HAL_PTI_MODE_UART_ONEWIRE"],
+        "longdescription": "Select pin for the DOUT signal",
     },
 
 }

@@ -1,10 +1,10 @@
 /***************************************************************************//**
  * @file uartdrv.c
  * @brief UARTDRV API implementation.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
- * <b>Copyright 2016 Silicon Laboratories, Inc, http://www.silabs.com</b>
+ * <b>Copyright 2016 Silicon Laboratories, Inc, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -226,7 +226,8 @@ static void EnableTransmitter(UARTDRV_Handle_t handle)
     // Enable TX
     handle->peripheral.uart->CMD = USART_CMD_TXEN;
     // Wait for TX to be enabled
-    while (!(handle->peripheral.uart->STATUS & USART_STATUS_TXENS)) ;
+    while (!(handle->peripheral.uart->STATUS & USART_STATUS_TXENS)) {
+    }
 
     // Enable TX route
 #if defined(USART_ROUTEPEN_TXPEN)
@@ -236,12 +237,14 @@ static void EnableTransmitter(UARTDRV_Handle_t handle)
 #endif
   } else if (handle->type == uartdrvUartTypeLeuart) {
     // Wait for previous register writes to sync
-    while (handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+    while ((handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+    }
 
     // Enable TX
     handle->peripheral.leuart->CMD = LEUART_CMD_TXEN;
     // Wait for TX to be enabled
-    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_TXENS)) ;
+    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_TXENS)) {
+    }
 
     // Enable TX route
 #if defined(LEUART_ROUTEPEN_TXPEN)
@@ -268,7 +271,8 @@ static void DisableTransmitter(UARTDRV_Handle_t handle)
     handle->peripheral.uart->CMD = USART_CMD_TXDIS;
   } else if (handle->type == uartdrvUartTypeLeuart) {
     // Wait for previous register writes to sync
-    while (handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+    while ((handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+    }
 
     // Disable TX route
 #if defined(LEUART_ROUTEPEN_TXPEN)
@@ -290,7 +294,8 @@ static void EnableReceiver(UARTDRV_Handle_t handle)
     // Enable RX
     handle->peripheral.uart->CMD = USART_CMD_RXEN;
     // Wait for RX to be enabled
-    while (!(handle->peripheral.uart->STATUS & USART_STATUS_RXENS)) ;
+    while (!(handle->peripheral.uart->STATUS & USART_STATUS_RXENS)) {
+    }
 
     // Enable RX route
 #if defined(USART_ROUTEPEN_RXPEN)
@@ -300,12 +305,14 @@ static void EnableReceiver(UARTDRV_Handle_t handle)
 #endif
   } else if (handle->type == uartdrvUartTypeLeuart) {
     // Wait for previous register writes to sync
-    while (handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+    while ((handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+    }
 
     // Enable RX
     handle->peripheral.leuart->CMD = LEUART_CMD_RXEN;
     // Wait for RX to be enabled
-    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_RXENS)) ;
+    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_RXENS)) {
+    }
 
     // Enable RX route
 #if defined(LEUART_ROUTEPEN_RXPEN)
@@ -332,7 +339,8 @@ static void DisableReceiver(UARTDRV_Handle_t handle)
     handle->peripheral.uart->CMD = USART_CMD_RXDIS;
   } else if (handle->type == uartdrvUartTypeLeuart) {
     // Wait for prevous register writes to sync
-    while (handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+    while ((handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+    }
 
     // Disable RX route
 #if defined(LEUART_ROUTEPEN_RXPEN)
@@ -1231,7 +1239,8 @@ Ecode_t UARTDRV_InitLeuart(UARTDRV_Handle_t handle,
   LEUART_Enable(initData->port, leuartEnableTx);
 
   // Wait for previous write (TXEN) to sync before clearing FIFOs
-  while (initData->port->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+  while ((initData->port->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+  }
 
   // Discard false frames and/or IRQs
   initData->port->CMD = LEUART_CMD_CLEARRX | LEUART_CMD_CLEARTX;
@@ -1248,7 +1257,8 @@ Ecode_t UARTDRV_InitLeuart(UARTDRV_Handle_t handle,
   }
 
   // Wait for everything to be synchronized
-  while (initData->port->SYNCBUSY) ;
+  while (initData->port->SYNCBUSY != 0U) {
+  }
   return ECODE_EMDRV_UARTDRV_OK;
 }
 
@@ -1279,7 +1289,8 @@ Ecode_t UARTDRV_DeInit(UARTDRV_Handle_t handle)
     handle->peripheral.uart->CMD = USART_CMD_TXDIS;
   } else if (handle->type == uartdrvUartTypeLeuart) {
     LEUART_Reset(handle->peripheral.leuart);
-    while (handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) ;
+    while ((handle->peripheral.leuart->SYNCBUSY & LEUART_SYNCBUSY_CMD) != 0U) {
+    }
     handle->peripheral.leuart->CMD = LEUART_CMD_RXDIS | LEUART_CMD_TXDIS;
   }
 
@@ -1373,7 +1384,8 @@ Ecode_t UARTDRV_Abort(UARTDRV_Handle_t handle, UARTDRV_AbortType_t type)
 
     // Wait for peripheral to finish cleaning up, to prevent framing errors
     // on subsequent transfers
-    while (!(UARTDRV_GetPeripheralStatus(handle) & UARTDRV_STATUS_TXIDLE)) ;
+    while (!(UARTDRV_GetPeripheralStatus(handle) & UARTDRV_STATUS_TXIDLE)) {
+    }
   }
   if ((type == uartdrvAbortReceive) || (type == uartdrvAbortAll)) {
     // Stop the current transfer
@@ -1709,7 +1721,8 @@ UARTDRV_Count_t UARTDRV_ForceReceive(UARTDRV_Handle_t handle,
   }
 
   // Wait for DMA receive to complete and clear
-  while (handle->rxQueue->used > 0) ;
+  while (handle->rxQueue->used > 0) {
+  }
 
   if (handle->type == uartdrvUartTypeUart) {
     rxState = (handle->peripheral.uart->STATUS & USART_STATUS_RXENS);
@@ -1724,7 +1737,7 @@ UARTDRV_Count_t UARTDRV_ForceReceive(UARTDRV_Handle_t handle,
   }
 
   if (handle->type == uartdrvUartTypeUart) {
-    while ((handle->peripheral.uart->STATUS & USART_STATUS_RXDATAV)) {
+    while ((handle->peripheral.uart->STATUS & USART_STATUS_RXDATAV) != 0U) {
       *data = (uint8_t)handle->peripheral.uart->RXDATA;
       data++;
       i++;
@@ -1733,7 +1746,7 @@ UARTDRV_Count_t UARTDRV_ForceReceive(UARTDRV_Handle_t handle,
       }
     }
   } else if (handle->type == uartdrvUartTypeLeuart) {
-    while ((handle->peripheral.leuart->STATUS & LEUART_STATUS_RXDATAV)) {
+    while ((handle->peripheral.leuart->STATUS & LEUART_STATUS_RXDATAV) != 0U) {
       *data = (uint8_t)handle->peripheral.leuart->RXDATA;
       data++;
       i++;
@@ -1800,18 +1813,19 @@ Ecode_t  UARTDRV_ForceTransmit(UARTDRV_Handle_t handle,
   handle->hasTransmitted = true;
 
   if (handle->type == uartdrvUartTypeUart) {
-    while (count--) {
+    while (count-- != 0U) {
       USART_Tx(handle->peripheral.uart, *data++);
     }
     // Wait for TX completion
     while (!(handle->peripheral.uart->STATUS & USART_STATUS_TXC)) {
     }
   } else if (handle->type == uartdrvUartTypeLeuart) {
-    while (count--) {
+    while (count-- != 0U) {
       LEUART_Tx(handle->peripheral.leuart, *data++);
     }
     // Wait for TX completion
-    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_TXC)) ;
+    while (!(handle->peripheral.leuart->STATUS & LEUART_STATUS_TXC)) {
+    }
   }
 
   if (!txState) {

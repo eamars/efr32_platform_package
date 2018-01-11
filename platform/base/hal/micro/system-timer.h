@@ -198,5 +198,5 @@ EmberStatus halCobraIdleForMicroseconds(uint32_t *duration);
 
 #endif //__SYSTEM_TIMER_H__
 
-/**@} //END addtogroup
+/**@}END addtogroup
  */

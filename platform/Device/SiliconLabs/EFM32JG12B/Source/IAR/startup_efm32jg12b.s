@@ -2,7 +2,7 @@
 ; * @file startup_efm32jg12b.s
 ; * @brief    CMSIS Core Device Startup File
 ; *           Silicon Labs EFM32JG12B Device Series
-; * @version 5.3.3
+; * @version 5.3.5
 ; * @date     30. January 2012
 ; *
 ; * @note

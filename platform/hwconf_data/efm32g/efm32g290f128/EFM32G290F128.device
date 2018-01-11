@@ -260,7 +260,7 @@
       <peripheral componentIdRef="efm32.efm32g.serial" displayName="Serial" name="SERIAL" revision="A" category=" Serial" hidden="false"/>
       <peripheral componentIdRef="efm32.efm32g.spincp" displayName="SPI NCP" name="SPINCP" revision="A" category=" NCP" hidden="false"/>
       <peripheral componentIdRef="efm32.efm32g.uartncp" displayName="UART NCP" name="UARTNCP" revision="A" category=" NCP" hidden="false"/>
-      <peripheral componentIdRef="efm32.efm32g.vcom" displayName="Virtual COM" name="VCOM" revision="A" category=" Serial" hidden="false"/>
+      <peripheral componentIdRef="efm32.efm32g.vcom" displayName="Virtual COM Port" name="VCOM" revision="A" category=" Serial" hidden="false"/>
     </peripherals>
     <script uri="../EFM32G.py">
       <path>.</path>

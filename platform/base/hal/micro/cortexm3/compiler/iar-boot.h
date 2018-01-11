@@ -216,7 +216,7 @@ void halInternalResetWatchDog(void);
 /**
  * @brief Define the magic value that is interpreted by IAR C-SPY's Stack View.
  */
-#define STACK_FILL_VALUE  0xCDCDCDCD
+#define STACK_FILL_VALUE  0xCDCDCDCDU
 
 /**
  * @brief Define a generic RAM function identifier to a compiler specific one.

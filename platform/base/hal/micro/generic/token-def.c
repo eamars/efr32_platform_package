@@ -52,15 +52,12 @@ const uint8_t tokenArraySize[] = {
 // a macro expansion. Moreover, since TOKEN_DEF is only being used here as a
 // static declaration of token default values, there's no risk that it will
 // interfere with any other logic.
-//cstat -MISRAC2012-Rule-20.7
 // -------------------------------------------------------------------------
 #define TOKEN_DEF(name, creator, iscnt, isidx, type, arraysize, ...) \
   const type TOKEN_##name##_DEFAULTS = __VA_ARGS__;
   #include "stack/config/token-stack.h"
 #undef TOKEN_DEF
 // -------------------------------------------------------------------------
-// Re-enable enclosing parentheses CSTAT rule
-//cstat +MISRAC2012-Rule-20.7
 // -------------------------------------------------------------------------
 
 #define TOKEN_DEF(name, creator, iscnt, isidx, type, arraysize, ...) \

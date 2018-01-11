@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file fem-control.c
  * @brief This file implements a simple API for configuring FEM control signals via PRS.
- * @copyright Copyright 2016 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2016 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include PLATFORM_HEADER

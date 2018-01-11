@@ -41,8 +41,6 @@
   #elif defined (CORTEXM3_EFM32_MICRO)
 // EFR32, EZR32
     #include "em_device.h"
-    #include "micro/cortexm3/efm32/regs.h"
-    #include "micro/cortexm3/micro-features.h"
     #define NVIC_CONFIG "hal/micro/cortexm3/efm32/nvic-config.h"
     #include "interrupts-efm32.h"
   #else
@@ -226,7 +224,7 @@ void rtosResetWatchdog(void);
 /**
  * @brief Define the magic value that is interpreted by IAR C-SPY's Stack View.
  */
-#define STACK_FILL_VALUE  0xCDCDCDCD
+#define STACK_FILL_VALUE  0xCDCDCDCDU
 
 /**
  * @brief Define a generic RAM function identifier to a compiler specific one.

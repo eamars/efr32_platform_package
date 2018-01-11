@@ -17,6 +17,7 @@ options = {
                                  inherit_options=True,
                                  define_value_prefix="HAL_SERIAL_PORT_",
                                  mode="uart"),
-        "description": "UART NCP USART port",
+        "description": "UART port",
+        "longdescription": "Select UART port for NCP communication",
     },
 }

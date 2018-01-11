@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file packet_ci.c
  * @brief This file implements the packet commands for RAIL test applications.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>

@@ -4,7 +4,7 @@
  * @version 3.20.10
  *******************************************************************************
  * @section License
- * <b>(C) Copyright 2014 Silicon Labs, http://www.silabs.com</b>
+ * <b>(C) Copyright 2014 Silicon Labs, www.silabs.com</b>
  *******************************************************************************
  *
  * This file is licensed under the Silabs License Agreement. See the file
@@ -114,7 +114,7 @@ static void DelayTicks(uint16_t ticks)
   uint16_t startTime;
   volatile uint16_t now;
 
-  if ( ticks ) {
+  if ( ticks != 0U ) {
     startTime = TMR_CNT;
     do {
       now = TMR_CNT;

@@ -2,7 +2,7 @@
  * @file app_common.h
  * @brief This header file defines variables to be shared between the main
  * test application and customer specific sections.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #ifndef __APPS_COMMON_H__
@@ -85,6 +85,7 @@ typedef struct Counters{
 
   uint32_t receive;
   uint32_t syncDetect;
+  uint32_t preambleLost;
   uint32_t preambleDetect;
   uint32_t frameError;
   uint32_t rxOfEvent;

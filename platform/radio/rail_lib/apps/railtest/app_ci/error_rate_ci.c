@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file error_rate_ci.c
  * @brief This file provides functionality to test RAIL error rates.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 #include <string.h>
 

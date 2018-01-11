@@ -29,7 +29,6 @@ static const char *stateNames[] =
   [USBD_STATE_ATTACHED] = "ATTACHED  ",
   [USBD_STATE_POWERED] = "POWERED   ",
   [USBD_STATE_DEFAULT] = "DEFAULT   ",
-  [USBD_STATE_ADDRESSED] = "ADDRESSED ",
   [USBD_STATE_CONFIGURED] = "CONFIGURED",
   [USBD_STATE_SUSPENDED] = "SUSPENDED ",
   [USBD_STATE_LASTMARKER] = "UNDEFINED "
@@ -74,7 +73,6 @@ int USBD_AbortTransfer(int epAddr)
   assert(ep != NULL);
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-cmp-bef !PTR-null-assign-pos
   // nUSBD_AbortTransfer(), Illegal endpoint
   assert(ep->num != 0);
 
@@ -88,14 +86,13 @@ int USBD_AbortTransfer(int epAddr)
   // USBD_AbortEp( ep );
 
   ep->state = D_EP_IDLE;
-  if ( ep->xferCompleteCb ) {
+  if ((ep->xferCompleteCb) != 0U) {
     callback = ep->xferCompleteCb;
     ep->xferCompleteCb = NULL;
 
     if ((dev->lastState == USBD_STATE_CONFIGURED)
         && (dev->state     == USBD_STATE_ADDRESSED)) {
       // Assert above prevents dereferencing null pointer
-      //cstat !PTR-null-assign-fun-pos
       USBDHAL_DeactivateEp(ep);
     }
 
@@ -207,7 +204,6 @@ bool USBD_EpIsBusy(int epAddr)
   assert(ep != NULL);
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-cmp-bef !PTR-null-assign-pos
   if ( ep->state == D_EP_IDLE ) {
     return false;
   }
@@ -246,7 +242,6 @@ int USBD_StallEp(int epAddr)
   // assert (ep->num!=0);
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-cmp-bef-fun !PTR-null-assign-fun-pos
   ATOMIC(
     retVal = USBDHAL_StallEp(ep);
     )
@@ -288,7 +283,6 @@ int USBD_UnStallEp(int epAddr)
   // assert (ep->num!=0);
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-cmp-bef-fun !PTR-null-assign-fun-pos
   ATOMIC(
     retVal = USBDHAL_UnStallEp(ep);
     )
@@ -535,7 +529,7 @@ int USBD_Write(int epAddr, void *data, int byteCount,
 
   // USBD_Write(), Misaligned data buffer
   if (data != NULL) {
-    assert(!((uint32_t)data & 3));
+    assert(!((uint32_t)(uint8_t *)data & 3));
   }
 
   DECLARE_INTERRUPT_STATE;
@@ -635,14 +629,13 @@ int USBD_Read(int epAddr, void *data, int byteCount,
   // assert ((byteCount < MAX_XFER_LEN) && ((byteCount/ep->packetSize) < MAX_PACKETS_PR_XFER));
 
   if (data != NULL) {
-    assert(!((uint32_t)data & 3));
+    assert(!((uint32_t)(uint8_t *)data & 3));
   }
 
   DECLARE_INTERRUPT_STATE;
   DISABLE_INTERRUPTS();
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-assign-fun-pos
   if ( USBDHAL_EpIsStalled(ep)) {
     RESTORE_INTERRUPTS();
     #ifdef USB_DEBUG_READ
@@ -652,7 +645,6 @@ int USBD_Read(int epAddr, void *data, int byteCount,
   }
 
   // Assert above prevents dereferencing null pointer
-  //cstat !PTR-null-cmp-bef !PTR-null-assign-pos
   if ( ep->state == D_EP_TRANSMITTING ) {
     RESTORE_INTERRUPTS();
     #ifdef USB_DEBUG_READ

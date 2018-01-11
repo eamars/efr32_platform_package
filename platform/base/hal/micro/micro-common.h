@@ -44,7 +44,7 @@ void halSuspend(void);
  *  ::halInternalDisableWatchDog() in order to successfully disable the watchdog
  *  timer.
  */
-#define MICRO_DISABLE_WATCH_DOG_KEY 0xA5
+#define MICRO_DISABLE_WATCH_DOG_KEY 0xA5U
 
 /** @brief Enables the watchdog timer.
  */
@@ -100,19 +100,19 @@ typedef uint8_t SleepModes;
 enum
 #endif
 {
-  SLEEPMODE_RUNNING = 0,
-  SLEEPMODE_IDLE = 1,
-  SLEEPMODE_WAKETIMER = 2,
-  SLEEPMODE_MAINTAINTIMER = 3,
-  SLEEPMODE_NOTIMER = 4,
-  SLEEPMODE_HIBERNATE = 5,
+  SLEEPMODE_RUNNING = 0U,
+  SLEEPMODE_IDLE = 1U,
+  SLEEPMODE_WAKETIMER = 2U,
+  SLEEPMODE_MAINTAINTIMER = 3U,
+  SLEEPMODE_NOTIMER = 4U,
+  SLEEPMODE_HIBERNATE = 5U,
 
   //The following SleepModes are deprecated on EM2xx and EM3xx chips.  Each
   //micro's halSleep() function will remap these modes to the appropriate
   //replacement, as necessary.
-  SLEEPMODE_RESERVED = 6,
-  SLEEPMODE_POWERDOWN = 7,
-  SLEEPMODE_POWERSAVE = 8,
+  SLEEPMODE_RESERVED = 6U,
+  SLEEPMODE_POWERDOWN = 7U,
+  SLEEPMODE_POWERSAVE = 8U,
 };
 
 #ifdef CORTEXM3_EMBER_MICRO

@@ -10,19 +10,21 @@ options = {
         {
             # SWO pin is called "SWV" on Series 1
             "type": types.Pin(signal='SWV'),
-            "description": "Serial Wire Output",
-            "dependency": dep.Dependency(platform=dep.Platform.SERIES1)
+            "description": "Serial Wire Output pin",
+            "dependency": dep.Dependency(platform=dep.Platform.SERIES1),
+            "longdescription": "Select pin for SWO",
         },
         {
             # SWO pin is called "SWO" on Series 0
             "type": types.Pin(signal='SWO'),
             "description": "Serial Wire Output",
-            "dependency": dep.Dependency(platform=dep.Platform.SERIES0, not_sdid=[76,77])
+            "dependency": dep.Dependency(platform=dep.Platform.SERIES0, not_sdid=[76,77]),
+            "longdescription": "Select pin for SWO",
         },
         # Documentation options
         {
             "type": types.Pin(),
-            "description": "Serial Wire Output",
+            "description": "Serial Wire Output pin",
             "dependency": dep.Dependency(),
             "documentation": "True",
         },

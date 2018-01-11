@@ -2,7 +2,7 @@
 ; * @file startup_efr32mg14p.s
 ; * @brief    CMSIS Core Device Startup File
 ; *           Silicon Labs EFR32MG14P Device Series
-; * @version 5.3.3
+; * @version 5.3.5
 ; * @date     30. January 2012
 ; *
 ; * @note

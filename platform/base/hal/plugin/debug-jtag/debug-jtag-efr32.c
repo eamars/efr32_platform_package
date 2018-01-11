@@ -56,51 +56,28 @@ static char rtt_buffer[DEBUG_VUART_BUFFER_DOWN_SIZE];
 static uint8_t debugChannelState = DEBUG_OFF;
 #endif //defined(EMBER_STACK_IP) || defined(EMBER_STACK_CONNECT))
 
+// Fallback BSP_TRACE definitions match EFR32 WSTK routing
+#ifndef BSP_TRACE_SWO_LOC
+#define BSP_TRACE_SWO_LOC  0
+#define BSP_TRACE_SWO_PIN  2
+#define BSP_TRACE_SWO_PORT gpioPortF
+#endif
+
 EmberStatus emDebugInit(void)
 {
   // Initialize SWO for target -> debugger output (up-channel)
   // enable gpio clock
   CMU_ClockEnable(cmuClock_GPIO, true);
 
-#if defined(_EFM32_GIANT_FAMILY) || defined(_EFM32_LEOPARD_FAMILY) || defined(_EFM32_WONDER_FAMILY)
-
   // Enable Serial wire output pin
   GPIO_DbgSWOEnable(true);
 
   // set location to 0
-  GPIO_DbgLocationSet(0);
-
-  // enable output on pin - GPIO port f pin 2
-  GPIO_PinModeSet(gpioPortF, 2, gpioModePushPull, 1);
-
-#elif defined(_EFR32_MIGHTY_FAMILY) \
-  || defined(_EFR32_BLUE_FAMILY)    \
-  || defined(_EFR32_FLEX_FAMILY)    \
-  || defined(_EFR32_SNAPPY_FAMILY)
-
-  // Enable Serial wire output pin
-  GPIO_DbgSWOEnable(true);
-
-  // set location to 0
-  GPIO_DbgLocationSet(0);
+  GPIO_DbgLocationSet(BSP_TRACE_SWO_LOC);
 
   // TODO: Use AF_DBG_SWV_PORT and AF_DBG_SWV_PIN macros instead?
   // enable output on pin
-  GPIO_PinModeSet(gpioPortF, 2, gpioModePushPull, 1);
-
-#elif defined(ITM)
-
-  // Enable Serial wire output pin
-  GPIO_DbgSWOEnable(true);
-
-  // set location to 1
-  GPIO_DbgLocationSet(1);
-
-  // TODO: Use AF_DBG_SWV_PORT and AF_DBG_SWV_PIN macros instead?
-  // enable output on pin
-  GPIO_PinModeSet(gpioPortA, 0, gpioModePushPull, 0);
-
-#endif
+  GPIO_PinModeSet(BSP_TRACE_SWO_PORT, BSP_TRACE_SWO_PIN, gpioModePushPull, 1);
 
 #if !(defined(__CORTEX_M) && (__CORTEX_M == 0x00))
 //Fancy debugging is not supported on M0(+)...
@@ -144,12 +121,12 @@ void emDebugPowerUp(void)
 #if defined(ITM)
   CoreDebug->DHCSR |= CoreDebug_DHCSR_C_DEBUGEN_Msk;
   CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk; //trace enable
-  ITM->LAR  = 0xC5ACCE55;  // unlock itm
-  ITM->TER  = 0x0;         // trace enable
-  ITM->TCR  = 0x0;         // trace control
-  TPI->SPPR = 2;           // pin protocol (2 = NRZ)
-  TPI->ACPR = 21;          // clock prescaler
-  ITM->TPR  = 0x0;         // trace priveledge
+  ITM->LAR  = 0xC5ACCE55UL; // unlock itm
+  ITM->TER  = 0x0UL;        // trace enable
+  ITM->TCR  = 0x0UL;        // trace control
+  TPI->SPPR = 2UL;          // pin protocol (2 = NRZ)
+  TPI->ACPR = 21UL;         // clock prescaler
+  ITM->TPR  = 0x0UL;        // trace priveledge
   DWT->CTRL = ((0x4UL << DWT_CTRL_NUMCOMP_Pos)
                | (1UL << DWT_CTRL_CYCTAP_Pos)
                | (0xFUL << DWT_CTRL_POSTINIT_Pos)
@@ -348,7 +325,7 @@ void emDebugPowerDown(void)
 
     ITM->TCR &= ~ITM_TCR_ITMENA_Msk;
 
-    while (ITM->TCR & ITM_TCR_BUSY_Msk) {
+    while ((ITM->TCR & ITM_TCR_BUSY_Msk) != 0U) {
       // do nothing
     }
 
@@ -400,7 +377,8 @@ __STATIC_INLINE uint8_t itmSendByteChannel8(uint8_t byte)
 {
 #if defined(ITM)
   if ((ITM->TCR & ITM_TCR_ITMENA_Msk) && (ITM->TER & (1UL << 8))) {
-    while (ITM->PORT[8].u32 == 0) ;
+    while (ITM->PORT[8].u32 == 0) {
+    }
     ITM->PORT[8].u8 = byte;
   }
 #endif

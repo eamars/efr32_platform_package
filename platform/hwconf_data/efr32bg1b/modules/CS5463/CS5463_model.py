@@ -14,6 +14,7 @@ options = {
     "BSP_CS5463_CS": {
         "type": types.Pin(disabled_label="Inherited from USART"),
         "description": "CS5463 CS pin",
+        "longdescription": "Pin used for CS signal of the CS5463",
     },
     "BSP_CS5463_USART_PORT": {
         "type": types.Peripheral(filter=["USART"],
@@ -21,5 +22,6 @@ options = {
                                  define_value_prefix='HAL_SPI_PORT_',
                                  mode="spi"),
         "description": "CS5463 USART port",
+        "longdescription": "USART port to communicate with the CS5463",
     },
 }

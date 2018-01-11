@@ -101,6 +101,8 @@ EmberStatus halStackInitTokens(void)
         status = EMBER_EEPROM_MFG_VERSION_MISMATCH;
       } else if (CURRENT_STACK_TOKEN_VERSION != tokStack) {
         status = EMBER_EEPROM_STACK_VERSION_MISMATCH;
+      } else {
+        // MISRA requires ..else if.. to have terminating else.
       }
       #if defined(DEBUG)
       if (!mfgTokenVersionValid) {

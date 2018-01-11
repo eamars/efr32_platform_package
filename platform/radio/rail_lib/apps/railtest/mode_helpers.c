@@ -2,7 +2,7 @@
  * @file mode_helpers.c
  * @brief This file contains helpers for transitioning into the various
  *   AppModes
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include "rail.h"

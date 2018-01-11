@@ -2,7 +2,7 @@
  * @file app_modes.c
  * @brief This is the states machine for the base test application. It handles
  * transmit, receive, and various debug modes.
- * @copyright Copyright 2015 Silicon Laboratories, Inc. http://www.silabs.com
+ * @copyright Copyright 2015 Silicon Laboratories, Inc. www.silabs.com
  ******************************************************************************/
 
 #include <stdio.h>
@@ -79,7 +79,7 @@ static void transitionAppMode(AppMode_t nextAppMode)
     txCount = 0;
     pendFinishTxSequence();
   } else if (currAppMode == RF_SENSE) {
-    (void) RAIL_StartRfSense(railHandle, RAIL_RFSENSE_OFF, 0, false);
+    (void) RAIL_StartRfSense(railHandle, RAIL_RFSENSE_OFF, 0, NULL);
   } else if (currAppMode == PER) {
     RAIL_CancelTimer(railHandle);
   } else if (currAppMode == BER) {
