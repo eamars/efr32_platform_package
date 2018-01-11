@@ -519,7 +519,8 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
                     }
 
                     // fire the callback for debug purposes
-                    obj->callbacks.on_raw_packet_received(obj, &msg);
+                    if (obj->callbacks.on_raw_packet_received)
+                        obj->callbacks.on_raw_packet_received(obj, &msg);
 
                     // process packet with different type
                     switch(header->packet_type)
