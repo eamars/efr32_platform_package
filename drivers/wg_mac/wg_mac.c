@@ -277,7 +277,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     wg_mac_raw_msg_t raw_msg;
 
                     // read from raw packet queue
-                    if (!xQueueReceive(obj->tx_raw_packet_queue, &raw_msg, 0))
+                    if (!xQueueReceive(queue, &raw_msg, 0))
                     {
                         DRV_ASSERT(false);
                     }
@@ -290,7 +290,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     wg_mac_uplink_msg_t uplink_msg;
 
                     // read from tx data queue
-                    if (!xQueueReceive(obj->tx_data_packet_queue, &uplink_msg, 0))
+                    if (!xQueueReceive(queue, &uplink_msg, 0))
                     {
                         DRV_ASSERT(false);
                     }
