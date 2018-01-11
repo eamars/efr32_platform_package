@@ -2,7 +2,7 @@
 * @file displayls013b7dh06config.h
 * @brief SLSTK3701A specific configuration for the display driver for
 *        the Sharp Memory LCD model LS013B7DH06.
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * # License
 * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

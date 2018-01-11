@@ -1,4 +1,10 @@
 ================ Revision history ============================================
+5.3.5:
+ - No changes.
+
+5.3.4:
+ - No changes.
+
 5.3.3:
  - Added kit headers
 
@@ -11,7 +17,7 @@
 5.3.0:
  - Thunderboard BSP updated.
  - Fixed support for RETARGET_VCOM on STK3700, STK3600 and STK3800.
- - Fixed bug in displaypalls013b7dh06config.h for SLSTK3701A_EFM32GG11 when 
+ - Fixed bug in displaypalls013b7dh06config.h for SLSTK3701A_EFM32GG11 when
    setting up PRS location.
 
 5.2.2:

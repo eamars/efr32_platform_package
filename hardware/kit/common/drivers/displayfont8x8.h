@@ -2,7 +2,7 @@
  * @file displayfont8x8.h
  * @brief 8x8 font with all characters
  *
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

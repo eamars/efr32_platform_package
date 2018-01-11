@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file
  * @brief EEPROM driver for 24AA024 (2Kbit) EEPROM device on the DK.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

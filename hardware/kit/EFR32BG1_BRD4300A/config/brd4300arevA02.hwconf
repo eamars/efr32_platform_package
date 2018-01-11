@@ -12,6 +12,7 @@
     <property object="CMU" propertyId="CMU.BSP_CLK_LFXO_PRESENT.BOOL" value="1"/>
     <property object="DCDC" propertyId="ABPeripheral.included" value="true"/>
     <property object="DefaultMode" propertyId="mode.diagramLocation" value="0, 0"/>
+    <property object="GPIO" propertyId="GPIO.BSP_TRACE_SWO.PIN" value="PF2"/>
     <property object="I2C0" propertyId="I2C.BSP_I2C_SCL.PIN" value="PC11"/>
     <property object="I2C0" propertyId="I2C.BSP_I2C_SDA.PIN" value="PC10"/>
     <property object="I2CSENSOR" propertyId="I2CSENSOR.BSP_I2CSENSOR_PERIPHERAL.MOD" value="I2C0"/>

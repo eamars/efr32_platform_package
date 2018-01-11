@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file bap_config.h
  * @brief Bosch Sensortec BMP280 barometric pressure sensor configuration file
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>

@@ -35,4 +35,10 @@
 		<property key="boardCompatibility" value="rd-0100-0201"/>
 		<property key="installationPath" value="./ist_a0100/ist_a0100_efr32mg12p432f1024gm48.hwconf"/>
 	</contentItemData>
+  <!-- CapTouchSensor -->
+	<contentItemData>
+		<property key="partCompatibility" value="mcu.arm.efr32.mg12.efr32mg12p432f1024gm48"/>
+		<property key="boardCompatibility" value="rd-0072-0201"/>
+		<property key="installationPath" value="./ist_a0072/ist_a0072_efr32mg12p432f1024gm48.hwconf"/>
+	</contentItemData>
 </contentItems>

@@ -1,7 +1,7 @@
 /**************************************************************************//**
 * @file
 * @brief SWO Trace API (for eAProfiler)
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * # License
 * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

@@ -2,7 +2,7 @@
  * @file  msdbot.h
  * @brief Definitions for the Bulk Only Transport protocol of
  *        USB Mass Storage devices.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

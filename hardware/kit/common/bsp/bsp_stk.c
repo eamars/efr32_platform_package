@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file
  * @brief Board support package API implementation STK's.
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2016 Silicon Labs, Inc. http://www.silabs.com</b>

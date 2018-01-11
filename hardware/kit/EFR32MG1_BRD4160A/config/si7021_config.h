@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file si7021_config.h
  * @brief Si7021 I2C Humidity and Temperature Sensor configuration file
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>

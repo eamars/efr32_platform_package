@@ -2,7 +2,7 @@
 * @file displaypalemlib.c
 * @brief Platform Abstraction Layer (PAL) for DISPLAY driver on EMLIB based
 *        platforms.
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * # License
 * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

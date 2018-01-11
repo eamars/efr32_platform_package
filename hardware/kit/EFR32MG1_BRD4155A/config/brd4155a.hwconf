@@ -19,6 +19,7 @@
     <property object="EXTFLASH" propertyId="EXTFLASH.BSP_EXTFLASH_CS.PIN" value="PA4"/>
     <property object="EXTFLASH" propertyId="EXTFLASH.BSP_EXTFLASH_USART.MOD" value="USART1"/>
     <property object="EZRADIOPRO" propertyId="EZRADIOPRO.BSP_EZRADIOPRO_USART.MOD" value="USART1"/>
+    <property object="GPIO" propertyId="GPIO.BSP_TRACE_SWO.PIN" value="PF2"/>
     <property object="I2C0" propertyId="I2C.BSP_I2C_SCL.PIN" value="PC10"/>
     <property object="I2C0" propertyId="I2C.BSP_I2C_SDA.PIN" value="PC11"/>
     <property object="I2CSENSOR" propertyId="I2CSENSOR.BSP_I2CSENSOR_ENABLE.PIN" value="PD15"/>

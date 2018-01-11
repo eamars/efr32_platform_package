@@ -85,6 +85,14 @@
 // [EZRADIOPRO]$
 
 // $[GPIO]
+#define PORTIO_GPIO_SWV_PIN                           (2)
+#define PORTIO_GPIO_SWV_PORT                          (gpioPortF)
+#define PORTIO_GPIO_SWV_LOC                           (0)
+
+#define BSP_TRACE_SWO_PIN                             (2)
+#define BSP_TRACE_SWO_PORT                            (gpioPortF)
+#define BSP_TRACE_SWO_LOC                             (0)
+
 // [GPIO]$
 
 // $[I2C0]

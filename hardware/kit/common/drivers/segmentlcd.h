@@ -1,7 +1,7 @@
 /**************************************************************************//**
 * @file
 * @brief EFM32 Segment LCD Display driver, header file
-* @version 5.3.3
+* @version 5.3.5
 ******************************************************************************
 * # License
 * <b>Copyright 2015 Silicon Labs, Inc. http://www.silabs.com</b>

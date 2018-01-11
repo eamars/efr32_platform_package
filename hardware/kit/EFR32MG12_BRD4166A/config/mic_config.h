@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file mic_config.h
  * @brief SPH0645LM4H-B MEMS Microphone configuration file
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * # License
  * <b>Copyright 2017 Silicon Laboratories, Inc. http://www.silabs.com</b>

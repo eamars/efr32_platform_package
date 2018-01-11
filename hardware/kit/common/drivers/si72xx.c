@@ -1,7 +1,7 @@
 /***************************************************************************//**
  * @file si72xx.c
  * @brief Driver for the Si72xx Hall Effect Sensor
- * @version 5.3.3
+ * @version 5.3.5
  *******************************************************************************
  * @section License
  * <b>Copyright 2017 Silicon Labs, Inc. http://www.silabs.com</b>
