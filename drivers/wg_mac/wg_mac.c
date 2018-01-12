@@ -34,9 +34,6 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
     rx_msg.rssi = rssi;
     rx_msg.quality = quality;
 
-    // continue receive packet unless interrupted
-    // radio_recv_timeout(obj->radio, 0);
-
     // send message to thread handler
     xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
 }
