@@ -185,7 +185,15 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
             // extend the rx window if required
             if (ack_packet->extended_rx_window_ms)
             {
-                obj->config.extended_rx_window_timeout_ms = ack_packet->extended_rx_window_ms;
+                xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+                // select extended rx window timeout if present
+                xTimerChangePeriod(obj->retransmit.rx_window_timer,
+                                   pdMS_TO_TICKS(
+                                           MAX(ack_packet->extended_rx_window_ms, obj->config.rx_window_timeout_ms)
+                                   ),
+                                   portMAX_DELAY);
+                xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
             }
 
             break;
@@ -372,17 +380,21 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                     // starts rx receive window
 
                     // reset the rx window timer
+                    uint32_t time_left = 0;
                     if (xTimerIsTimerActive(obj->retransmit.rx_window_timer))
                     {
+                        // get the time left
+                        time_left = (xTimerGetExpiryTime(obj->retransmit.rx_window_timer) - xTaskGetTickCount()) /
+                                (configTICK_RATE_HZ / 1000);
+
                         // update previous timer
                         xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
                     }
 
-                    // select extended rx window timeout if present
+                    // create a new timer, based on the time left for the previous one
                     xTimerChangePeriod(obj->retransmit.rx_window_timer,
                                        pdMS_TO_TICKS(
-                                            MAX(obj->config.extended_rx_window_timeout_ms,
-                                                obj->config.rx_window_timeout_ms)
+                                            MAX(time_left, obj->config.rx_window_timeout_ms)
                                        ),
                                        portMAX_DELAY);
                     xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
