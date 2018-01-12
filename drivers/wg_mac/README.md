@@ -43,6 +43,17 @@ can be interrupted when further transmission is required.
 
 ![receive_window](../../resources/receive_window.png)
 
+Configurable Downlink Window
+-----------------
+To make sure downlink message can be reliably delivered, the host can request the client to open the receive window 
+longer than it should be. The receive window should be large enough for host to perform at least one retransmission. 
+
+Currently the configurable receive window information is encapsulated in downlink acknowledgement packet. The client 
+will then reconfigure the receive window immediately. The receive window will be kept open until expires. The following 
+timing diagram shows how downlink window can be configured. 
+
+![configurable_receive_window](../../resources/configurable_rx_window.png)
+
 Notes
 -----
 [^1]: Encryption will be focused in the next release of protocol. 
