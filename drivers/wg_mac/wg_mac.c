@@ -15,7 +15,6 @@
 const wg_mac_config_t wg_mac_default_config = {
         .local_eui64 = 0,
         .rx_window_timeout_ms = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS,
-        .extended_rx_window_timeout_ms = 0,
         .tx_timeout_ms = WG_MAC_DEFAULT_TX_TIMEOUT_MS,
         .max_retransmit = WG_MAC_DEFAULT_MAX_RETRIES,
 };
@@ -82,12 +81,6 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 
     // read radio object
     wg_mac_t * obj = (wg_mac_t *) pvTimerGetTimerID(xTimer);
-
-    // clear the extended timeout
-    if (obj->config.extended_rx_window_timeout_ms > obj->config.rx_window_timeout_ms)
-    {
-        obj->config.extended_rx_window_timeout_ms = 0;
-    }
 
     // if previous packet is acked, then I can safely enter the idle state and waiting for another transmission
     if (obj->retransmit.is_packet_clear)

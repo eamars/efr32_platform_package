@@ -82,7 +82,6 @@ typedef struct
 {
     uint64_t local_eui64;
     uint16_t rx_window_timeout_ms;
-    uint16_t extended_rx_window_timeout_ms;
     uint16_t tx_timeout_ms;
     uint8_t max_retransmit;
 } wg_mac_config_t;
