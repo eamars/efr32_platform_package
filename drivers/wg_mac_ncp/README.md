@@ -43,3 +43,9 @@ if the old packet doesn't have a chance to transmit.
 
 The downlink message will be activated and transmited right after the acknowledgement packet has been transmitted. Only
 the data packet will guarantee the downlink slot will be opened. 
+
+To grant more time for host to transmit data, including the retransmission, the host can request the client to extend
+its receive window by specifying such timeout in the acknowledgement packet. As it is shown in diagram below, the client
+will maintain its receive window until expires.
+
+![configurable_receive_window](../../resources/configurable_rx_window.png)
