@@ -16,7 +16,7 @@
 #define SUBG_MAC_MAGIC_BYTE 0x03
 #define SUBG_MAC_HEADER_SIZE (5)
 #define SUBG_MAC_CMD_HEADER_SIZE (SUBG_MAC_HEADER_SIZE + 1)
-#define SUBG_MAC_PACKET_CMD_ACK_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 2)
+#define SUBG_MAC_PACKET_CMD_ACK_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 4)
 #define SUBG_MAC_PACKET_CMD_JOIN_REQ_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 8)
 #define SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 2)
 #define SUBG_MAC_PACKET_DATA_HEADER_SIZE (SUBG_MAC_HEADER_SIZE + 3)
@@ -84,6 +84,7 @@ typedef union
         subg_mac_cmd_header_t cmd_header;
         uint8_t ack_type;
         uint8_t ack_seqid;
+        uint16_t extended_rx_window_ms;
     };
 } subg_mac_cmd_ack_t;
 

@@ -10,10 +10,12 @@
 
 #include "wg_mac.h"
 #include "subg_mac.h"
+#include "utils.h"
 
 const wg_mac_config_t wg_mac_default_config = {
         .local_eui64 = 0,
         .rx_window_timeout_ms = WG_MAC_DEFAULT_RX_WINDOW_TIMEOUT_MS,
+        .extended_rx_window_timeout_ms = 0,
         .tx_timeout_ms = WG_MAC_DEFAULT_TX_TIMEOUT_MS,
         .max_retransmit = WG_MAC_DEFAULT_MAX_RETRIES,
 };
@@ -33,7 +35,7 @@ static void wg_mac_on_rx_done_isr(wg_mac_t * obj, void * msg, int32_t size, int3
     rx_msg.quality = quality;
 
     // continue receive packet unless interrupted
-    radio_recv_timeout(obj->radio, 0);
+    // radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
     xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
@@ -83,6 +85,12 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 
     // read radio object
     wg_mac_t * obj = (wg_mac_t *) pvTimerGetTimerID(xTimer);
+
+    // clear the extended timeout
+    if (obj->config.extended_rx_window_timeout_ms > obj->config.rx_window_timeout_ms)
+    {
+        obj->config.extended_rx_window_timeout_ms = 0;
+    }
 
     // if previous packet is acked, then I can safely enter the idle state and waiting for another transmission
     if (obj->retransmit.is_packet_clear)
@@ -135,6 +143,7 @@ static void send_ack_packet(wg_mac_t * obj, uint8_t seqid_to_ack)
     ack_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_ACK;
     ack_packet->ack_seqid = seqid_to_ack;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
+    ack_packet->extended_rx_window_ms = 0;
 
     wg_mac_send_raw_pri(obj, &tx_msg, true);
 }
@@ -174,6 +183,12 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 }
                 default:
                     break;
+            }
+
+            // extend the rx window if required
+            if (ack_packet->extended_rx_window_ms)
+            {
+                obj->config.extended_rx_window_timeout_ms = ack_packet->extended_rx_window_ms;
             }
 
             break;
@@ -332,14 +347,9 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
             {
                 // in tx state we are going to wait until tx is complete
                 // stay in tx state until tx is done
-                if (!xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
-                {
-                    // fail to transmit, then enter idle state
-                    obj->fsm_state = WG_MAC_IDLE;
-
-                    DRV_ASSERT(false);
-                }
-                else
+                radio_opmode_t opmode = radio_get_opmode(obj->radio);
+                DRV_ASSERT(opmode == RADIO_OPMODE_TX);
+                if (xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
                 {
                     obj->retransmit.is_packet_clear = false;
                     // if previously doesn't require ack or the previous packet is an ack, we are not expecting an ack
@@ -363,15 +373,32 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
                     // for other packet that requires an ACK, open the receive window and waiting for ack packet
                     // starts rx receive window
-                    radio_recv_timeout(obj->radio, 0);
 
-                    // starts rx timer
-                    xTimerChangePeriod(obj->retransmit.rx_window_timer, pdMS_TO_TICKS(obj->config.rx_window_timeout_ms),
+                    // reset the rx window timer
+                    if (xTimerIsTimerActive(obj->retransmit.rx_window_timer))
+                    {
+                        // update previous timer
+                        xTimerStop(obj->retransmit.rx_window_timer, portMAX_DELAY);
+                    }
+
+                    // select extended rx window timeout if present
+                    xTimerChangePeriod(obj->retransmit.rx_window_timer,
+                                       pdMS_TO_TICKS(
+                                            MAX(obj->config.extended_rx_window_timeout_ms,
+                                                obj->config.rx_window_timeout_ms)
+                                       ),
                                        portMAX_DELAY);
                     xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
 
                     // setup done, then enter rx state
                     obj->fsm_state = WG_MAC_RX;
+                }
+                else
+                {
+                    // fail to transmit, then enter idle state
+                    obj->fsm_state = WG_MAC_IDLE;
+
+                    DRV_ASSERT(false);
                 }
 
                 break;
@@ -379,6 +406,10 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
             case WG_MAC_RX:
             {
+                // put the radio into receive mode in rx state
+                if (radio_get_opmode(obj->radio) != RADIO_OPMODE_RX)
+                    radio_recv_timeout(obj->radio, 0);
+
                 // wait for packets to arrive
                 wg_mac_raw_msg_t rx_msg;
                 if (xQueueReceive(obj->rx_raw_packet_queue, &rx_msg, pdMS_TO_TICKS(100)))
