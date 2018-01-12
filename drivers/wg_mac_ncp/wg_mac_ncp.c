@@ -19,9 +19,10 @@
 const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .local_eui64 = 0,
         .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
-        .ack_window_sec = 2,
+        .ack_window_sec = 1,
         .max_retries = 3,
         .auto_ack = true,
+        .downlink_extended_rx_window_ms = 5000,
 };
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
@@ -35,9 +36,6 @@ static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_
     memcpy(rx_msg.buffer, msg, rx_msg.size);
     rx_msg.rssi = rssi;
     rx_msg.quality = quality;
-
-    // enter rx state again
-    radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
     xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
@@ -158,9 +156,9 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
 
         if (requires_ack)
         {
-            // the next retransmission time is calculated by: current time + retry_counter * ack_window
+            // the next retransmission time is calculated by: current time + ack_window
             client->next_retry_time_sec =
-                    obj->sec_since_start + client->retransmit.retry_counter * obj->config.ack_window_sec;
+                    obj->sec_since_start + obj->config.ack_window_sec;
 
             client->retransmit.prev_packet_acked = false;
         }
@@ -169,11 +167,19 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
     // send to queue
     if (__IS_INTERRUPT())
     {
-        xQueueSendFromISR(obj->tx_raw_packet_queue, msg, NULL);
+        if (!xQueueSendFromISR(obj->tx_raw_packet_queue, msg, NULL))
+        {
+            // tx_raw_packet_queue is full
+            DRV_ASSERT(false);
+        }
     }
     else
     {
-        xQueueSend(obj->tx_raw_packet_queue, msg, portMAX_DELAY);
+        if (!xQueueSend(obj->tx_raw_packet_queue, msg, 0))
+        {
+            // tx_raw_packet_queue is full
+            DRV_ASSERT(false);
+        }
     }
 }
 
@@ -391,7 +397,18 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     ack_packet->ack_seqid = client->rx_seqid;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
-    wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
+    // if there is pending downlink packet, then extend the downlink receive window
+    if (client->downlink.is_pending_downlink_packet)
+    {
+        ack_packet->extended_rx_window_ms = obj->config.downlink_extended_rx_window_ms;
+    }
+    else
+    {
+        ack_packet->extended_rx_window_ms = 0;
+    }
+
+    // send ack message
+    wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, false);
 
     // for safety concern, we only transmit data on data packet rx window
     if (client->downlink.is_pending_downlink_packet)
@@ -487,7 +504,8 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
             case WG_MAC_NCP_RX:
             {
                 // put the radio to rx state before entering sleep
-                radio_recv_timeout(obj->radio, 0);
+                if (radio_get_opmode(obj->radio) != RADIO_OPMODE_RX)
+                    radio_recv_timeout(obj->radio, 0);
 
                 // listen on both tx_queue_pri and rx_queue_pri
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->queue_set_pri, portMAX_DELAY);
