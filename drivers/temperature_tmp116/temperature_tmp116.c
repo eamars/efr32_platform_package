@@ -1,7 +1,7 @@
 /**
  * @brief TMP116 temperature sensor driver
  * @file temperature_tmp116.c
- * @author Ran Bao
+ * @author Ran Bao, Connor Janie
  * @date Sept, 2017
  */
 

@@ -133,7 +133,7 @@ void assert_failed(const char * file, uint32_t line)
     );
 
     // dump call stack
-    backtrace();
+    // backtrace();
 
     // reset the device
     system_reset(RESET_CRASH_ASSERT);

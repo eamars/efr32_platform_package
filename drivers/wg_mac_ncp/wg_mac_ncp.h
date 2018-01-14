@@ -35,11 +35,20 @@ typedef enum
 
 typedef enum
 {
+    WG_MAC_NCP_DOWNLINK_EMPTY,
+    WG_MAC_NCP_DOWNLINK_PENDING,
+    WG_MAC_NCP_DOWNLINK_TRANSMITTING
+} wg_mac_ncp_downlink_state;
+
+typedef enum
+{
     WG_MAC_NCP_NO_ERROR,
     WG_MAC_NCP_UNKNOWN_ERROR,
+    WG_MAC_NCP_TIMEOUT,
     WG_MAC_NCP_INVALID_PACKET_LENGTH,
     WG_MAC_NCP_NO_CLIENT_SLOT_AVAILABLE,
     WG_MAC_NCP_NO_CLIENT_FOUND,
+    WG_MAC_NCP_INVALID_CLIENT_STATE,
 } wg_mac_ncp_error_code_t;
 
 typedef enum
@@ -76,8 +85,8 @@ typedef struct
 
     struct
     {
-        wg_mac_ncp_raw_msg_t pending_downlink_packet;
-        bool is_pending_downlink_packet;
+        wg_mac_ncp_raw_msg_t downlink_packet;
+        wg_mac_ncp_downlink_state downlink_state;
     } downlink;
 } wg_mac_ncp_client_t;
 
@@ -86,7 +95,6 @@ typedef struct
     wg_mac_ncp_client_t * client;
     uint16_t payload_size;
     uint8_t payload[SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE];
-    bool requires_ack;
 } wg_mac_ncp_downlink_msg_t;
 
 typedef struct
@@ -105,6 +113,7 @@ typedef struct
     uint32_t ack_window_sec;
     uint8_t max_retries;
     bool auto_ack;
+    uint16_t downlink_extended_rx_window_ms;
 } wg_mac_ncp_config_t;
 
 typedef void (*wg_mac_ncp_on_client_joined)(void * obj, wg_mac_ncp_client_t * client);
@@ -112,6 +121,10 @@ typedef void (*wg_mac_ncp_on_client_left)(void * obj, wg_mac_ncp_client_t * clie
 typedef void (*wg_mac_ncp_on_repeated_message_recevied)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_packet_missing)(void * obj, wg_mac_ncp_client_t * client, uint8_t diff);
 typedef void (*wg_mac_ncp_on_raw_packet_received)(void * obj, wg_mac_ncp_raw_msg_t * msg);
+typedef void (*wg_mac_ncp_on_packet_received)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
+typedef void (*wg_mac_ncp_on_downlink_packet_init)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
+typedef void (*wg_mac_ncp_on_downlink_packet_success)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
+typedef void (*wg_mac_ncp_on_downlink_packet_fail)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 
 typedef struct
 {
@@ -150,8 +163,12 @@ typedef struct
         wg_mac_ncp_on_client_left on_client_left;
         wg_mac_ncp_on_repeated_message_recevied on_repeated_message_recevied;
         wg_mac_ncp_on_packet_missing on_packet_missing;
+        wg_mac_ncp_on_downlink_packet_init on_downlink_packet_init;
+        wg_mac_ncp_on_downlink_packet_success on_downlink_packet_success;
+        wg_mac_ncp_on_downlink_packet_fail on_downlink_packet_fail;
 
         // callbacks for debug purposes
+        wg_mac_ncp_on_packet_received on_packet_received;
         wg_mac_ncp_on_raw_packet_received on_raw_packet_received;
     } callbacks;
 } wg_mac_ncp_t;
@@ -185,7 +202,7 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
  * @param timeout_ms timeout when waiting for place in queue
  * @return if the timeout is triggered
  */
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms);
+wg_mac_ncp_error_code_t wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_ncp_send(obj, msg) \
         wg_mac_ncp_send_timeout((obj), (msg), 0)
 #define wg_mac_ncp_send_block(obj, msg) \
@@ -198,7 +215,7 @@ bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg
  * @param timeout_ms timeout when waiting to read from queue
  * @return if the timeout is triggered
  */
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms);
+wg_mac_ncp_error_code_t wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms);
 #define wg_mac_ncp_recv(obj, msg) \
         wg_mac_ncp_recv_timeout((obj), (msg), 0)
 #define wg_mac_ncp_recv_block(obj, msg) \

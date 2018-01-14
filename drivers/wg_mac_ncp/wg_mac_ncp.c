@@ -19,9 +19,10 @@
 const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .local_eui64 = 0,
         .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
-        .ack_window_sec = 2,
+        .ack_window_sec = 1,
         .max_retries = 3,
         .auto_ack = true,
+        .downlink_extended_rx_window_ms = 5000,
 };
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
@@ -35,9 +36,6 @@ static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_
     memcpy(rx_msg.buffer, msg, rx_msg.size);
     rx_msg.rssi = rssi;
     rx_msg.quality = quality;
-
-    // enter rx state again
-    radio_recv_timeout(obj->radio, 0);
 
     // send message to thread handler
     xQueueSendFromISR(obj->rx_raw_packet_queue, &rx_msg, NULL);
@@ -158,9 +156,9 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
 
         if (requires_ack)
         {
-            // the next retransmission time is calculated by: current time + retry_counter * ack_window
+            // the next retransmission time is calculated by: current time + ack_window
             client->next_retry_time_sec =
-                    obj->sec_since_start + client->retransmit.retry_counter * obj->config.ack_window_sec;
+                    obj->sec_since_start + obj->config.ack_window_sec;
 
             client->retransmit.prev_packet_acked = false;
         }
@@ -169,11 +167,19 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
     // send to queue
     if (__IS_INTERRUPT())
     {
-        xQueueSendFromISR(obj->tx_raw_packet_queue, msg, NULL);
+        if (!xQueueSendFromISR(obj->tx_raw_packet_queue, msg, NULL))
+        {
+            // tx_raw_packet_queue is full
+            DRV_ASSERT(false);
+        }
     }
     else
     {
-        xQueueSend(obj->tx_raw_packet_queue, msg, portMAX_DELAY);
+        if (!xQueueSend(obj->tx_raw_packet_queue, msg, 0))
+        {
+            // tx_raw_packet_queue is full
+            DRV_ASSERT(false);
+        }
     }
 }
 
@@ -232,8 +238,65 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
     {
         case SUBG_MAC_PACKET_CMD_ACK:
         {
-            // no special operation with ACK packet
-            client = wg_mac_ncp_find_client_with_short_id(obj, cmd_header->mac_header.src_id);
+            if (msg->size < sizeof(subg_mac_cmd_ack_t))
+            {
+                return WG_MAC_NCP_INVALID_PACKET_LENGTH;
+            }
+
+            subg_mac_cmd_ack_t * ack_packet = (subg_mac_cmd_ack_t *) msg->buffer;
+
+            // decode the ack packet to figure out which packet is being acked
+            switch (ack_packet->ack_type)
+            {
+                case SUBG_MAC_PACKET_CMD_ACK_REACHABLE: // INTERNATIONAL FALL THROUGH
+                case SUBG_MAC_PACKET_CMD_ACK_CONFIRM:
+                {
+                    // find the client and compare it with the latest packet it transmitted
+                    client = wg_mac_ncp_find_client_with_short_id(obj, cmd_header->mac_header.src_id);
+                    break;
+                }
+                case SUBG_MAC_PACKET_CMD_ACK_UNREACHABLE:
+                {
+                    // TODO: how to find the correct client?
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+
+
+            if (client)
+            {
+                // clear the pending transmit packet
+                if (!client->retransmit.prev_packet_acked)
+                {
+                    // matches the seqid
+                    subg_mac_header_t * header = (subg_mac_header_t *) client->retransmit.prev_packet.buffer;
+                    if (header->seqid == ack_packet->ack_seqid)
+                        client->retransmit.prev_packet_acked = true;
+                }
+
+                // clear the downlink message if any
+                if (client->downlink.downlink_state == WG_MAC_NCP_DOWNLINK_TRANSMITTING)
+                {
+                    // matches the seqid
+                    subg_mac_header_t * header = (subg_mac_header_t *) client->downlink.downlink_packet.buffer;
+                    if (header->seqid == ack_packet->ack_seqid)
+                    {
+                        client->downlink.downlink_state = WG_MAC_NCP_DOWNLINK_EMPTY;
+
+                        // fire the callback to indicate the downlink packet has been transmitted
+                        if (obj->callbacks.on_downlink_packet_success)
+                            obj->callbacks.on_downlink_packet_success(obj, client, &client->downlink.downlink_packet);
+                    }
+                }
+            }
+
+            // NOTE: We don't care if the ack packet request to extend the receive window since NCP is designed
+            // to open the rx window all the time
+
             break;
         }
         case SUBG_MAC_PACKET_CMD_JOIN_REQ:
@@ -260,6 +323,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 // a new client has been created
                 memset(client, 0x0, sizeof(wg_mac_ncp_client_t));
 
+                // initialize client default state
                 client->is_valid = true;
                 client->short_id = generate_unique_id(obj,
                                                       join_request->eui64); // generate a unique short id for the client
@@ -268,6 +332,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 client->rx_seqid = (uint8_t) (join_request->cmd_header.mac_header.seqid - 1);
                 client->retransmit.prev_packet_acked = true;
                 client->retransmit.retry_counter = 0;
+                client->downlink.downlink_state = WG_MAC_NCP_DOWNLINK_EMPTY;
             }
 
             // send a response message back
@@ -333,6 +398,10 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
         return WG_MAC_NCP_NO_CLIENT_FOUND;
     }
 
+    // fire the callback for debug purpose (the application shouldn't rely on this callback
+    if (obj->callbacks.on_packet_received)
+        obj->callbacks.on_packet_received(obj, client, msg);
+
     // compare the sequence number of received data
     uint8_t seqid_diff = data_header->mac_header.seqid - client->rx_seqid;
 
@@ -391,15 +460,33 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     ack_packet->ack_seqid = client->rx_seqid;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
-    wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
+    // extend the receiving window at client to make sure following packet can be received
+    // the receive window periodic is specified in ACK packet
+    if (client->downlink.downlink_state == WG_MAC_NCP_DOWNLINK_PENDING)
+    {
+        ack_packet->extended_rx_window_ms = obj->config.downlink_extended_rx_window_ms;
+    }
+    else
+    {
+        ack_packet->extended_rx_window_ms = 0;
+    }
+
+    // send ack message
+    wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, false);
 
     // for safety concern, we only transmit data on data packet rx window
-    if (client->downlink.is_pending_downlink_packet)
+    if (client->downlink.downlink_state == WG_MAC_NCP_DOWNLINK_PENDING)
     {
-        wg_mac_ncp_send_raw_pri(obj, &client->downlink.pending_downlink_packet, true, false);
+        // NOTE: @wg_mac_ncp_send_raw_pri will assign the downlink packet a unique seqid for the short period of time
+        // The receiver thread will then compare the seqid with ack to make sure packet is delivered
+        wg_mac_ncp_send_raw_pri(obj, &client->downlink.downlink_packet, true, false);
 
-        // clear the pending packet
-        client->downlink.is_pending_downlink_packet = false;
+        // put the downlink state to transmitting, allowing retransmission to be complete
+        client->downlink.downlink_state = WG_MAC_NCP_DOWNLINK_TRANSMITTING;
+
+        // fire the callback to indicate the packet is attempting to transmit
+        if (obj->callbacks.on_downlink_packet_init)
+            obj->callbacks.on_downlink_packet_init(obj, client, &client->downlink.downlink_packet);
     }
 
     return WG_MAC_NCP_NO_ERROR;
@@ -438,11 +525,15 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                         // exceed the maximum retry threshold, then remove the device from list
                         if (obj->clients[idx].retransmit.retry_counter > obj->config.max_retries)
                         {
-                            // TODO: report to host that a device is unresponsive
-                            DEBUG_PRINT("NCP: a client [0x%08llx] failed to ACK, removed from device list\r\n", obj->clients[idx].device_eui64);
-
                             // mark the device as invalid
                             obj->clients[idx].is_valid = false;
+
+                            // if the packet is downlink packet, then notify the packet loss
+                            if (obj->clients[idx].downlink.downlink_state == WG_MAC_NCP_DOWNLINK_TRANSMITTING)
+                            {
+                                if (obj->callbacks.on_downlink_packet_fail)
+                                    obj->callbacks.on_downlink_packet_fail(obj, &obj->clients[idx], &obj->clients[idx].downlink.downlink_packet);
+                            }
 
                             // fire the callback to notify the client has been removed
                             if (obj->callbacks.on_client_left)
@@ -487,7 +578,8 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
             case WG_MAC_NCP_RX:
             {
                 // put the radio to rx state before entering sleep
-                radio_recv_timeout(obj->radio, 0);
+                if (radio_get_opmode(obj->radio) != RADIO_OPMODE_RX)
+                    radio_recv_timeout(obj->radio, 0);
 
                 // listen on both tx_queue_pri and rx_queue_pri
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->queue_set_pri, portMAX_DELAY);
@@ -649,26 +741,32 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
 }
 
-bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms)
+wg_mac_ncp_error_code_t wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
     DRV_ASSERT(msg->client);
 
-    if (msg->client->is_valid)
+    if (!msg->client->is_valid)
     {
-        return false;
+        return WG_MAC_NCP_NO_CLIENT_FOUND;
+    }
+
+    // the downlink message cannot be configured at transmitting state
+    if (msg->client->downlink.downlink_state == WG_MAC_NCP_DOWNLINK_TRANSMITTING)
+    {
+        return WG_MAC_NCP_INVALID_CLIENT_STATE;
     }
 
     // the downlink message can only be transmitted right after the uplink message from
     // corresponding client. Each client has one slot for holding the most recent downlink
     // message.
-    msg->client->downlink.is_pending_downlink_packet = true;
+    msg->client->downlink.downlink_state = WG_MAC_NCP_DOWNLINK_PENDING;
 
-    // build message;
+    // build message (directly map to the client's downlink packet buffer)
     {
         subg_mac_data_header_t * data_header =
-                (subg_mac_data_header_t *) msg->client->downlink.pending_downlink_packet.buffer;
+                (subg_mac_data_header_t *) msg->client->downlink.downlink_packet.buffer;
 
         data_header->mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
         data_header->mac_header.src_id = 0;
@@ -676,23 +774,21 @@ bool wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg
         data_header->mac_header.packet_type = SUBG_MAC_PACKET_DATA;
         data_header->mac_header.seqid = 0;
 
-        data_header->data_type = msg->requires_ack ?
-                                 SUBG_MAC_PACKET_DATA_CONFIRM :
-                                 SUBG_MAC_PACKET_DATA_UNCONFIRM;
+        data_header->data_type = SUBG_MAC_PACKET_DATA_CONFIRM;
         data_header->payload_length = msg->payload_size;
 
         memcpy(&data_header->payload_start_place_holder, msg->payload, msg->payload_size);
 
         // set mac layer payload size
-        msg->client->downlink.pending_downlink_packet.size =
+        msg->client->downlink.downlink_packet.size =
                 (uint16_t) (SUBG_MAC_PACKET_DATA_HEADER_SIZE + data_header->payload_length);
     }
 
-    return true;
+    return WG_MAC_NCP_NO_ERROR;
 }
 
 
-bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms)
+wg_mac_ncp_error_code_t wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(msg);
@@ -702,7 +798,7 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, 
     {
         if (xQueueReceive(obj->rx_data_packet_queue, msg, portMAX_DELAY))
         {
-            return true;
+            return WG_MAC_NCP_NO_ERROR;
         }
     }
     else
@@ -710,12 +806,12 @@ bool wg_mac_ncp_recv_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_uplink_msg_t * msg, 
         // attempt to read from queue
         if (xQueueReceive(obj->rx_data_packet_queue, msg, pdMS_TO_TICKS(timeout_ms)))
         {
-            return true;
+            return WG_MAC_NCP_NO_ERROR;
         }
     }
 
     // timeout, nothing is received in rx queue
-    return false;
+    return WG_MAC_NCP_TIMEOUT;
 }
 
 #endif // #if USE_FREERTOS == 1
