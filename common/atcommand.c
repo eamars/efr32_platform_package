@@ -23,6 +23,9 @@ const char atcmd_command_reset[] = "RESET";
 const char atcmd_command_rxd[] = "RXD";
 const char atcmd_command_txd[] = "TXD";
 const char atcmd_command_rxtimeout[] = "RXTIMEOUT";
+const char atcmd_command_txpwr[] = "TXPWR";
+const char atcmd_command_lsclient[] = "LSCLIENT";
+const char atcmd_command_rmclient[] = "RMCLIENT";
 
 typedef struct {
     const atcmd_command_t command;
@@ -35,7 +38,10 @@ const atcmd_command_index_t atcmd_command_index[] = {
     {ATCMD_COMMAND_RESET, atcmd_command_reset, strlen(atcmd_command_reset)},
     {ATCMD_COMMAND_RXD, atcmd_command_rxd, strlen(atcmd_command_rxd)},
     {ATCMD_COMMAND_TXD, atcmd_command_txd, strlen(atcmd_command_txd)},
-    {ATCMD_COMMAND_RXTIMEOUT, atcmd_command_rxtimeout, strlen(atcmd_command_rxtimeout)}
+    {ATCMD_COMMAND_RXTIMEOUT, atcmd_command_rxtimeout, strlen(atcmd_command_rxtimeout)},
+    {ATCMD_COMMAND_TXPWR, atcmd_command_txpwr, strlen(atcmd_command_txpwr)},
+    {ATCMD_COMMAND_LSCLIENT, atcmd_command_lsclient, strlen(atcmd_command_lsclient)},
+    {ATCMD_COMMAND_RMCLIENT, atcmd_command_rmclient, strlen(atcmd_command_rmclient)},
 };
 
 
