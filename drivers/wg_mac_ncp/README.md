@@ -42,7 +42,10 @@ Each client will queue up to one downlink packet. Any new downlink packet to the
 if the old packet doesn't have a chance to transmit. 
 
 The downlink message will be activated and transmited right after the acknowledgement packet has been transmitted. Only
-the data packet will guarantee the downlink slot will be opened. 
+the data packet will guarantee the downlink slot will be opened. The downlink packet transmission operation can be described 
+by a state machine. The state transiton diagram is shown below:
+
+![downlink_states](../../resources/downlink_states.png)
 
 To grant more time for host to transmit data, including the retransmission, the host can request the client to extend
 its receive window by specifying such timeout in the acknowledgement packet. As it is shown in diagram below, the client
