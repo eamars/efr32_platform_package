@@ -27,6 +27,11 @@ typedef enum
     REG_PREV_SP,
 } core_regs_auto_stack_t;
 
+
+// define halInternalAssertFailed as an alias of assert_failed when not present
+void halInternalAssertFailed(const char *, int) __attribute__ ((weak, alias ("assert_failed")));
+
+
 void system_reset(uint16_t reset_reason)
 {
     // write to reset info with reset reason
