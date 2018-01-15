@@ -37,6 +37,10 @@ typedef enum
     SUBG_MAC_PACKET_CMD_ACK = 0,
     SUBG_MAC_PACKET_CMD_JOIN_REQ = 1,
     SUBG_MAC_PACKET_CMD_JOIN_RESP = 2,
+    SUBG_MAC_PACKET_CMD_LEAVE_REQ = 3,
+    SUBG_MAC_PACKET_CMD_LEAVE_RESP = 4,
+    SUBG_MAC_PACKET_CMD_KICK_REQ = 5,
+    SUBG_MAC_PACKET_CMD_KICK_RESP = 6,
 } subg_mac_packet_cmd_type_e;
 
 typedef enum
