@@ -332,6 +332,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
                     // send to transceiver
                     wg_mac_send_raw_pri(obj, &raw_msg, true);
+                    // xQueueSend(obj->tx_raw_packet_queue, &raw_msg, portMAX_DELAY);
                 }
                 else
                 {
@@ -345,11 +346,11 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
             {
                 // in tx state we are going to wait until tx is complete
                 // stay in tx state until tx is done
-                radio_opmode_t opmode = radio_get_opmode(obj->radio);
-                DRV_ASSERT(opmode == RADIO_OPMODE_TX);
                 if (xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
                 {
+                    // waiting for ack, unless specified
                     obj->retransmit.is_packet_clear = false;
+
                     // if previously doesn't require ack or the previous packet is an ack, we are not expecting an ack
                     subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
                     if (header->packet_type == SUBG_MAC_PACKET_CMD)
@@ -391,6 +392,10 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                                        ),
                                        portMAX_DELAY);
                     xTimerStart(obj->retransmit.rx_window_timer, portMAX_DELAY);
+
+                    // fire the callback to indicate the transmit is done
+                    if (obj->callbacks.on_raw_packet_transmitted)
+                        obj->callbacks.on_raw_packet_transmitted(obj, &obj->retransmit.prev_packet);
 
                     // setup done, then enter rx state
                     obj->fsm_state = WG_MAC_RX;
