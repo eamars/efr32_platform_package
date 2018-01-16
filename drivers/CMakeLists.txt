@@ -27,6 +27,7 @@ SET(ENABLED_DRIVERS
         imu_fxos
 		battery_monitor
 		simeeprom
+		gpcrc
 		# simgbpr
 		)
 
