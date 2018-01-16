@@ -168,7 +168,14 @@ const uint32_t totalTokenStorage[(0   //Compiler error here means total token st
 /**
  * @brief Define Symbols
  */
-VAR_AT_SEGMENT(NO_STRIPPING uint8_t simulatedEepromStorage[SIMEE_SIZE_B], __SIMEE__);
+VAR_AT_SEGMENT(NO_STRIPPING uint8_t simulated_eeprom_storage_static[SIMEE_SIZE_B], __SIMEE__);
+
+/**
+ * @brief Dummy declaration for simulated eeprom storage
+ *
+ * The alias variable simulatedEepromStorage shares the same memory with simulated_eeprom_storage_static
+ */
+extern uint8_t simulatedEepromStorage[] __attribute__((alias("simulated_eeprom_storage_static")));
 
 const uint8_t REAL_PAGES_PER_VIRTUAL = 0x02;
 const uint16_t REAL_PAGE_SIZE = 0x0400;
