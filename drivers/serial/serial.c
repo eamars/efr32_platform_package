@@ -15,6 +15,7 @@
 
 #include "FreeRTOS.h"
 #include "queue.h"
+#include "task.h"
 
 // external variables
 extern const pio_map_t usart_tx_map[];
@@ -364,6 +365,12 @@ ssize_t serial_write_timeout(serial_t * obj, void * buffer, size_t size, uint32_
     DRV_ASSERT(obj);
     DRV_ASSERT(size <= SERIAL_BUFFER_SIZE);
 
+    // if the scheduler is not start yet, the serial write won't work
+    if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
+    {
+        return size;
+    }
+
     ssize_t transmitted = 0;
     uint32_t block_ticks = 0;
 
@@ -443,6 +450,12 @@ ssize_t serial_read_timeout(serial_t * obj, void * buffer, size_t size, uint32_t
     DRV_ASSERT(size <= SERIAL_BUFFER_SIZE);
 
     volatile uint32_t available = obj->rx_buffer.available_bytes;
+
+    // if the scheduler is not start yet, we don't block
+    if (xTaskGetSchedulerState() != taskSCHEDULER_RUNNING)
+    {
+        return 0;
+    }
 
     // calculate how many bytes still need to read from ring buffer
     if (size > available)
