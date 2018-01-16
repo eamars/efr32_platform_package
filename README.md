@@ -1,6 +1,11 @@
 # EFR32 Target
 This repository is meant to be included in EFR32 related development project. 
 
+# Note
+
+- 16/Jan/2018: `arm-none-eabi-size` failed to recognize the data section size when RAM function (with
+`.ram` attribute) linked. 
+
 # EFR32 Device Memory Map
 
 The detailed memory layout can be found in `scripts/*.ld` folder. Following diagram shows the 
