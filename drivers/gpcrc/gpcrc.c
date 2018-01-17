@@ -84,7 +84,7 @@ uint16_t gpcrc_ccitt(gpcrc_t * obj, void * buffer, size_t len)
     GPCRC_Init_TypeDef init_data = GPCRC_INIT_DEFAULT;
 
     // configure the parameter
-    init_data.crcPoly = 0x1021;
+    init_data.crcPoly = 0x1021; // x16 + x12 + x5 + 1
     init_data.initValue = 0xFFFF;
     init_data.reverseBits = true;
 
