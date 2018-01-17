@@ -12,11 +12,9 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "em_msc.h"
-
 #include "drv_debug.h"
 #include "simeeprom.h"
-#include "sim-eeprom.h"
+#include "sim-eeprom.h" // << silabs' code
 
 #define BYTES_TO_WORDS(x) (((x) + 1) / 2)
 #define COUNTER_TOKEN_PAD        50
@@ -177,14 +175,16 @@ VAR_AT_SEGMENT(NO_STRIPPING uint8_t simulated_eeprom_storage_static[SIMEE_SIZE_B
  */
 extern uint8_t simulatedEepromStorage[] __attribute__((alias("simulated_eeprom_storage_static")));
 
-const uint8_t REAL_PAGES_PER_VIRTUAL = 0x02;
-const uint16_t REAL_PAGE_SIZE = 0x0400;
-const uint16_t LEFT_BASE = 0x0000;
-const uint16_t LEFT_TOP = 0x07FF;
-const uint16_t RIGHT_BASE = 0x0800;
-const uint16_t RIGHT_TOP = 0x0FFF;
-const uint16_t ERASE_CRITICAL_THRESHOLD = 0x0400;
-const uint16_t ID_COUNT = 0x0008;
+const uint8_t REAL_PAGES_PER_VIRTUAL = ((SIMEE_SIZE_HW / FLASH_PAGE_SIZE_HW) / 2);
+const uint16_t REAL_PAGE_SIZE = FLASH_PAGE_SIZE_HW;
+const uint16_t LEFT_BASE = SIMEE_BASE_ADDR_HW;
+const uint16_t LEFT_TOP = ((SIMEE_BASE_ADDR_HW + (FLASH_PAGE_SIZE_HW
+                                                  * ((SIMEE_SIZE_HW / FLASH_PAGE_SIZE_HW) / 2))) - 1);
+const uint16_t RIGHT_BASE = (SIMEE_BASE_ADDR_HW + (FLASH_PAGE_SIZE_HW
+                                                   * ((SIMEE_SIZE_HW / FLASH_PAGE_SIZE_HW) / 2)));
+const uint16_t RIGHT_TOP = (SIMEE_BASE_ADDR_HW + (SIMEE_SIZE_HW - 1));
+const uint16_t ERASE_CRITICAL_THRESHOLD = (SIMEE_SIZE_HW / 4);
+const uint16_t ID_COUNT = TOKEN_COUNT;
 
 bool checkForSimEe2DataExistence(uint32_t simEe2offset);
 uint8_t halInternalSimEeStartupCore(bool forceRebuildAll, uint8_t *lookupCache);
@@ -290,23 +290,24 @@ uint8_t halInternalSimEeStartup(bool forceRebuildAll)
     return halInternalSimEeStartupCore(forceRebuildAll, lookupCache);
 }
 
-
-void simeeprom_init(void)
+void simeeprom_init(simeeprom_t * obj)
 {
     DRV_ASSERT(halInternalSimEeInit() == 0);
+
+    simeeprom_bookkeeping(obj);
 }
 
-void simeeprom_read(uint8_t id, void * data, uint8_t len)
+void simeeprom_read(simeeprom_t * obj, uint8_t id, void * data, uint8_t len)
 {
     halInternalSimEeGetData(data, id, 0, len);
 }
 
-void simeeprom_write(uint8_t id, void * data, uint8_t len)
+void simeeprom_write(simeeprom_t * obj, uint8_t id, void * data, uint8_t len)
 {
     halInternalSimEeSetData(id, data, 0, len);
 }
 
-void simeeprom_bookkeeping(void)
+void simeeprom_bookkeeping(simeeprom_t * obj)
 {
     while (halSimEepromErasePage());
 }
