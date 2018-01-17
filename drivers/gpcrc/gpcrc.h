@@ -65,6 +65,17 @@ uint32_t gpcrc_crc32(gpcrc_t * obj, uint32_t polynomial, uint32_t init_value, vo
  */
 uint16_t gpcrc_crc16(gpcrc_t * obj, uint16_t polynomial, uint16_t init_value, void * buffer, size_t len);
 
+/**
+ * @brief Initialize a CRC-CCITT calculation
+ * @param obj The GPCRC object
+ * @param buffer data buffer
+ * @param len The length of data buffer in bytes
+ * @return CRC checksum
+ *
+ * For testing, gpcrc_ccitt(&gpcrc, "123456789", strlen("123456789")) should give 0x29B1
+ */
+uint16_t gpcrc_ccitt(gpcrc_t * obj, void * buffer, size_t len);
+
 #ifdef __cplusplus
 }
 #endif
