@@ -511,7 +511,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
     obj->retransmit.is_packet_clear = false;
     obj->retransmit.rx_window_timer = xTimerCreate(
             "rx_timer",
-            pdMS_TO_TICKS(obj-config->rx_window_timeout_ms),
+            pdMS_TO_TICKS(config->rx_window_timeout_ms),
             pdFALSE,
             obj,
             wg_mac_on_rx_window_timeout
