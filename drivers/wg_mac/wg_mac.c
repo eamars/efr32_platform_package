@@ -177,9 +177,11 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 case SUBG_MAC_PACKET_CMD_ACK_REACHABLE:
                 case SUBG_MAC_PACKET_CMD_ACK_UNREACHABLE:
                 {
-                    // TODO: Check seqid of acked packet
-                    clear_pending = true;
-                    send_ack = false;
+                    // check seqid of ack packet and compare the value with previous transmitted packet
+                    subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
+                    if (ack_packet->ack_seqid == header->seqid)
+                        clear_pending = true;
+
                     break;
                 }
                 default:
