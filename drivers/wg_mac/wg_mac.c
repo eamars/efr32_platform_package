@@ -97,12 +97,22 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 
         if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
         {
-            // leave the network
-            // obj->link_state.is_network_joined = false;
+            // if the network is joined previously, then trigger an event,
+            // otherwise we do nothing.
+            if (obj->link_state.is_network_joined)
+            {
+                // leave the network
+                if (obj->callbacks.on_network_state_changed)
+                    obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
 
-            // leave the network
-            if (obj->callbacks.on_network_state_changed)
-                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
+                // on network left, write network state to eeprom
+                if (obj->callbacks.on_backup_requested)
+                {
+                    wg_mac_backup_t backup_data;
+                    memcpy(&backup_data.link_state, &obj->link_state, sizeof(wg_mac_link_state_t));
+                    obj->callbacks.on_backup_requested(obj, &backup_data);
+                }
+            }
 
             // reset to idle state
             obj->fsm_state = WG_MAC_IDLE;
@@ -235,6 +245,9 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
     if (network_joined)
     {
         // fire callback to indicate the network state has changed
+        // Note: unlike network leave, the join event will always be acknowledged to the user
+        // since the device may request to join another network without notifying the previous
+        // host
         if (obj->callbacks.on_network_state_changed)
             obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
 
