@@ -8,7 +8,7 @@
 #ifndef __FXOS8700CQ_H__
 #define __FXOS8700CQ_H__
 
-//#if USE_FREERTOS == 1
+#if USE_FREERTOS == 1
 
 #include <stdint.h>
 #include "i2cdrv.h"
