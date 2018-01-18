@@ -66,6 +66,7 @@ typedef enum
 
 typedef struct __attribute__((packed))
 {
+    uint16_t crc16;
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
