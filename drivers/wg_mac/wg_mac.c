@@ -104,14 +104,6 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
                 // leave the network
                 if (obj->callbacks.on_network_state_changed)
                     obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
-
-                // on network left, write network state to eeprom
-                if (obj->callbacks.on_backup_requested)
-                {
-                    wg_mac_backup_t backup_data;
-                    memcpy(&backup_data.link_state, &obj->link_state, sizeof(wg_mac_link_state_t));
-                    obj->callbacks.on_backup_requested(obj, &backup_data);
-                }
             }
 
             // reset to idle state
@@ -252,14 +244,6 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
         // host
         if (obj->callbacks.on_network_state_changed)
             obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
-
-        // on network join, write network state to eeprom
-        if (obj->callbacks.on_backup_requested)
-        {
-            wg_mac_backup_t backup_data;
-            memcpy(&backup_data.link_state, &obj->link_state, sizeof(wg_mac_link_state_t));
-            obj->callbacks.on_backup_requested(obj, &backup_data);
-        }
     }
 
     return WG_MAC_NO_ERROR;
@@ -507,7 +491,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
     }
 }
 
-void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config, wg_mac_backup_t * backup)
+void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(radio);
@@ -533,13 +517,6 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config, wg_m
     obj->link_state.is_network_joined = false;
     obj->link_state.allocated_id = 0;
     obj->link_state.uplink_dest_id = 0;
-
-    // restore backup data if necessary
-    // NOTE: assume data read is valid
-    if (backup)
-    {
-        memcpy(&obj->link_state, &backup->link_state, sizeof(wg_mac_link_state_t));
-    }
 
     // setup retransmit
     obj->retransmit.retry_counter = 0;

@@ -94,16 +94,9 @@ typedef enum
     WG_MAC_INVALID_PACKET_LENGTH,
 } wg_mac_error_code_t;
 
-typedef struct __attribute__((packed))
-{
-    uint16_t crc16;
-    wg_mac_link_state_t link_state;
-} wg_mac_backup_t;
-
 typedef void (*wg_mac_on_network_state_changed)(void * obj, wg_mac_network_state_t state);
 typedef void (*wg_mac_on_raw_packet_received)(void * obj, wg_mac_raw_msg_t * msg);
 typedef void (*wg_mac_on_raw_packet_transmitted)(void * obj, wg_mac_raw_msg_t * msg);
-typedef void (*wg_mac_on_backup_requested)(void * obj, wg_mac_backup_t * backup);
 
 typedef struct
 {
@@ -145,7 +138,6 @@ typedef struct
     struct
     {
         wg_mac_on_network_state_changed on_network_state_changed;
-        wg_mac_on_backup_requested on_backup_requested;
 
         // callback for debug purpose
         wg_mac_on_raw_packet_received on_raw_packet_received;
@@ -170,7 +162,7 @@ extern const wg_mac_config_t wg_mac_default_config;
  * @param config the settings. If NULL is passed the network stack will use default configuration instead @see wg_mac_default_config
  * @param backup backup data to restore from reset (can be NULL). The backup data must be valid is non-NULL is received
  */
-void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config, wg_mac_backup_t * backup);
+void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config);
 
 /**
  * @brief Send join network request
