@@ -686,7 +686,7 @@ static void wg_mac_ncp_state_machine_thread(wg_mac_ncp_t * obj)
 }
 
 
-void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config)
+void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config, wg_mac_ncp_backup_t * backup)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(radio);
@@ -697,16 +697,44 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     // make the radio sleep during setup
     radio_set_opmode_sleep(obj->radio);
 
+    // reset sec since start
+    obj->sec_since_start = 0;
+
+    // put radio to rx state
+    obj->state = WG_MAC_NCP_RX;
+
     // if the user didn't supply the config, then use default copy
     if (config)
         memcpy(&obj->config, config, sizeof(wg_mac_ncp_config_t));
     else
         memcpy(&obj->config, &wg_mac_ncp_default_config, sizeof(wg_mac_ncp_config_t));
 
-    // initialize client list
-    for (uint8_t client_idx = 0; client_idx < WG_MAC_NCP_MAX_CLIENT_COUNT; client_idx++)
+    // restore backup data
+    if (backup)
     {
-        obj->clients[client_idx].is_valid = false;
+        // continue from previous run
+        obj->sec_since_start = backup->sec_since_start;
+
+        // restore clients which are valid
+        for (uint8_t client_idx = 0; client_idx < WG_MAC_NCP_MAX_CLIENT_COUNT; client_idx++)
+        {
+            // only copy the valid client
+            if (backup->client_list[client_idx].is_valid)
+            {
+                obj->clients[client_idx].is_valid = true;
+                obj->clients[client_idx].device_eui64 = backup->client_list[client_idx].device_eui64;
+                obj->clients[client_idx].last_seen_sec = backup->client_list[client_idx].last_seen_sec;
+                obj->clients[client_idx].short_id = backup->client_list[client_idx].short_id;
+            }
+        }
+    }
+    else
+    {
+        // initialize client list
+        for (uint8_t client_idx = 0; client_idx < WG_MAC_NCP_MAX_CLIENT_COUNT; client_idx++)
+        {
+            obj->clients[client_idx].is_valid = false;
+        }
     }
 
     // reset user-defined callbacks
@@ -732,9 +760,6 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
 
     obj->tx_done_signal = xSemaphoreCreateBinary();
     DRV_ASSERT(obj->tx_done_signal);
-
-    // put radio to rx state
-    obj->state = WG_MAC_NCP_RX;
 
     // create book keeping thread (handles transceiver state)
     xTaskCreate((void *) wg_mac_ncp_client_bookkeeping_thread, "ncp_b", 500, obj, 4, &obj->client_bookkeeping_thread);
