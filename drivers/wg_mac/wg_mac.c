@@ -208,17 +208,22 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 return WG_MAC_INVALID_PACKET_LENGTH;
             }
 
-            subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
+            // depending on the current network state, if the device is currently not at any network, then
+            // send the response and join the corresponding network. Otherwise, do not ack anything.
+            if (!obj->link_state.is_network_joined)
+            {
+                subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
 
-            // the hub send me an allocated id!
-            obj->link_state.is_network_joined = true;
-            obj->link_state.allocated_id = response_packet->allocated_device_id;
-            obj->link_state.uplink_dest_id = response_packet->uplink_dest_id;
+                // the hub send me an allocated id!
+                obj->link_state.is_network_joined = true;
+                obj->link_state.allocated_id = response_packet->allocated_device_id;
+                obj->link_state.uplink_dest_id = response_packet->uplink_dest_id;
 
-            // clear the pending packet and send ack back
-            clear_pending = true;
-            send_ack = true;
-            network_joined = true;
+                // clear the pending packet and send ack back
+                clear_pending = true;
+                send_ack = true;
+                network_joined = true;
+            }
 
             break;
         }
