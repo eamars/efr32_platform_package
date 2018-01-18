@@ -30,8 +30,8 @@ typedef enum {
 
 
 typedef struct {
-    uint8_t wg_data_protocol_version;
-    wg_data_v1_packet_type_t type;
+    uint8_t protocol_version;
+    wg_data_v1_packet_type_t packet_type;
 } wg_data_v1_packet_header_t;
 
 
@@ -75,15 +75,12 @@ typedef struct __attribute__ ((packed)) {
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
     //TODO add device configuration fields
-    uint8_t errors;
+    int8_t tx_power;
 } wg_data_v1_settings_command_t;
 
 
-typedef struct __attribute__ ((packed)) {
-    wg_data_v1_packet_header_t header;
-    //TODO add device configuration fields
-    uint8_t errors;
-} wg_data_v1_settings_report_t;
+// Settings report  hould match settings command
+typedef wg_data_v1_settings_command_t wg_data_v1_settings_report_t;
 
 
 typedef struct __attribute__ ((packed)) {
