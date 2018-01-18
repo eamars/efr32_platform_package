@@ -116,8 +116,11 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     //Now get the current vector - check if open or closed
     FXOS8700CQ_Calculate_Vector(obj);
 
+#if 0
     if (obj->vector > obj->origin.vector_threshold_closed)
     {
+        DRV_ASSERT(false);
+
         //The door doesn't seem to be closed enough to confidently recalibrate the device without a person checking
         while (1)
         {
@@ -126,6 +129,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
             //calibration can be performed like the one below even if the door still seems open (due to field change)
         }
     }
+#endif 
     // Otherwise - the door is all good to calibrate (auto/remote reset, closed) or there has been a fresh reset (manual reset)
     //  - also possible that the stored data was corrupt (auto reset) and in this case the door could be open or closed
     // (manual reset required). Door could be open but field has changed in such a way that the vector is under the
