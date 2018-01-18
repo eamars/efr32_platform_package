@@ -12,7 +12,7 @@
 
 #define WG_MAC_NCP_MSG_BUFFER_SIZE 256
 #define WG_MAC_NCP_MAX_CLIENT_COUNT 16
-#define WG_MAC_NCP_QUEUE_LENGTH 4
+#define WG_MAC_NCP_QUEUE_LENGTH 8
 
 #include <stdint.h>
 #include <stdbool.h>
