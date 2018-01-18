@@ -129,7 +129,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
             //calibration can be performed like the one below even if the door still seems open (due to field change)
         }
     }
-#endif 
+#endif
     // Otherwise - the door is all good to calibrate (auto/remote reset, closed) or there has been a fresh reset (manual reset)
     //  - also possible that the stored data was corrupt (auto reset) and in this case the door could be open or closed
     // (manual reset required). Door could be open but field has changed in such a way that the vector is under the
