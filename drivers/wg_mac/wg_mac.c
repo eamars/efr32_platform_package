@@ -147,6 +147,7 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
 
     bool clear_pending = false;
     bool send_ack = false;
+    bool network_joined = false;
 
     // map command header packet to the msg
     subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) msg->buffer;
@@ -213,10 +214,7 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
             // clear the pending packet and send ack back
             clear_pending = true;
             send_ack = true;
-
-            // fire callback to indicate the network state has changed
-            if (obj->callbacks.on_network_state_changed)
-                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
+            network_joined = true;
 
             break;
         }
@@ -232,6 +230,21 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
     if (send_ack)
     {
         send_ack_packet(obj, cmd_header->mac_header.seqid);
+    }
+
+    if (network_joined)
+    {
+        // fire callback to indicate the network state has changed
+        if (obj->callbacks.on_network_state_changed)
+            obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
+
+        // on network join, write network state to eeprom
+        if (obj->callbacks.on_backup_requested)
+        {
+            wg_mac_backup_t backup_data;
+            memcpy(&backup_data.link_state, &obj->link_state, sizeof(wg_mac_link_state_t));
+            obj->callbacks.on_backup_requested(obj, &backup_data);
+        }
     }
 
     return WG_MAC_NO_ERROR;
@@ -479,7 +492,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
     }
 }
 
-void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
+void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config, wg_mac_backup_t * backup)
 {
     DRV_ASSERT(obj);
     DRV_ASSERT(radio);
@@ -505,6 +518,13 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
     obj->link_state.is_network_joined = false;
     obj->link_state.allocated_id = 0;
     obj->link_state.uplink_dest_id = 0;
+
+    // restore backup data if necessary
+    // NOTE: assume data read is valid
+    if (backup)
+    {
+        memcpy(&obj->link_state, &backup->link_state, sizeof(wg_mac_link_state_t));
+    }
 
     // setup retransmit
     obj->retransmit.retry_counter = 0;
