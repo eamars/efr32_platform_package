@@ -111,8 +111,6 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
         if (!client)
         {
             // TODO: Notify the host that the host is attemping to send data to an unknown host
-            DEBUG_PRINT("NCP: attempting to transmit to an unknown client [%d]\r\n", header->dest_id);
-
             DRV_ASSERT(false);
             return;
         }
@@ -419,7 +417,6 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
         else if (seqid_diff > 1)
         {
             // have some missing packet however we don't care that much
-            DEBUG_PRINT("NCP: have [%d] packet missing from [0x%08llx]\r\n", seqid_diff, client->device_eui64);
             if (obj->callbacks.on_packet_missing)
                 obj->callbacks.on_packet_missing(obj, client, seqid_diff);
         }
