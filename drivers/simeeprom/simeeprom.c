@@ -26,12 +26,6 @@
 #define SIMEE_SIZE_B        8192
 #define SIMEE_BTS_SIZE_B    2104
 
-#define DEFINETYPES
-typedef uint16_t EmberNodeId;
-typedef uint8_t EmberEUI64[8];
-#include "stack/config/token-stack.h"
-#undef DEFINETYPES
-
 
 #define DEFINETOKENS
 #define TOKEN_MFG(name, creator, iscnt, isidx, type, arraysize, ...)
@@ -127,19 +121,6 @@ const uint8_t sizeCache[0    //Compiler error here means a token's size is too l
    + ((iscnt) ? BYTES_TO_WORDS(COUNTER_TOKEN_PAD) : 0)),
 #include "stack/config/token-stack.h"
         };
-#undef TOKEN_DEF
-
-
-/**
- * @brief Define TOKEN_COUNT
- */
-#define TOKEN_DEF(name, creator, iscnt, isidx, type, arraysize, ...) \
-  TOKEN_##name,
-enum {
-#include "stack/config/token-stack.h"
-    TOKEN_COUNT
-};
-
 #undef TOKEN_DEF
 
 
@@ -297,14 +278,19 @@ void simeeprom_init(simeeprom_t * obj)
     simeeprom_bookkeeping(obj);
 }
 
-void simeeprom_read(simeeprom_t * obj, uint8_t id, void * data, uint8_t len)
+void simeeprom_read(simeeprom_t * obj, uint8_t token, void * data, uint8_t len)
 {
-    halInternalSimEeGetData(data, id, 0, len);
+    halInternalSimEeGetData(data, token, 0, len);
 }
 
-void simeeprom_write(simeeprom_t * obj, uint8_t id, void * data, uint8_t len)
+void simeeprom_write(simeeprom_t * obj, uint8_t token, void * data, uint8_t len)
 {
-    halInternalSimEeSetData(id, data, 0, len);
+    halInternalSimEeSetData(token, data, 0, len);
+}
+
+void simeeprom_self_increase(simeeprom_t * obj, uint8_t token)
+{
+    halInternalSimEeIncrementCounter(token);
 }
 
 void simeeprom_bookkeeping(simeeprom_t * obj)
