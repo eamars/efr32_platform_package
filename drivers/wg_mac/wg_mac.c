@@ -208,10 +208,13 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 return WG_MAC_INVALID_PACKET_LENGTH;
             }
 
-            // depending on the current network state, if the device is currently not at any network, then
-            // send the response and join the corresponding network. Otherwise, do not ack anything.
-            if (!obj->link_state.is_network_joined)
+            // only process the join response when there is a join request packet previously transmitted
+            if (!obj->retransmit.is_packet_clear && // there is a packet
+                    ((subg_mac_header_t *) obj->retransmit.prev_packet.buffer)->packet_type == SUBG_MAC_PACKET_CMD && // the packet is command packet
+                    ((subg_mac_cmd_header_t *) obj->retransmit.prev_packet.buffer)->cmd_type == SUBG_MAC_PACKET_CMD_JOIN_REQ) // the command packet is also a join request
             {
+                // regardless the link state, if the application requested a join request then we will need to process
+                // the join response and clear the previous packet to avoid any other late join response
                 subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
 
                 // the hub send me an allocated id!
