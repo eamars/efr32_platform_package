@@ -12,7 +12,7 @@
 
 #define WG_MAC_NCP_MSG_BUFFER_SIZE 256
 #define WG_MAC_NCP_MAX_CLIENT_COUNT 16
-#define WG_MAC_NCP_QUEUE_LENGTH 4
+#define WG_MAC_NCP_QUEUE_LENGTH 8
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -90,6 +90,19 @@ typedef struct
     } downlink;
 } wg_mac_ncp_client_t;
 
+typedef struct __attribute__((packed))
+{
+    uint16_t crc16;
+    uint32_t sec_since_start;
+    struct __attribute__((packed))
+    {
+        uint64_t device_eui64;
+        uint32_t last_seen_sec; // we are going to calculate the new last seen sec when we come back
+        uint8_t short_id;
+        bool is_valid;
+    } client_list[WG_MAC_NCP_MAX_CLIENT_COUNT];
+} wg_mac_ncp_backup_t;
+
 typedef struct
 {
     wg_mac_ncp_client_t * client;
@@ -125,6 +138,7 @@ typedef void (*wg_mac_ncp_on_packet_received)(void * obj, wg_mac_ncp_client_t * 
 typedef void (*wg_mac_ncp_on_downlink_packet_init)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_downlink_packet_success)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_downlink_packet_fail)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
+typedef void (*wg_mac_ncp_on_backup_requested)(void * obj, wg_mac_ncp_backup_t * backup);
 
 typedef struct
 {
@@ -167,6 +181,9 @@ typedef struct
         wg_mac_ncp_on_downlink_packet_success on_downlink_packet_success;
         wg_mac_ncp_on_downlink_packet_fail on_downlink_packet_fail;
 
+        // data backup
+        wg_mac_ncp_on_backup_requested on_backup_requested;
+
         // callbacks for debug purposes
         wg_mac_ncp_on_packet_received on_packet_received;
         wg_mac_ncp_on_raw_packet_received on_raw_packet_received;
@@ -192,8 +209,9 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_short_id(wg_mac_ncp_t * obj, u
  * @param obj the NCP object
  * @param radio the abstract radio object
  * @param config the setings. If NULL is passed the network stack will use default configuration instead @see wg_mac_ncp_default_config
+ * @param backup backup data from eeprom. If NULL is presented then the backup data is invalid
  */
-void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config);
+void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config, wg_mac_ncp_backup_t * backup);
 
 /**
  * @brief Send bytes to transceiver

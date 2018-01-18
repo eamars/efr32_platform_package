@@ -97,12 +97,14 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 
         if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
         {
-            // leave the network
-            // obj->link_state.is_network_joined = false;
-
-            // leave the network
-            if (obj->callbacks.on_network_state_changed)
-                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
+            // if the network is joined previously, then trigger an event,
+            // otherwise we do nothing.
+            if (obj->link_state.is_network_joined)
+            {
+                // leave the network
+                if (obj->callbacks.on_network_state_changed)
+                    obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
+            }
 
             // reset to idle state
             obj->fsm_state = WG_MAC_IDLE;
@@ -147,6 +149,7 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
 
     bool clear_pending = false;
     bool send_ack = false;
+    bool network_joined = false;
 
     // map command header packet to the msg
     subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) msg->buffer;
@@ -166,9 +169,11 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 case SUBG_MAC_PACKET_CMD_ACK_REACHABLE:
                 case SUBG_MAC_PACKET_CMD_ACK_UNREACHABLE:
                 {
-                    // TODO: Check seqid of acked packet
-                    clear_pending = true;
-                    send_ack = false;
+                    // check seqid of ack packet and compare the value with previous transmitted packet
+                    subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
+                    if (ack_packet->ack_seqid == header->seqid)
+                        clear_pending = true;
+
                     break;
                 }
                 default:
@@ -203,20 +208,25 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                 return WG_MAC_INVALID_PACKET_LENGTH;
             }
 
-            subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
+            // only process the join response when there is a join request packet previously transmitted
+            if (!obj->retransmit.is_packet_clear && // there is a packet
+                    ((subg_mac_header_t *) obj->retransmit.prev_packet.buffer)->packet_type == SUBG_MAC_PACKET_CMD && // the packet is command packet
+                    ((subg_mac_cmd_header_t *) obj->retransmit.prev_packet.buffer)->cmd_type == SUBG_MAC_PACKET_CMD_JOIN_REQ) // the command packet is also a join request
+            {
+                // regardless the link state, if the application requested a join request then we will need to process
+                // the join response and clear the previous packet to avoid any other late join response
+                subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) msg->buffer;
 
-            // the hub send me an allocated id!
-            obj->link_state.is_network_joined = true;
-            obj->link_state.allocated_id = response_packet->allocated_device_id;
-            obj->link_state.uplink_dest_id = response_packet->uplink_dest_id;
+                // the hub send me an allocated id!
+                obj->link_state.is_network_joined = true;
+                obj->link_state.allocated_id = response_packet->allocated_device_id;
+                obj->link_state.uplink_dest_id = response_packet->uplink_dest_id;
 
-            // clear the pending packet and send ack back
-            clear_pending = true;
-            send_ack = true;
-
-            // fire callback to indicate the network state has changed
-            if (obj->callbacks.on_network_state_changed)
-                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
+                // clear the pending packet and send ack back
+                clear_pending = true;
+                send_ack = true;
+                network_joined = true;
+            }
 
             break;
         }
@@ -232,6 +242,16 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
     if (send_ack)
     {
         send_ack_packet(obj, cmd_header->mac_header.seqid);
+    }
+
+    if (network_joined)
+    {
+        // fire callback to indicate the network state has changed
+        // Note: unlike network leave, the join event will always be acknowledged to the user
+        // since the device may request to join another network without notifying the previous
+        // host
+        if (obj->callbacks.on_network_state_changed)
+            obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_JOINED);
     }
 
     return WG_MAC_NO_ERROR;

@@ -20,7 +20,6 @@
  * temperature adjustment task.
  */
 
-
 #if USE_FREERTOS == 1
 
 #include <math.h>
@@ -48,9 +47,9 @@
  * @param  address    I2C slave address, depending on hardware configuration
  * @return            if already initialised will not reinitialise the IMU
  */
-void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address)
+void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
+                            imu_backup_t * backup_pointer)
 {
-//    uint16_t i = 0;
     // sanity check for pointers
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
@@ -77,10 +76,19 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     obj->current_compass = 0;
     obj->current_heading = 0;
-    obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
 
-	// initialize door state and calibrate state
-	obj->door_state = IMU_EVENT_DOOR_CLOSE;
+
+    if (backup_pointer == NULL)
+    {
+        //Initialise from scratch
+        obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
+
+    }
+    else
+    {
+        //Data had been saved from before, so don't reset the tmp coef (as this gets more accurate over time)
+       obj->origin.tmp_coef = backup_pointer->tmp_coef;
+    }
 
     //initialise queue
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
@@ -105,16 +113,37 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     FXOS8700CQ_ConfigureMagnetometer(obj);
     //sets initial thresholds (quite lenient thresholds)
 
+    //Now get the current vector - check if open or closed
+    FXOS8700CQ_Calculate_Vector(obj);
+
+#if 0
+    if (obj->vector > obj->origin.vector_threshold_closed)
+    {
+        DRV_ASSERT(false);
+
+        //The door doesn't seem to be closed enough to confidently recalibrate the device without a person checking
+        while (1)
+        {
+            printf("Someone needs to check that the door is closed and then restart the device");
+            //There should be a flag in the saved data so that when this case happens, the flag can be set, and a fresh
+            //calibration can be performed like the one below even if the door still seems open (due to field change)
+        }
+    }
+#endif
+    // Otherwise - the door is all good to calibrate (auto/remote reset, closed) or there has been a fresh reset (manual reset)
+    //  - also possible that the stored data was corrupt (auto reset) and in this case the door could be open or closed
+    // (manual reset required). Door could be open but field has changed in such a way that the vector is under the
+    // closed threshold (rare).
+
+    // initialize door state and calibrate state
+    obj->door_state = IMU_EVENT_DOOR_CLOSE;
+
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     FXOS8700CQ_Init_Interrupt(obj);
     FXOS8700CQ_ActiveMode(obj);
-    if (obj->origin.checksum != true)
-    {
-        FXOS8700CQ_Calibrate(obj);
-    }
 
-
+    FXOS8700CQ_Calibrate(obj);
 }
 
 char FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj)
@@ -783,7 +812,7 @@ void FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t* obj)
     int32_t origin_vector  = sqrt((origin_x * origin_x) + (origin_y * origin_y) + (origin_z * origin_z));
     int32_t dot_product    = (mag_x * origin_x) + (mag_y * origin_y) + (mag_z * origin_z);
     float fraction         = dot_product/(float)(current_vector * origin_vector);
-    float rad              = acos(fraction);
+    float rad              = acosf(fraction);
 
     obj->vector_angle = (int16_t)(r2d2 * rad);
 }
@@ -811,7 +840,6 @@ void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
 
 
     obj->vector = sqrt((dx*dx) + (dy*dy) + (dz*dz));
-
 }
 
 /**
@@ -838,8 +866,6 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
-    obj->origin.checksum = true;
-
 }
 
 

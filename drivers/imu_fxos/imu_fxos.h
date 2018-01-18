@@ -66,14 +66,14 @@ typedef enum
 
 typedef struct __attribute__((packed))
 {
+    uint16_t crc16;
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
     uint16_t vector_threshold_closed;
     uint16_t vector_threshold_open;
     float tmp_coef;
-    uint8_t checksum;
-} imu_origin_t;
+} imu_backup_t;
 
 typedef struct
 {
@@ -104,13 +104,14 @@ typedef struct
     TaskHandle_t ImuCalHandler;
 
     rawdata_t old_magdata;
-    imu_origin_t origin;
+    imu_backup_t origin; // should there be a separate type for this?
 
 
 } imu_FXOS8700CQ_t;
 
 
-void       FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address);
+void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
+                            imu_backup_t * backup_pointer);
 char       FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ActiveMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_StandbyMode (imu_FXOS8700CQ_t * obj);
