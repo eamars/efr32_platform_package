@@ -16,22 +16,21 @@
 #define WG_DATA_V1_PROTOCOL_VERSION 1
 
 typedef enum {
-    BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
-    EXTENDED_REPORT,    // More data than a basic DATA_REPORT
-    DATA_REQUEST,       // Request a report packet from the device. 
-    RESET_COMMAND,      // Reset the device according to parameters
-    RESET_ACKNOWLEDGE,  // Follows a RESET_COMMAND before device reset
-    CALIBRATE_COMMAND,  // Calibrate device sensors/state
-    CALIBRATE_REPORT,   // Calibration data following a CALIBRATE_COMMAND
-    SETTINGS_COMMAND,   // Configure device settings, e.g. report period/type
-    SETTINGS_REPORT,    // Follows a SETTINGS_COMMAND, or settings request
-    DEBUG_REPORT = 255  // Extended boot debug message. Misc data.
+    WG_DATA_PACKET_BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
+    WG_DATA_PACKET_EXTENDED_REPORT,    // More data than a basic DATA_REPORT
+    WG_DATA_PACKET_DATA_REQUEST,       // Request a report packet from the device. 
+    WG_DATA_PACKET_RESET_COMMAND,      // Reset the device according to parameters
+    WG_DATA_PACKET_RESET_ACKNOWLEDGE,  // Follows a RESET_COMMAND before device reset
+    WG_DATA_PACKET_CALIBRATE_COMMAND,  // Calibrate device sensors/state
+    WG_DATA_PACKET_CALIBRATE_REPORT,   // Calibration data following a CALIBRATE_COMMAND
+    WG_DATA_PACKET_SETTINGS_COMMAND,   // Configure device settings, e.g. report period/type
+    WG_DATA_PACKET_SETTINGS_REPORT,    // Follows a SETTINGS_COMMAND, or settings request
+    WG_DATA_PACKET_DEBUG_REPORT = 255,  // Extended boot debug message. Misc data.
 } wg_data_v1_packet_type_t;
-
 
 typedef struct {
     uint8_t protocol_version;
-    wg_data_v1_packet_type_t packet_type;
+    uint8_t packet_type;
 } wg_data_v1_packet_header_t;
 
 
