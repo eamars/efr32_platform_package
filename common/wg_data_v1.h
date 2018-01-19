@@ -97,6 +97,13 @@ typedef struct __attribute__ ((packed)) {
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
     //TODO Add debug data here
+    uint16_t reset_reason;
+    uint32_t rmu_reset_reason;
+    struct __attribute__((packed))
+    {
+        char assert_filename[32];
+        uint32_t assert_line;
+    } assert_info;
 } wg_data_v1_debug_report_t;
 
 
