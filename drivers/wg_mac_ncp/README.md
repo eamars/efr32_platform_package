@@ -52,3 +52,7 @@ its receive window by specifying such timeout in the acknowledgement packet. As 
 will maintain its receive window until expires.
 
 ![configurable_receive_window](../../resources/configurable_rx_window.png)
+
+
+Encryption
+----------
