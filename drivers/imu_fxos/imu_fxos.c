@@ -25,6 +25,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "drv_debug.h"
 #include "imu_fxos.h"
 #include "imu_fxos_regs.h"
 
@@ -52,7 +53,7 @@ void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer
  */
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
                             imu_backup_t * backup_pointer)
-
+{
     // sanity check for pointers
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
