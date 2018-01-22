@@ -76,6 +76,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // assign hardware slave address
     obj->i2c_slave_addr = address;
 
+    // Object has not yet been calibrated
+    obj->calibrated = false;
+
     //initialise queue
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
@@ -84,7 +87,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     obj->initialized = true;
 
-    FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
+    FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);     //Reset sensor, and wait for reboot to complete
     delay_ms(2);                                        //Wait at least 1ms after issuing a reset before attempting communications
     FXOS8700CQ_StandbyMode(obj);
 
@@ -127,14 +130,24 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
 void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
 {
-    obj->origin.crc16 = backup_pointer->crc16;
     obj->origin.tmp_coef = backup_pointer->tmp_coef;
     obj->origin.vector_threshold_closed = backup_pointer->vector_threshold_closed;
     obj->origin.vector_threshold_open = backup_pointer->vector_threshold_open;
     obj->origin.x_origin = backup_pointer->x_origin;
     obj->origin.y_origin = backup_pointer->y_origin;
     obj->origin.z_origin = backup_pointer->y_origin;
-    obj->current_compass = backup_pointer->start_position;
+
+    obj->calibrated = true;
+}
+
+void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
+{
+    backup_pointer->tmp_coef = obj->origin.tmp_coef;
+    backup_pointer->vector_threshold_closed = obj->origin.vector_threshold_closed;
+    backup_pointer->vector_threshold_open = obj->origin.vector_threshold_open;
+    backup_pointer->x_origin = obj->origin.x_origin;
+    backup_pointer->y_origin = obj->origin.x_origin;
+    backup_pointer->y_origin = obj->origin.z_origin;
 }
 
 char FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj)
@@ -260,10 +273,6 @@ uint8_t FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data
         delay_ms(500); // delay for the imu to get new values.
     }
     return (mag_data->x + mag_data->y + mag_data->z);
-
-
-
-
 }
 
 char FXOS8700CQ_MagnetometerStatus(imu_FXOS8700CQ_t * obj)
@@ -608,28 +617,21 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     interrupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentially debouncing wont let the state change constantly
     {
-        FXOS8700CQ_Door_State_Poll(obj); // Gets the current heading so we can double check door state
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
         // this may also remove some false positives that are only there for a very short time
         if (interrupt_1 == true)
         {
-            if (obj->current_heading > obj->origin.angle_threshold_open)
-            {
-                obj->door_state = IMU_EVENT_DOOR_OPEN;
-                //halSetLed(BOARDLED1);
-                Vector_Threshold[0] = obj->origin.vector_threshold_closed >> 8 | 0x80;
-                Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_closed;
-            }
+            obj->door_state = IMU_EVENT_DOOR_OPEN;
+            //halSetLed(BOARDLED1);
+            Vector_Threshold[0] = obj->origin.vector_threshold_closed >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_closed;
         }
         else
         {
-            if (obj->current_heading > obj->origin.angle_threshold_closed)
-            {
-                obj->door_state = IMU_EVENT_DOOR_CLOSE;
-                //halClearLed(BOARDLED1);
-                Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
-                Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_open;
-            }
+            obj->door_state = IMU_EVENT_DOOR_CLOSE;
+            //halClearLed(BOARDLED1);
+            Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
+            Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_open;
         }
         if (obj->door_state != obj->last_event) // Statement seems defunct, this would always be true
         {
@@ -759,7 +761,7 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
-            // Sets the temp to old temp and resets the z max and remembers the last emp change and temperature.
+            // Sets the temp to old temp and resets the z max and remembers the last temp change and temperature.
             obj->temp = temperature_imu;
             last_temp_change = temp_change;
             max_z = 0;
@@ -769,8 +771,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * finds the temperature scaling factor and used very simple smoothing to make sure to outlandish values are achived. starts off with a gues of 3
- * every thing in this is made to be a float as it was having problems with it befor.
+ * finds the temperature scaling factor and uses very simple smoothing to make sure no outlandish values are achieved. 4
+ * starts off with a guess of 3
+ * everything in this is made to be a float as it was having problems with it before.
  * @param obj         imu object
  * @param temp_change the change in temperatue since the device last updated the z value
  * @param max_z   largest value of z found in each section of the temperature graph
@@ -860,10 +863,9 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     }
     obj->origin.vector_threshold_open = (temp_vector * 2) + 40;
     obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
-    obj->origin.angle_threshold_open = 30;
-    obj->origin.angle_threshold_closed = 10;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
+    obj->calibrated = true;
 }
 
 

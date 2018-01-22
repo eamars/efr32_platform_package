@@ -70,11 +70,8 @@ typedef struct __attribute__((packed))
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
-    int16_t start_position;
     uint16_t vector_threshold_closed;
     uint16_t vector_threshold_open;
-    int16_t angle_threshold_closed;
-    int16_t angle_threshold_open;
     float tmp_coef;
 } imu_backup_t;
 
@@ -110,7 +107,16 @@ typedef struct
     TaskHandle_t ImuCalHandler;
 
     rawdata_t old_magdata;
-    imu_backup_t origin; // should there be a separate type for this?
+
+    struct
+    {
+        int16_t x_origin;
+        int16_t y_origin;
+        int16_t z_origin;
+        uint16_t vector_threshold_closed;
+        uint16_t vector_threshold_open;
+        float tmp_coef;
+    } origin;
 
     struct
     {
