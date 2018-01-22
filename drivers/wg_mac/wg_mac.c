@@ -101,30 +101,11 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
         // retransmit
         if (obj->retransmit.retry_counter < obj->config.max_retransmit)
         {
-            // only retransmit when network is joined
-            if (obj->link_state.is_network_joined)
-            {
-                // for the retransmission, we don't generate a different seqid
-                wg_mac_send_raw_pri(obj, &obj->retransmit.prev_packet, false);
-            }
-            else
-            {
-                // this is the extreme case where data is attempting to be transmitted but
-                // the device is not in the network
-                obj->fsm_state = WG_MAC_IDLE;
-            }
+            // for the retransmission, we don't generate a different seqid
+            wg_mac_send_raw_pri(obj, &obj->retransmit.prev_packet, false);
         }
         else
         {
-            // if the network is joined previously, then trigger an event,
-            // otherwise we do nothing.
-            if (obj->link_state.is_network_joined)
-            {
-                // leave the network
-                if (obj->callbacks.on_network_state_changed)
-                    obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
-            }
-
             // kick the device out of network
             obj->link_state.is_network_joined = false;
 
@@ -133,6 +114,10 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
 
             // reset to idle state
             obj->fsm_state = WG_MAC_IDLE;
+
+            // leave the network
+            if (obj->callbacks.on_network_state_changed)
+                obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
         }
     }
 }
@@ -193,6 +178,8 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                     subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
                     if (ack_packet->ack_seqid == header->seqid)
                         clear_pending = true;
+                    else
+                        DRV_ASSERT(false);
 
                     break;
                 }
