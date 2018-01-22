@@ -16,22 +16,21 @@
 #define WG_DATA_V1_PROTOCOL_VERSION 1
 
 typedef enum {
-    BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
-    EXTENDED_REPORT,    // More data than a basic DATA_REPORT
-    DATA_REQUEST,       // Request a report packet from the device. 
-    RESET_COMMAND,      // Reset the device according to parameters
-    RESET_ACKNOWLEDGE,  // Follows a RESET_COMMAND before device reset
-    CALIBRATE_COMMAND,  // Calibrate device sensors/state
-    CALIBRATE_REPORT,   // Calibration data following a CALIBRATE_COMMAND
-    SETTINGS_COMMAND,   // Configure device settings, e.g. report period/type
-    SETTINGS_REPORT,    // Follows a SETTINGS_COMMAND, or settings request
-    DEBUG_REPORT = 255  // Extended boot debug message. Misc data.
+    WG_DATA_PACKET_BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
+    WG_DATA_PACKET_EXTENDED_REPORT,    // More data than a basic DATA_REPORT
+    WG_DATA_PACKET_DATA_REQUEST,       // Request a report packet from the device. 
+    WG_DATA_PACKET_RESET_COMMAND,      // Reset the device according to parameters
+    WG_DATA_PACKET_RESET_ACKNOWLEDGE,  // Follows a RESET_COMMAND before device reset
+    WG_DATA_PACKET_CALIBRATE_COMMAND,  // Calibrate device sensors/state
+    WG_DATA_PACKET_CALIBRATE_REPORT,   // Calibration data following a CALIBRATE_COMMAND
+    WG_DATA_PACKET_SETTINGS_COMMAND,   // Configure device settings, e.g. report period/type
+    WG_DATA_PACKET_SETTINGS_REPORT,    // Follows a SETTINGS_COMMAND, or settings request
+    WG_DATA_PACKET_DEBUG_REPORT = 255,  // Extended boot debug message. Misc data.
 } wg_data_v1_packet_type_t;
 
-
 typedef struct {
-    uint8_t wg_data_protocol_version;
-    wg_data_v1_packet_type_t type;
+    uint8_t protocol_version;
+    uint8_t packet_type;
 } wg_data_v1_packet_header_t;
 
 
@@ -75,15 +74,12 @@ typedef struct __attribute__ ((packed)) {
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
     //TODO add device configuration fields
-    uint8_t errors;
+    int8_t tx_power;
 } wg_data_v1_settings_command_t;
 
 
-typedef struct __attribute__ ((packed)) {
-    wg_data_v1_packet_header_t header;
-    //TODO add device configuration fields
-    uint8_t errors;
-} wg_data_v1_settings_report_t;
+// Settings report  hould match settings command
+typedef wg_data_v1_settings_command_t wg_data_v1_settings_report_t;
 
 
 typedef struct __attribute__ ((packed)) {
@@ -101,6 +97,13 @@ typedef struct __attribute__ ((packed)) {
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
     //TODO Add debug data here
+    uint16_t reset_reason;
+    uint32_t rmu_reset_reason;
+    struct __attribute__((packed))
+    {
+        char assert_filename[32];
+        uint32_t assert_line;
+    } assert_info;
 } wg_data_v1_debug_report_t;
 
 

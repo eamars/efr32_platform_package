@@ -15,12 +15,6 @@
 
 #define SUBG_MAC_MAGIC_BYTE 0x03
 #define SUBG_MAC_HEADER_SIZE (5)
-#define SUBG_MAC_CMD_HEADER_SIZE (SUBG_MAC_HEADER_SIZE + 1)
-#define SUBG_MAC_PACKET_CMD_ACK_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 4)
-#define SUBG_MAC_PACKET_CMD_JOIN_REQ_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 8)
-#define SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE (SUBG_MAC_CMD_HEADER_SIZE + 2)
-#define SUBG_MAC_PACKET_DATA_HEADER_SIZE (SUBG_MAC_HEADER_SIZE + 3)
-#define SUBG_MAC_PACKET_ROUTING_HEADER_SIZE (SUBG_MAC_HEADER_SIZE + 17)
 #define SUBG_MAC_PACKET_MAX_DATA_PAYLOAD_SIZE 128
 
 #define SUBG_MAC_BROADCAST_ADDR_ID 0xFF
@@ -58,7 +52,6 @@ typedef enum
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_HEADER_SIZE];
     struct __attribute__((packed))
     {
         uint8_t magic_byte;
@@ -72,7 +65,6 @@ typedef union
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_CMD_HEADER_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_header_t mac_header;
@@ -82,7 +74,6 @@ typedef union
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_PACKET_CMD_ACK_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_cmd_header_t cmd_header;
@@ -94,17 +85,17 @@ typedef union
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_PACKET_CMD_JOIN_REQ_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_cmd_header_t cmd_header;
         uint64_t eui64;
+        uint16_t nonce;
+        uint32_t mic;
     };
 } subg_mac_cmd_join_req_t;
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_cmd_header_t cmd_header;
@@ -115,7 +106,6 @@ typedef union
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_PACKET_DATA_HEADER_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_header_t mac_header;
@@ -127,7 +117,6 @@ typedef union
 
 typedef union
 {
-    uint8_t _raw_data[SUBG_MAC_PACKET_ROUTING_HEADER_SIZE];
     struct __attribute__((packed))
     {
         subg_mac_header_t mac_header;
