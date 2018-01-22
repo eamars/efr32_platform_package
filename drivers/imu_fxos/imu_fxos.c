@@ -36,6 +36,9 @@
 #include "queue.h"
 #include "task.h"
 
+// PROTOTYPES
+void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer);
+/////////////////////////////////////////////////////////////////////////////////
 
 /**
  * Initialise the imu and imu i2c instance
@@ -49,11 +52,10 @@
  */
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
                             imu_backup_t * backup_pointer)
-{
+
     // sanity check for pointers
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
-
 
     // do not reinitialize the imu driver
     if (obj->initialized)
@@ -74,22 +76,6 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // assign hardware slave address
     obj->i2c_slave_addr = address;
 
-    obj->current_compass = 0;
-    obj->current_heading = 0;
-
-
-    if (backup_pointer == NULL)
-    {
-        //Initialise from scratch
-        obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
-
-    }
-    else
-    {
-        //Data had been saved from before, so don't reset the tmp coef (as this gets more accurate over time)
-       obj->origin.tmp_coef = backup_pointer->tmp_coef;
-    }
-
     //initialise queue
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
@@ -107,8 +93,6 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // detect the existence of IMU
     DRV_ASSERT(FXOS8700CQ_ID(obj) == FXOS8700CQ_WHOAMI_VAL);
 
-
-
     FXOS8700CQ_ConfigureAccelerometer(obj);
     FXOS8700CQ_ConfigureMagnetometer(obj);
     //sets initial thresholds (quite lenient thresholds)
@@ -116,34 +100,41 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     //Now get the current vector - check if open or closed
     FXOS8700CQ_Calculate_Vector(obj);
 
-#if 0
-    if (obj->vector > obj->origin.vector_threshold_closed)
-    {
-        DRV_ASSERT(false);
-
-        //The door doesn't seem to be closed enough to confidently recalibrate the device without a person checking
-        while (1)
-        {
-            printf("Someone needs to check that the door is closed and then restart the device");
-            //There should be a flag in the saved data so that when this case happens, the flag can be set, and a fresh
-            //calibration can be performed like the one below even if the door still seems open (due to field change)
-        }
-    }
-#endif
-    // Otherwise - the door is all good to calibrate (auto/remote reset, closed) or there has been a fresh reset (manual reset)
-    //  - also possible that the stored data was corrupt (auto reset) and in this case the door could be open or closed
-    // (manual reset required). Door could be open but field has changed in such a way that the vector is under the
-    // closed threshold (rare).
-
     // initialize door state and calibrate state
-    obj->door_state = IMU_EVENT_DOOR_CLOSE;
 
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     FXOS8700CQ_Init_Interrupt(obj);
     FXOS8700CQ_ActiveMode(obj);
 
-    FXOS8700CQ_Calibrate(obj);
+    obj->current_compass = 0;
+    obj->current_heading = 0;
+
+    if (backup_pointer == NULL)
+    {
+        //Initialise from scratch - DOOR MUST BE CLOSED
+        obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
+        obj->door_state = IMU_EVENT_DOOR_CLOSE;
+        FXOS8700CQ_Calibrate(obj);
+    }
+    else
+    {
+        // Data had been saved from before, so don't reset the tmp coef (as this gets more accurate over time) and don't
+        // recalibrate the device (load the backup data straight in)
+        FXOS8700CQ_LoadBackup(obj, backup_pointer);
+    }
+}
+
+void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
+{
+    obj->origin.crc16 = backup_pointer->crc16;
+    obj->origin.tmp_coef = backup_pointer->tmp_coef;
+    obj->origin.vector_threshold_closed = backup_pointer->vector_threshold_closed;
+    obj->origin.vector_threshold_open = backup_pointer->vector_threshold_open;
+    obj->origin.x_origin = backup_pointer->x_origin;
+    obj->origin.y_origin = backup_pointer->y_origin;
+    obj->origin.z_origin = backup_pointer->y_origin;
+    obj->current_compass = backup_pointer->start_position;
 }
 
 char FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj)
@@ -617,23 +608,28 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
     interrupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentially debouncing wont let the state change constantly
     {
+        FXOS8700CQ_Door_State_Poll(obj); // Gets the current heading so we can double check door state
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
         // this may also remove some false positives that are only there for a very short time
         if (interrupt_1 == true)
         {
-            obj->door_state = IMU_EVENT_DOOR_OPEN;
-            //halSetLed(BOARDLED1);
-            Vector_Threshold[0] = obj->origin.vector_threshold_closed >> 8 | 0x80;
-            Vector_Threshold[1] = (uint8_t)obj->origin.vector_threshold_closed ;
-
-
+            if (obj->current_heading > obj->origin.angle_threshold_open)
+            {
+                obj->door_state = IMU_EVENT_DOOR_OPEN;
+                //halSetLed(BOARDLED1);
+                Vector_Threshold[0] = obj->origin.vector_threshold_closed >> 8 | 0x80;
+                Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_closed;
+            }
         }
         else
         {
-            obj->door_state = IMU_EVENT_DOOR_CLOSE;
-            //halClearLed(BOARDLED1);
-            Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
-            Vector_Threshold[1] = (uint8_t)obj->origin.vector_threshold_open ;
+            if (obj->current_heading > obj->origin.angle_threshold_closed)
+            {
+                obj->door_state = IMU_EVENT_DOOR_CLOSE;
+                //halClearLed(BOARDLED1);
+                Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
+                Vector_Threshold[1] = (uint8_t) obj->origin.vector_threshold_open;
+            }
         }
         if (obj->door_state != obj->last_event) // Statement seems defunct, this would always be true
         {
@@ -864,6 +860,8 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     }
     obj->origin.vector_threshold_open = (temp_vector * 2) + 40;
     obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
+    obj->origin.angle_threshold_open = 30;
+    obj->origin.angle_threshold_closed = 10;
     FXOS8700CQ_Magnetic_Vector(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
 }

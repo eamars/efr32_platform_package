@@ -70,10 +70,15 @@ typedef struct __attribute__((packed))
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
+    int16_t start_position;
     uint16_t vector_threshold_closed;
     uint16_t vector_threshold_open;
+    int16_t angle_threshold_closed;
+    int16_t angle_threshold_open;
     float tmp_coef;
 } imu_backup_t;
+
+typedef void (*imu_on_backup_requested)(void * obj, imu_backup_t * backup);
 
 typedef struct
 {
@@ -86,6 +91,7 @@ typedef struct
     uint8_t i2c_slave_addr;
 
     bool initialized;
+    bool calibrated;
 
 	imu_event_t door_state;
     int16_t start_position;
@@ -106,6 +112,10 @@ typedef struct
     rawdata_t old_magdata;
     imu_backup_t origin; // should there be a separate type for this?
 
+    struct
+    {
+        imu_on_backup_requested on_backup_requested;
+    } callbacks;
 
 } imu_FXOS8700CQ_t;
 
