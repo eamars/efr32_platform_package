@@ -253,7 +253,7 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     DRV_ASSERT(radio_efr32_singleton_instance.rail_handle);
 
     // calibrate the radio
-    RAIL_ConfigCal(radio_efr32_singleton_instance.rail_handle, RAIL_CAL_ALL);
+    DRV_ASSERT(RAIL_ConfigCal(radio_efr32_singleton_instance.rail_handle, RAIL_CAL_ALL) == RAIL_STATUS_NO_ERROR);
 
     // configure available channels
     RAIL_ConfigChannels(radio_efr32_singleton_instance.rail_handle, channelConfigs[0], NULL);
@@ -335,8 +335,8 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
             .success = RAIL_RF_STATE_RX,
             .error = RAIL_RF_STATE_RX
     };
-    RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
-    RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions);
+    DRV_ASSERT(RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
+    DRV_ASSERT(RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
 
     // set default channel
     radio_efr32_set_channel(&radio_efr32_singleton_instance, 0);
