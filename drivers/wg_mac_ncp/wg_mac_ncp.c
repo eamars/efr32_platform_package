@@ -336,7 +336,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
 
             // send a response message back
             wg_mac_ncp_raw_msg_t tx_msg;
-            tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_RESP_SIZE;
+            tx_msg.size = sizeof(subg_mac_cmd_join_resp_t);
 
             // map
             subg_mac_cmd_join_resp_t * response_packet = (subg_mac_cmd_join_resp_t *) tx_msg.buffer;
@@ -804,7 +804,7 @@ wg_mac_ncp_error_code_t wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_d
 
         // set mac layer payload size
         msg->client->downlink.downlink_packet.size =
-                (uint16_t) (SUBG_MAC_PACKET_DATA_HEADER_SIZE + data_header->payload_length);
+                (uint16_t) (sizeof(subg_mac_data_header_t) - 1 + data_header->payload_length); // do not count for the place holder in the data header
     }
 
     return WG_MAC_NCP_NO_ERROR;

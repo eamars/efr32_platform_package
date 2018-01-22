@@ -106,6 +106,15 @@ typedef struct
     // transmit seqid (local copy, maintained by driver)
     uint8_t local_seq_id;
 
+    // configuration
+    wg_mac_config_t config;
+
+    // link state
+    wg_mac_link_state_t link_state;
+
+    // local nonce
+    uint16_t nonce;
+
     // packet queue
     QueueHandle_t rx_data_packet_queue;
     QueueHandle_t rx_raw_packet_queue;
@@ -119,12 +128,6 @@ typedef struct
     wg_mac_fsm_state_t fsm_state;
     TaskHandle_t fsm_thread_handler;
     SemaphoreHandle_t fsm_tx_done;
-
-    // configuration
-    wg_mac_config_t config;
-
-    // link state
-    wg_mac_link_state_t link_state;
 
     // retransmit
     struct
@@ -160,7 +163,6 @@ extern const wg_mac_config_t wg_mac_default_config;
  * @param obj the network stack object
  * @param radio the abstract radio object
  * @param config the settings. If NULL is passed the network stack will use default configuration instead @see wg_mac_default_config
- * @param backup backup data to restore from reset (can be NULL). The backup data must be valid is non-NULL is received
  */
 void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config);
 

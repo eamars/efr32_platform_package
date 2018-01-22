@@ -8,9 +8,12 @@
 
 #if USE_FREERTOS == 1
 
+#include <stdlib.h>
+
 #include "wg_mac.h"
 #include "subg_mac.h"
 #include "utils.h"
+
 
 const wg_mac_config_t wg_mac_default_config = {
         .local_eui64 = 0,
@@ -95,7 +98,23 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
         // we can bypass the idle state to transmit packet
         obj->retransmit.retry_counter += 1;
 
-        if (obj->retransmit.retry_counter >= obj->config.max_retransmit)
+        // retransmit
+        if (obj->retransmit.retry_counter < obj->config.max_retransmit)
+        {
+            // only retransmit when network is joined
+            if (obj->link_state.is_network_joined)
+            {
+                // for the retransmission, we don't generate a different seqid
+                wg_mac_send_raw_pri(obj, &obj->retransmit.prev_packet, false);
+            }
+            else
+            {
+                // this is the extreme case where data is attempting to be transmitted but
+                // the device is not in the network
+                obj->fsm_state = WG_MAC_IDLE;
+            }
+        }
+        else
         {
             // if the network is joined previously, then trigger an event,
             // otherwise we do nothing.
@@ -106,13 +125,14 @@ static void wg_mac_on_rx_window_timeout(TimerHandle_t xTimer)
                     obj->callbacks.on_network_state_changed(obj, WG_MAC_NETWORK_LEFT);
             }
 
+            // kick the device out of network
+            obj->link_state.is_network_joined = false;
+
+            // reset the sequence id
+            obj->local_seq_id = 0;
+
             // reset to idle state
             obj->fsm_state = WG_MAC_IDLE;
-        }
-        else
-        {
-            // for the retransmission, we don't generate a different seqid
-            wg_mac_send_raw_pri(obj, &obj->retransmit.prev_packet, false);
         }
     }
 }
@@ -347,12 +367,15 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                         memcpy(&data_header->payload_start_place_holder, uplink_msg.payload, uplink_msg.payload_size);
 
                         // set mac layer payload size
-                        raw_msg.size = (uint16_t) (SUBG_MAC_PACKET_DATA_HEADER_SIZE + data_header->payload_length);
+                        raw_msg.size = (uint16_t) (sizeof(subg_mac_data_header_t) - 1 + data_header->payload_length); // do not count for the place holder in the data header
                     }
 
                     // send to transceiver
-                    wg_mac_send_raw_pri(obj, &raw_msg, true);
-                    // xQueueSend(obj->tx_raw_packet_queue, &raw_msg, portMAX_DELAY);
+                    // wg_mac_send_raw_pri(obj, &raw_msg, true);
+
+                    // write to raw packet queue, in which case the raw packet queue have higher priority to
+                    // be transmitted than the data packet
+                    xQueueSend(obj->tx_raw_packet_queue, &raw_msg, portMAX_DELAY);
                 }
                 else
                 {
@@ -571,12 +594,15 @@ void wg_mac_join_network(wg_mac_t * obj)
 {
     DRV_ASSERT(obj);
 
+    // generate a nonce for every join attempt (srand) need to be called
+    obj->nonce = (uint16_t) random();
+
     // form a join request packet
     wg_mac_raw_msg_t tx_msg;
     subg_mac_cmd_join_req_t * join_request = (subg_mac_cmd_join_req_t *) tx_msg.buffer;
 
     // set the packet length
-    tx_msg.size = SUBG_MAC_PACKET_CMD_JOIN_REQ_SIZE;
+    tx_msg.size = sizeof(subg_mac_cmd_join_req_t);
 
     join_request->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
     join_request->cmd_header.mac_header.src_id = 0; // src id is managed by driver
@@ -585,6 +611,10 @@ void wg_mac_join_network(wg_mac_t * obj)
     join_request->cmd_header.mac_header.seqid = 0; // seqid is controlled by the driver
     join_request->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_REQ;
     join_request->eui64 = obj->config.local_eui64;
+    join_request->nonce = obj->nonce;
+
+    // TODO: generate mic
+
 
     // send to local transmit queue
     xQueueSend(obj->tx_raw_packet_queue, &tx_msg, portMAX_DELAY);
