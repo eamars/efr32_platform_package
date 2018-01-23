@@ -107,7 +107,8 @@ typedef struct
 
     TaskHandle_t ImuCalHandler;
 
-    rawdata_t old_magdata;
+    rawdata_t old_magdata; //Where the fuck is that used?
+    rawdata_t accel_data;
 
     struct
     {
@@ -137,7 +138,7 @@ char       FXOS8700CQ_GetChipMode(imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj, rawdata_t *accel_data);
+void       FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_HighPassFilter(imu_FXOS8700CQ_t * obj, char status);
 void       FXOS8700CQ_FullScaleRange(imu_FXOS8700CQ_t * obj, range_t range);
 void       FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t range);

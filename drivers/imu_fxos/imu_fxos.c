@@ -101,14 +101,12 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     FXOS8700CQ_ConfigureMagnetometer(obj);
     //sets initial thresholds (quite lenient thresholds)
 
-    //Now get the current vector - check if open or closed
-    FXOS8700CQ_Calculate_Vector(obj);
-
     // initialize door state and calibrate state
 
     while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
 
     FXOS8700CQ_Init_Interrupt(obj);
+    xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler); // Was in init interrupt
     FXOS8700CQ_ActiveMode(obj);
 
     obj->current_compass = 0;
@@ -127,6 +125,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
         // recalibrate the device (load the backup data straight in)
         FXOS8700CQ_LoadBackup(obj, backup_pointer);
     }
+
+    //Now get the current vector - check if open or closed
+    FXOS8700CQ_Calculate_Vector(obj);
 }
 
 void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
@@ -141,6 +142,8 @@ void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer
     obj->calibrated = true;
 }
 
+
+// When should this be run?
 void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
 {
     backup_pointer->tmp_coef = obj->origin.tmp_coef;
@@ -195,7 +198,7 @@ char FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj)
 void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
 {
     FXOS8700CQ_StandbyMode (obj);
-    //FXOS8700CQ_WriteByte(obj, CTRL_REG4, INT_EN_DRDY_MASK );                   // Enable interrupts for DRDY (TO, Aug 2012)
+    FXOS8700CQ_WriteByte(obj, CTRL_REG4, INT_EN_DRDY_MASK );                   // Enable interrupts for DRDY (TO, Aug 2012)
     //FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, FULL_SCALE_2G);                    // Set FSR of accel to +/-2g
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, (ASLP_RATE_1_56HZ|DATA_RATE_640MS));     // Set ODRs
     //FXOS8700CQ_WriteByte(obj, CTRL_REG2, (SMOD_LOW_POWER|SLPE_MASK));
@@ -203,18 +206,18 @@ void FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_ActiveMode (obj);
 }
 
-void FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj, rawdata_t *accel_data)
+void FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj)
 {
     char raw[6] = {0};
     FXOS8700CQ_ReadByteArray(obj, OUT_X_MSB, raw, 6);
-    accel_data->x = (raw[0] << 8) | raw[1];     // Pull out 16-bit, 2's complement magnetometer data
-    accel_data->y = (raw[2] << 8) | raw[3];
-    accel_data->z = (raw[4] << 8) | raw[5];
+    obj->accel_data.x = (raw[0] << 8) | raw[1];     // Pull out 16-bit, 2's complement accelerometer data
+    obj->accel_data.y = (raw[2] << 8) | raw[3];
+    obj->accel_data.z = (raw[4] << 8) | raw[5];
 }
 
 void FXOS8700CQ_HighPassFilter(imu_FXOS8700CQ_t * obj, char status)
 {
-    FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG,status);
+    FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, status);
 }
 
 void FXOS8700CQ_FullScaleRange(imu_FXOS8700CQ_t * obj, range_t range)
@@ -251,7 +254,7 @@ void FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_StandbyMode (obj);
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, (MAG_ACTIVE | M_OSR_800_HZ));      // OSR=400, mag only mode (TO, Aug 2012) auto calibrate mode off
     FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, M_HYB_AUTOINC_MASK);       // enable hybrid autoinc
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_100_HZ);       // OSR =2 in auto sleep mode
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, M_ASLP_OSR_100_HZ);        // OSR =2 in auto sleep mode
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_CFG));
     FXOS8700CQ_ActiveMode (obj);
 }
@@ -513,6 +516,19 @@ void FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj)
 }
 
 /**
+ * Sets the IMU to interrupt when a change in acceleration is detected
+ * @param object [description]
+ */
+void FXOS8700CQ_ConfigureTransientDetectionMode(imu_FXOS8700CQ_t * obj)
+{
+    FXOS8700CQ_WriteByte(obj, TRANSIENT_CFG, 0x00); // Should all be zero
+    //Need to set thresholds
+    FXOS8700CQ_WriteByte(obj, TRANSIENT_THS, 0x87); // 7 x 63mg = 441mg
+
+    FXOS8700CQ_WriteByte(obj, TRANSIENT_COUNT, 0x01); // 1 count above threshold needed
+}
+
+/**
  * takes a measurement of the magnetometer and sets the x,y and z initial positions
  * @param object [description]
  */
@@ -565,7 +581,6 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_StandbyMode (obj);
     uint8_t Vector_Threshold[2] = {0};
     uint8_t ref[6] = {0};
-    rawdata_t mag_raw;
 
     ref[1] = obj->origin.x_origin;
     ref[0] = obj->origin.x_origin >> 8;
@@ -579,8 +594,9 @@ void FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj)
 
     //FXOS8700CQ_WriteByte(obj, M_VECM_CFG,0X00); //  reset values in the vec_cfg register
 
+    // Configures interrupt
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
-    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector ena bleld,procs wake up,interupt on pin 2 enlabeled
+    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector enabled, procs wake up, interrupt on pin 2 enabled
     FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
     FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
     FXOS8700CQ_ActiveMode (obj);
@@ -672,9 +688,6 @@ void FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj)
  */
 void FXOS8700CQ_Init_Interrupt (imu_FXOS8700CQ_t * obj)
 {
-    // creates the temperature adjusting queue (this is here instead of the init as the temp code needs the int to initialised first)
-    xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler);
-
     GPIO_PinModeSet(PIO_PORT(obj->int_1), PIO_PIN(obj->int_1), gpioModeInput, 0);
     GPIO_PinModeSet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), gpioModeInput, 0);
 
