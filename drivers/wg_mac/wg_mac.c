@@ -14,6 +14,16 @@
 #include "subg_mac.h"
 #include "utils.h"
 
+/**
+ * @brief Define srandom function for gcc version below 5.0
+ * GCC version below 5.0 does not have proper support for random() function. We
+ * will use rand instead
+ */
+#if __GNUC__ < 5
+#warning "You should upgrade your GCC to version 5.0 or above"
+#define random(x) rand(x)
+#endif
+
 
 const wg_mac_config_t wg_mac_default_config = {
         .local_eui64 = 0,
