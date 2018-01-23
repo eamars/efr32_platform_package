@@ -304,7 +304,7 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
         tx_power_curves_config.txPowerSgCurves = curvesSg;
 
         tx_power_config.mode = RAIL_TX_POWER_MODE_SUBGIG;
-        tx_power_config.voltage = PA_VBAT_VOLTAGE;
+        tx_power_config.voltage = PA_DCDC_VOLTAGE;
         tx_power_config.rampTime = PA_RAMP;
     }
     else
@@ -316,7 +316,7 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
         tx_power_curves_config.txPowerSgCurves = curvesSg;
 
         tx_power_config.mode = RAIL_TX_POWER_MODE_SUBGIG;
-        tx_power_config.voltage = PA_DCDC_VOLTAGE;
+        tx_power_config.voltage = PA_VBAT_VOLTAGE;
         tx_power_config.rampTime = PA_RAMP;
     }
 
