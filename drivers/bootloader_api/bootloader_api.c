@@ -81,7 +81,7 @@ void reboot_to_bootloader(void)
     boot_info_map->prev_aat_addr = (uint32_t) &__AAT__begin;
 
     // reset using debug interface
-    system_reset(RESET_BOOTLOADER_BOOTLOAD);
+    software_reset(RESET_BOOTLOADER_BOOTLOAD);
 }
 
 void reboot_to_addr(uint32_t vtor_addr)
@@ -93,7 +93,7 @@ void reboot_to_addr(uint32_t vtor_addr)
     boot_info_map->next_aat_addr = vtor_addr;
 
     // reset using debug interface
-    system_reset(RESET_BOOTLOADER_GO);
+    software_reset(RESET_BOOTLOADER_GO);
 }
 
 void branch_to_addr(uint32_t vtor_addr)
