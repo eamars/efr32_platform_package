@@ -15,6 +15,10 @@
 
 #define WG_DATA_V1_PROTOCOL_VERSION 1
 
+#define WG_DATA_RESET_TYPE_SOFT = 0
+#define WG_DATA_RESET_TYPE_HARD = 1
+
+
 typedef enum {
     WG_DATA_PACKET_BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
     WG_DATA_PACKET_EXTENDED_REPORT,    // More data than a basic DATA_REPORT
