@@ -26,9 +26,16 @@ void assert_failed_func(const char * function_name);
 void assert_failed_null();
 
 void backtrace(void);
+
 uint16_t system_crash_handler(void);
-void system_reset(uint16_t reset_reason);
+
+void factory_reset(void);
+
+void system_reset(uint16_t reset_reason) __attribute__ ((deprecated));
+void software_reset(uint16_t reset_reason);
+
 void stack_reg_dump(const uint32_t * stack_addr);
+
 void debug_breakpoint(void);
 
 

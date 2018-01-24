@@ -297,3 +297,8 @@ void simeeprom_bookkeeping(simeeprom_t * obj)
 {
     while (halSimEepromErasePage());
 }
+
+void simeeprom_mass_erase(void)
+{
+    halInternalSimEeRepair(true);
+}

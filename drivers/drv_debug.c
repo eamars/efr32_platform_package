@@ -11,6 +11,7 @@
 #include "em_dbg.h"
 #include "bits.h"
 #include "reset_info.h"
+#include "simeeprom.h"
 
 #define IRQ_TO_VECT_NUM(x) ((x) + 16)
 
@@ -30,9 +31,9 @@ typedef enum
 
 // define halInternalAssertFailed as an alias of assert_failed when not present
 void halInternalAssertFailed(const char *, int) __attribute__ ((weak, alias ("assert_failed")));
+void system_reset(uint16_t reset_reason) __attribute__((alias("software_reset")));
 
-
-void system_reset(uint16_t reset_reason)
+void software_reset(uint16_t reset_reason)
 {
     // write to reset info with reset reason
     reset_info_set_reset_reason(reset_reason);
@@ -71,6 +72,15 @@ void system_reset(uint16_t reset_reason)
     {
 
     }
+}
+
+void factory_reset(void)
+{
+    // erase the simulated eeprom sector
+    simeeprom_mass_erase();
+
+    // perform a software reset
+    software_reset(RESET_SOFTWARE_REBOOT);
 }
 
 static _Unwind_Reason_Code backtrace_handler(_Unwind_Context * contex, void * args)
@@ -141,7 +151,7 @@ void assert_failed(const char * file, uint32_t line)
     // backtrace();
 
     // reset the device
-    system_reset(RESET_CRASH_ASSERT);
+    software_reset(RESET_CRASH_ASSERT);
 }
 
 void assert_failed_func(const char * function_name)

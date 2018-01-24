@@ -95,6 +95,11 @@ void simeeprom_self_increase(simeeprom_t * obj, uint8_t token);
  */
 void simeeprom_bookkeeping(simeeprom_t * obj);
 
+/**
+ * @brief Erase entire Simulated EEPROM page
+ */
+void simeeprom_mass_erase(void);
+
 #ifdef __cplusplus
 }
 #endif
