@@ -15,14 +15,14 @@
 
 #define WG_DATA_V1_PROTOCOL_VERSION 1
 
-#define WG_DATA_RESET_TYPE_SOFT = 0
-#define WG_DATA_RESET_TYPE_HARD = 1
+#define WG_DATA_RESET_TYPE_SOFT 0
+#define WG_DATA_RESET_TYPE_HARD 1
 
 
 typedef enum {
     WG_DATA_PACKET_BASIC_REPORT = 0,   // Simple periodic data report (closed/temp/batlevel)
     WG_DATA_PACKET_EXTENDED_REPORT,    // More data than a basic DATA_REPORT
-    WG_DATA_PACKET_DATA_REQUEST,       // Request a report packet from the device. 
+    WG_DATA_PACKET_DATA_REQUEST,       // Request a report packet from the device.
     WG_DATA_PACKET_RESET_COMMAND,      // Reset the device according to parameters
     WG_DATA_PACKET_RESET_ACKNOWLEDGE,  // Follows a RESET_COMMAND before device reset
     WG_DATA_PACKET_CALIBRATE_COMMAND,  // Calibrate device sensors/state
