@@ -110,6 +110,8 @@ typedef union
     struct __attribute__((packed))
     {
         subg_mac_cmd_header_t cmd_header;
+
+        // TODO: packet structure to be discussed
         uint32_t seed;
     };
 } subg_mac_cmd_join_confirm_t;
