@@ -35,6 +35,7 @@ typedef enum
     SUBG_MAC_PACKET_CMD_LEAVE_RESP = 4,
     SUBG_MAC_PACKET_CMD_KICK_REQ = 5,
     SUBG_MAC_PACKET_CMD_KICK_RESP = 6,
+    SUBG_MAC_PACKET_CMD_JOIN_CONFIRM = 7,
 } subg_mac_packet_cmd_type_e;
 
 typedef enum
@@ -103,6 +104,15 @@ typedef union
         uint8_t uplink_dest_id;            // dest id for following transmission
     };
 } subg_mac_cmd_join_resp_t;
+
+typedef union
+{
+    struct __attribute__((packed))
+    {
+        subg_mac_cmd_header_t cmd_header;
+        uint32_t seed;
+    };
+} subg_mac_cmd_join_confirm_t;
 
 typedef union
 {
