@@ -124,9 +124,10 @@ typedef struct
     uint64_t local_eui64;
     uint32_t max_heartbeat_period_sec;
     uint32_t ack_window_sec;
+    uint16_t downlink_extended_rx_window_ms;
     uint8_t max_retries;
     bool auto_ack;
-    uint16_t downlink_extended_rx_window_ms;
+    bool enable_join_delay;
 } wg_mac_ncp_config_t;
 
 typedef void (*wg_mac_ncp_on_client_joined)(void * obj, wg_mac_ncp_client_t * client);

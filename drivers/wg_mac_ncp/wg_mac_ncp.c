@@ -9,12 +9,14 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "wg_mac_ncp.h"
 #include "drv_debug.h"
 #include "subg_mac.h"
 #include "irq.h"
 #include "yield.h"
+#include "delay.h"
 
 /**
  * @brief Define srandom function for gcc version below 5.0
@@ -33,6 +35,7 @@ const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .max_retries = 3,
         .auto_ack = true,
         .downlink_extended_rx_window_ms = 5000,
+        .enable_join_delay = true,
 };
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
@@ -359,6 +362,14 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             response_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_RESP;
             response_packet->allocated_device_id = client->short_id;
             response_packet->uplink_dest_id = (uint8_t) (obj->config.local_eui64 & 0xff);
+
+            // delay response
+            if (obj->config.enable_join_delay)
+            {
+                uint32_t delay = (uint32_t) lroundf(((-1.0f/13.0f) * msg->rssi + (30.0f/13.0f)));
+                if (delay > 0)
+                    delay_ms(pdMS_TO_TICKS(delay));
+            }
 
             wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
 
