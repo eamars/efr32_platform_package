@@ -12,7 +12,8 @@
 
 MEMORY
 {
-    FLASH (rx) : ORIGIN = 0x0FE10000, LENGTH = 32K
+    BL_FLASH (rx) : ORIGIN = 0x0FE10000, LENGTH = 32K
+    FLASH (rx) : ORIGIN = 0x00000000, LENGTH = 1M
     RAM (rwx)  : ORIGIN = 0x20000000, LENGTH = 256K
 }
 
@@ -54,18 +55,18 @@ ENTRY(Reset_Handler)
 SECTIONS
 {
     /* FLASH segment */
-    .LOADER ORIGIN(FLASH) + 0x0 :
+    .LOADER ORIGIN(BL_FLASH) + 0x0 :
     {
         KEEP(*(.tiny_loader*));
         KEEP(*(.loader*));
-    } > FLASH
+    } > BL_FLASH
 
-    .VECTORS ORIGIN(FLASH) + 0x100 :
+    .VECTORS ORIGIN(BL_FLASH) + 0x100 :
     {
         __AAT__begin = . ;
         KEEP(*(.aat));
         __AAT__end = . ;
-    } > FLASH
+    } > BL_FLASH
 
     .text :
     {
@@ -110,18 +111,18 @@ SECTIONS
         . = ALIGN(4);
         KEEP(*(.eh_frame*))
         __TEXT__end = .;
-    } > FLASH
+    } > BL_FLASH
 
     .ARM.extab :
     {
         *(.ARM.extab* .gnu.linkonce.armextab.*)
-    } > FLASH
+    } > BL_FLASH
 
     __exidx_start = .;
     .ARM.exidx :
     {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
-    } > FLASH
+    } > BL_FLASH
     __exidx_end = .;
 
     /* End of text */
@@ -241,7 +242,7 @@ SECTIONS
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
 
     /* Check if FLASH usage exceeds FLASH size */
-    ASSERT( (LENGTH(FLASH) - 0x4) > (__rom_end__ - ORIGIN(FLASH)), "FLASH memory overflowed !")
+    ASSERT( (LENGTH(BL_FLASH) - 0x4) > (__rom_end__ - ORIGIN(BL_FLASH)), "FLASH memory overflowed !")
 
     /* Stabs debugging sections.  */
     .stab          0 : { *(.stab) }
