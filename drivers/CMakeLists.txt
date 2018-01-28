@@ -9,26 +9,31 @@ SET(ENABLED_DRIVERS
 		delay
 		bootloader_api
 		stack_struct
-		dynamic_callbacks
 		i2cdrv
-		eeprom_cat24c16
 		temperature_tmp116
-		pa_sky66112
 		radio_template
 		radio_rfm9x
 		radio_efr32
 		reset_info
-		# lorawan
-		# lora_phy
 		serial
 		wg_mac
 		wg_mac_ncp
-		# ncp_spi
         imu_fxos
 		battery_monitor
 		simeeprom
 		gpcrc
+		mfg_hw_test
+
+		# Some legacy drivers
+		# -------------------
+		#
+		# pa_sky66112
+		# eeprom_cat24c16
+		# dynamic_callbacks
+		# ncp_spi
 		# simgbpr
+		# lorawan
+		# lora_phy
 		)
 
 INCLUDE_DIRECTORIES(${TARGET_SPECIFIC_INCLUDE_DIRECTORY})

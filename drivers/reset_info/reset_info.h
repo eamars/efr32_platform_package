@@ -8,6 +8,7 @@
 #ifndef RESET_INFO_H_
 #define RESET_INFO_H_
 
+#include PLATFORM_HEADER
 #include <stdint.h>
 #include <stdbool.h>
 #include "micro/micro.h"

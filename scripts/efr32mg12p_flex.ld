@@ -152,8 +152,10 @@ SECTIONS
     {
         __data_start__ = .;
 
-        . = ALIGN(256);
+        . = ALIGN(0x100);
+        __DYNAMIC_VTOR__begin = . ;
         KEEP(*(.dynamic_vectors))
+        __DYNAMIC_VTOR__end = . ;
 
         . = ALIGN(4);
         *(.textrw .textrw*);

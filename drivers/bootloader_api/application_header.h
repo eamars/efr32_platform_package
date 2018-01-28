@@ -29,69 +29,72 @@ extern uint32_t __AAT__end;
 
 typedef struct __attribute__ ((packed))
 {
-	uint32_t * stack_top;
-	irq_handler_t reset_handler;
-	irq_handler_t nmi_handler;
-	irq_handler_t hardfault_handler;
+    uint32_t * stack_top;
+    irq_handler_t reset_handler;
+    irq_handler_t nmi_handler;
+    irq_handler_t hardfault_handler;
 
-	// Application Address Table or Bootloader Address Table
-	uint16_t type;
+    // Application Address Table or Bootloader Address Table
+    uint16_t type;
 
-	// Version: first byte: major version, second byte: minor version
-	uint16_t version;
+    // Version: first byte: major version, second byte: minor version
+    uint16_t version;
 
-	// Address to the full interrupt vector table
-	irq_handler_t * vector_table;
+    // Address to the full interrupt vector table
+    irq_handler_t * vector_table;
 } BasicApplicationHeaderTable_t;
 
 typedef struct __attribute__ ((packed))
 {
-	// Same structure for every application header shared across Silicon Labs product
-	BasicApplicationHeaderTable_t basic_application_header_table;
+    // Same structure for every application header shared across Silicon Labs product
+    BasicApplicationHeaderTable_t basic_application_header_table;
 
-	// Crc32 for basic application header table
-	uint32_t basic_app_header_table_crc;
+    // Crc32 for basic application header table
+    uint32_t basic_app_header_table_crc;
 
-	// Extended application header table version
-	uint32_t ext_header_version;
+    // The bundled manufacture test application address
+    irq_handler_t * mfg_vector_table;
 
-	// Application total size
-	uint32_t app_total_size;
+    // Extended application header table version
+    uint32_t ext_header_version;
 
-	// Header size
-	uint32_t header_size;
+    // Application total size
+    uint32_t app_total_size;
 
-	// Application version
-	union
-	{
-		uint32_t app_version;
+    // Header size
+    uint32_t header_size;
 
-		// TODO: the byte order is important!
-		struct __attribute__ ((packed))
-		{
-			uint8_t app_version_build;
-			uint8_t app_version_patch;
-			uint8_t app_version_minor;
-			uint8_t app_version_major;
-		};
-	};
+    // Application version
+    union
+    {
+        uint32_t app_version;
 
-	// Hardware version
-	union
-	{
-		uint16_t hw_version;
+        // TODO: the byte order is important!
+        struct __attribute__ ((packed))
+        {
+            uint8_t app_version_build;
+            uint8_t app_version_patch;
+            uint8_t app_version_minor;
+            uint8_t app_version_major;
+        };
+    };
 
-		// TODO: the byte order is important!
-		struct __attribute__ ((packed))
-		{
-			uint8_t hw_version_revision;
-			uint8_t hw_version_product_id;
-		};
-	};
+    // Hardware version
+    union
+    {
+        uint16_t hw_version;
+
+        // TODO: the byte order is important!
+        struct __attribute__ ((packed))
+        {
+            uint8_t hw_version_revision;
+            uint8_t hw_version_product_id;
+        };
+    };
 
 
-	// timestamp for build
-	uint32_t timestamp;
+    // timestamp for build
+    uint32_t timestamp;
 
 } ExtendedApplicationHeaderTableV1_t;
 
