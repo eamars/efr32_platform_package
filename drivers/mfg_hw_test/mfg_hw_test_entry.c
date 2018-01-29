@@ -20,7 +20,11 @@ extern uint32_t __DYNAMIC_VTOR__end;
 void __libc_init_array (void);
 
 extern uint32_t __StackTop;
+void Default_Handler(void);
+
 void mfg_main(void);
+void mfg_generic_irq_handler(uint32_t);
+
 void mfg_default_handler(void);
 void mfg_reset_handler(void);
 
@@ -109,9 +113,23 @@ const irq_handler_t mfg_test_vector_table[] =
         mfg_default_handler,                          /*  50 - Reserved      */
 };
 
-
+__attribute__((naked))
 void mfg_default_handler(void)
 {
+    asm(
+        // dump auto stacked value
+        "cpsid i\n" // prevent nested interrupt
+        "tst lr, #4\n"
+        "ite eq\n"
+        "mrseq r0, msp\n"
+        "mrsne r0, psp\n"
+        "bl.w stack_reg_dump\n"
+
+        // call generic irq handler
+        "mrs r0, ipsr\n"
+        "bl.w mfg_generic_irq_handler\n"
+    );
+
     while (1)
     {
 
@@ -142,16 +160,17 @@ void mfg_reset_handler(void)
         *pDest++ = 0x0UL;
     }
 
-    // fill CSTACK with magic numbers (from .heap_end to __StackTop)
-    for (register uint32_t *cstack = &__CSTACK__begin; cstack < &__CSTACK__end;)
-    {
-        *cstack++ = STACK_FILL_VALUE;
-    }
-
     // copy the mfg specific vector table to SRAM to replace application VTOR
     for (register uint32_t *dest = &__DYNAMIC_VTOR__begin, *src = (uint32_t *) mfg_test_vector_table; dest < &__DYNAMIC_VTOR__end;)
     {
         *dest++ = *src++;
+    }
+
+    // runtime patch that replace Default_Handler with mfg_default_handler
+    for (register irq_handler_t * handler = (irq_handler_t *) &__DYNAMIC_VTOR__begin; handler < (irq_handler_t *) &__DYNAMIC_VTOR__end; handler++)
+    {
+        if (*handler == Default_Handler)
+            *handler = mfg_default_handler;
     }
 
     // remap the exception table into SRAM to allow dynamic vector relocation.
@@ -160,7 +179,7 @@ void mfg_reset_handler(void)
     // initialize stack pointer
     {
         register volatile uint32_t *sp __asm ("sp");
-        sp = &__DYNAMIC_VTOR__begin;
+        sp = (uint32_t *) (&__DYNAMIC_VTOR__begin)[0];
     }
 
     /**
