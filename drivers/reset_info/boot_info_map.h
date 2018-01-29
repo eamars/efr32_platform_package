@@ -15,4 +15,5 @@ typedef struct __attribute__((packed))
 
     uint32_t prev_aat_addr;
     uint32_t next_aat_addr;
+    uint32_t boot_flags[4];
 } boot_info_map_t;
