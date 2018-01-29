@@ -34,7 +34,7 @@ void mfg_main(void)
     reset_info_clear();
 
     // trigger a divide by 0 error
-    uint32_t a = 5/0;
+//    uint32_t a = 5/0;
 
     while (1)
     {
