@@ -163,7 +163,6 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
         return WG_MAC_INVALID_PACKET_LENGTH;
 
     bool clear_pending = false;
-    bool send_ack = false;
     bool network_joined = false;
 
     // map command header packet to the msg
@@ -188,8 +187,6 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
                     subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
                     if (ack_packet->ack_seqid == header->seqid)
                         clear_pending = true;
-                    else
-                        DRV_ASSERT(false);
 
                     break;
                 }
@@ -241,10 +238,31 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
 
                 // clear the pending packet and send ack back
                 clear_pending = true;
-                send_ack = true;
                 network_joined = true;
+
+                // send join confirm message
+                wg_mac_raw_msg_t tx_msg;
+                tx_msg.size = sizeof(subg_mac_cmd_join_confirm_t);
+
+                // map subg_mac_cmd_join_confirm_t to tx_msg
+                subg_mac_cmd_join_confirm_t * join_confirm_packet = (subg_mac_cmd_join_confirm_t *) tx_msg.buffer;
+
+                join_confirm_packet->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+                join_confirm_packet->cmd_header.mac_header.src_id = 0;
+                join_confirm_packet->cmd_header.mac_header.dest_id = obj->link_state.uplink_dest_id;
+                join_confirm_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
+                join_confirm_packet->cmd_header.mac_header.seqid = 0;
+                join_confirm_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_CONFIRM;
+                join_confirm_packet->dummy_payload = obj->nonce;
+
+                wg_mac_send_raw_pri(obj, &tx_msg, true);
             }
 
+            break;
+        }
+        case SUBG_MAC_PACKET_CMD_JOIN_CONFIRM:
+        {
+            // the client shouldn't receive the join confirm message, skip
             break;
         }
         default:
@@ -254,11 +272,6 @@ static wg_mac_error_code_t process_cmd_packet(wg_mac_t * obj, wg_mac_raw_msg_t *
     if (clear_pending)
     {
         obj->retransmit.is_packet_clear = true;
-    }
-
-    if (send_ack)
-    {
-        send_ack_packet(obj, cmd_header->mac_header.seqid);
     }
 
     if (network_joined)
@@ -608,10 +621,6 @@ void wg_mac_join_network(wg_mac_t * obj)
     join_request->cmd_header.mac_header.seqid = 0; // seqid is controlled by the driver
     join_request->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_JOIN_REQ;
     join_request->eui64 = obj->config.local_eui64;
-    join_request->nonce = obj->nonce;
-
-    // TODO: generate mic
-
 
     // send to local transmit queue
     xQueueSend(obj->tx_raw_packet_queue, &tx_msg, portMAX_DELAY);

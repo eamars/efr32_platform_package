@@ -31,11 +31,11 @@ typedef enum
     SUBG_MAC_PACKET_CMD_ACK = 0,
     SUBG_MAC_PACKET_CMD_JOIN_REQ = 1,
     SUBG_MAC_PACKET_CMD_JOIN_RESP = 2,
-    SUBG_MAC_PACKET_CMD_LEAVE_REQ = 3,
-    SUBG_MAC_PACKET_CMD_LEAVE_RESP = 4,
-    SUBG_MAC_PACKET_CMD_KICK_REQ = 5,
-    SUBG_MAC_PACKET_CMD_KICK_RESP = 6,
-    SUBG_MAC_PACKET_CMD_JOIN_CONFIRM = 7,
+    SUBG_MAC_PACKET_CMD_JOIN_CONFIRM = 3,
+    SUBG_MAC_PACKET_CMD_LEAVE_REQ = 4,
+    SUBG_MAC_PACKET_CMD_LEAVE_RESP = 5,
+    SUBG_MAC_PACKET_CMD_KICK_REQ = 6,
+    SUBG_MAC_PACKET_CMD_KICK_RESP = 7,
 } subg_mac_packet_cmd_type_e;
 
 typedef enum
@@ -90,8 +90,6 @@ typedef union
     {
         subg_mac_cmd_header_t cmd_header;
         uint64_t eui64;
-        uint16_t nonce;
-        uint32_t mic;
     };
 } subg_mac_cmd_join_req_t;
 
@@ -110,9 +108,7 @@ typedef union
     struct __attribute__((packed))
     {
         subg_mac_cmd_header_t cmd_header;
-
-        // TODO: packet structure to be discussed
-        uint32_t seed;
+        uint32_t dummy_payload;
     };
 } subg_mac_cmd_join_confirm_t;
 

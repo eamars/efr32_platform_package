@@ -245,7 +245,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
     // map command header packet to the msg
     subg_mac_cmd_header_t * cmd_header = (subg_mac_cmd_header_t *) msg->buffer;
 
-    switch (cmd_header->cmd_type)
+    switch (((subg_mac_cmd_header_t *) msg->buffer)->cmd_type)
     {
         case SUBG_MAC_PACKET_CMD_ACK:
         {
@@ -263,7 +263,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 case SUBG_MAC_PACKET_CMD_ACK_CONFIRM:
                 {
                     // find the client and compare it with the latest packet it transmitted
-                    client = wg_mac_ncp_find_client_with_short_id(obj, cmd_header->mac_header.src_id);
+                    client = wg_mac_ncp_find_client_with_short_id(obj, ack_packet->cmd_header.mac_header.src_id);
                     break;
                 }
                 case SUBG_MAC_PACKET_CMD_ACK_UNREACHABLE:
@@ -371,17 +371,58 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                     delay_ms(pdMS_TO_TICKS(delay));
             }
 
+            // send join response
             wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
 
-            // fire the callback which indicates the device has joined the network
-            if (obj->callbacks.on_client_joined)
-                obj->callbacks.on_client_joined(obj, client);
+            // TODO: At this point the device should stay in the pending state, in which case the device might joined other network
+            // eventually, we need to remove such device from list if failed to send another join confirm message within a certain
+            // timeout.
 
             break;
         }
         case SUBG_MAC_PACKET_CMD_JOIN_RESP:
         {
             // do not process join response message as the message is transmitted from ncp
+            break;
+        }
+        case SUBG_MAC_PACKET_CMD_JOIN_CONFIRM:
+        {
+            if (msg->size < sizeof(subg_mac_cmd_join_confirm_t))
+                return WG_MAC_NCP_INVALID_PACKET_LENGTH;
+
+            subg_mac_cmd_join_confirm_t * join_confirm_packet = (subg_mac_cmd_join_confirm_t *) msg->buffer;
+
+            // find existing client in the client library with short id (assume the device already send join request before
+            client = wg_mac_ncp_find_client_with_short_id(obj, cmd_header->mac_header.src_id);
+
+            if (client)
+            {
+                // send ack
+                wg_mac_ncp_raw_msg_t tx_msg;
+
+                tx_msg.size = sizeof(subg_mac_cmd_ack_t);
+
+                // map subg_mac_cmd_ack_t to tx_msg
+                subg_mac_cmd_ack_t * ack_packet = (subg_mac_cmd_ack_t *) tx_msg.buffer;
+
+                ack_packet->cmd_header.mac_header.magic_byte = SUBG_MAC_MAGIC_BYTE;
+                ack_packet->cmd_header.mac_header.src_id = 0;
+                ack_packet->cmd_header.mac_header.dest_id = client->short_id;
+                ack_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
+                ack_packet->cmd_header.mac_header.seqid = 0;
+                ack_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_ACK;
+                ack_packet->ack_seqid = join_confirm_packet->cmd_header.mac_header.seqid;
+                ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
+                ack_packet->extended_rx_window_ms = 0; // no extra downlink for first packet
+
+                // send ack message
+                wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, false);
+
+                // fire the callback which indicates the device has joined the network
+                if (obj->callbacks.on_client_joined)
+                    obj->callbacks.on_client_joined(obj, client);
+            }
+
             break;
         }
         default:
@@ -476,7 +517,7 @@ static wg_mac_ncp_error_code_t process_data_packet(wg_mac_ncp_t * obj, wg_mac_nc
     ack_packet->cmd_header.mac_header.packet_type = SUBG_MAC_PACKET_CMD;
     ack_packet->cmd_header.mac_header.seqid = 0;
     ack_packet->cmd_header.cmd_type = SUBG_MAC_PACKET_CMD_ACK;
-    ack_packet->ack_seqid = client->rx_seqid;
+    ack_packet->ack_seqid = data_header->mac_header.seqid;
     ack_packet->ack_type = SUBG_MAC_PACKET_CMD_ACK_CONFIRM;
 
     // extend the receiving window at client to make sure following packet can be received
