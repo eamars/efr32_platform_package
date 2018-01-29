@@ -32,10 +32,10 @@ const wg_mac_ncp_config_t wg_mac_ncp_default_config = {
         .local_eui64 = 0,
         .max_heartbeat_period_sec = 21600, // by default the expire window for a client is 6 hours
         .ack_window_sec = 1,
+        .client_join_window_sec = 3,
+        .downlink_extended_rx_window_ms = 5000,
         .max_retries = 3,
         .auto_ack = true,
-        .downlink_extended_rx_window_ms = 5000,
-        .enable_join_delay = true,
 };
 
 static void wg_mac_ncp_on_rx_done_handler(wg_mac_ncp_t * obj, void * msg, int32_t size, int32_t rssi, int32_t quality)
@@ -64,7 +64,7 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_eui64(wg_mac_ncp_t * obj, uint
     for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
     {
         // look for sequence id for a specific client
-        if (obj->clients[idx].is_valid)
+        if (obj->clients[idx].state != WG_MAC_NCP_CLIENT_INVALID)
         {
             if (obj->clients[idx].device_eui64 == device_eui64)
             {
@@ -80,7 +80,7 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_short_id(wg_mac_ncp_t * obj, u
     for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
     {
         // look for sequence id for a specific client
-        if (obj->clients[idx].is_valid)
+        if (obj->clients[idx].state != WG_MAC_NCP_CLIENT_INVALID)
         {
             if (obj->clients[idx].short_id == short_id)
             {
@@ -96,7 +96,7 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_available_client_slot(wg_mac_ncp_t * obj)
     for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
     {
         // look for first invalid slot
-        if (!obj->clients[idx].is_valid)
+        if (obj->clients[idx].state == WG_MAC_NCP_CLIENT_INVALID)
         {
             return &obj->clients[idx];
         }
@@ -168,7 +168,7 @@ static void wg_mac_ncp_send_raw_pri(wg_mac_ncp_t * obj, wg_mac_ncp_raw_msg_t * m
         if (requires_ack)
         {
             // the next retransmission time is calculated by: current time + ack_window
-            client->next_retry_time_sec =
+            client->retransmit.next_retry_time_sec =
                     obj->sec_since_start + obj->config.ack_window_sec;
 
             client->retransmit.prev_packet_acked = false;
@@ -207,7 +207,7 @@ static bool is_id_unique(wg_mac_ncp_t * obj, uint8_t unique_id)
     for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
     {
         // tell if the short id matches the unique id
-        if (obj->clients[idx].is_valid)
+        if (obj->clients[idx].state == WG_MAC_NCP_CLIENT_JOINED)
         {
             if (obj->clients[idx].short_id == unique_id)
             {
@@ -336,7 +336,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
                 memset(client, 0x0, sizeof(wg_mac_ncp_client_t));
 
                 // initialize client default state
-                client->is_valid = true;
+                client->state = WG_MAC_NCP_CLIENT_PENDING; // put the client device as pending for now, until join confirm received
                 client->short_id = generate_unique_id(obj,
                                                       join_request->eui64); // generate a unique short id for the client
                 client->device_eui64 = join_request->eui64;
@@ -363,10 +363,10 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             response_packet->allocated_device_id = client->short_id;
             response_packet->uplink_dest_id = (uint8_t) (obj->config.local_eui64 & 0xff);
 
-            // delay response
-            if (obj->config.enable_join_delay)
+            // user defined delay response
+            if (obj->callbacks.on_join_delay_requested)
             {
-                uint32_t delay = (uint32_t) lroundf(((-1.0f/13.0f) * msg->rssi + (30.0f/13.0f)));
+                uint32_t delay = obj->callbacks.on_join_delay_requested(obj, client, msg->rssi, msg->quality);
                 if (delay > 0)
                     delay_ms(pdMS_TO_TICKS(delay));
             }
@@ -374,7 +374,7 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
             // send join response
             wg_mac_ncp_send_raw_pri(obj, &tx_msg, true, true);
 
-            // TODO: At this point the device should stay in the pending state, in which case the device might joined other network
+            // At this point the device should stay in the pending state, in which case the device might joined other network
             // eventually, we need to remove such device from list if failed to send another join confirm message within a certain
             // timeout.
 
@@ -397,6 +397,9 @@ static wg_mac_ncp_error_code_t process_cmd_packet(wg_mac_ncp_t * obj, wg_mac_ncp
 
             if (client)
             {
+                // indicate the client is valid now
+                client->state = WG_MAC_NCP_CLIENT_JOINED;
+
                 // send ack
                 wg_mac_ncp_raw_msg_t tx_msg;
 
@@ -572,13 +575,13 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
         // go through all valid clients
         for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
         {
-            if (obj->clients[idx].is_valid)
+            if (obj->clients[idx].state == WG_MAC_NCP_CLIENT_JOINED)
             {
                 // if the device didn't ack me yet
                 if (!obj->clients[idx].retransmit.prev_packet_acked)
                 {
                     // retransmit if it's the time to retransmit
-                    if (obj->sec_since_start > obj->clients[idx].next_retry_time_sec)
+                    if (obj->sec_since_start > obj->clients[idx].retransmit.next_retry_time_sec)
                     {
                         obj->clients[idx].retransmit.retry_counter += 1;
 
@@ -586,7 +589,7 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
                         if (obj->clients[idx].retransmit.retry_counter > obj->config.max_retries)
                         {
                             // mark the device as invalid
-                            obj->clients[idx].is_valid = false;
+                            obj->clients[idx].state = WG_MAC_NCP_CLIENT_INVALID;
 
                             // if the packet is downlink packet, then notify the packet loss
                             if (obj->clients[idx].downlink.downlink_state == WG_MAC_NCP_DOWNLINK_TRANSMITTING)
@@ -612,14 +615,34 @@ static void wg_mac_ncp_client_bookkeeping_thread(wg_mac_ncp_t * obj)
 
                 // remove the device from list if unseen for a certain amount of time
                 uint32_t unseen_period_sec = obj->sec_since_start - obj->clients[idx].last_seen_sec;
-
                 if (unseen_period_sec > obj->config.max_heartbeat_period_sec)
                 {
-                    obj->clients[idx].is_valid = false;
+                    obj->clients[idx].state = WG_MAC_NCP_CLIENT_INVALID;
 
                     // fire the callback to notify the client has been removed
                     if (obj->callbacks.on_client_left)
                         obj->callbacks.on_client_left(obj, &obj->clients[idx], WG_MAC_NCP_CLIENT_LOST);
+
+                    // no further checking of the client
+                    continue;
+                }
+            }
+
+            // the host is still waiting for the client to send join confirm
+            else if (obj->clients[idx].state == WG_MAC_NCP_CLIENT_PENDING)
+            {
+                // Note: In the pending state (join request is received from client), the next packet from certain client
+                // should always be the join confirm packet. If the no packet received within a specific window, the client
+                // is likely died or joined another network. In this case we need to remove the client record from the
+                // client list
+                if (obj->sec_since_start - obj->clients[idx].last_seen_sec > obj->config.client_join_window_sec)
+                {
+                    obj->clients[idx].state = WG_MAC_NCP_CLIENT_INVALID;
+
+                    // Note: No notification is sent to upper layer
+
+                    // no further checking of the client
+                    continue;
                 }
             }
         }
@@ -779,9 +802,9 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
         for (uint8_t client_idx = 0; client_idx < WG_MAC_NCP_MAX_CLIENT_COUNT; client_idx++)
         {
             // only copy the valid client
-            if (backup->client_list[client_idx].is_valid)
+            if (backup->client_list[client_idx].state == WG_MAC_NCP_CLIENT_JOINED)
             {
-                obj->clients[client_idx].is_valid = true;
+                obj->clients[client_idx].state = WG_MAC_NCP_CLIENT_JOINED;
                 obj->clients[client_idx].device_eui64 = backup->client_list[client_idx].device_eui64;
                 obj->clients[client_idx].last_seen_sec = backup->client_list[client_idx].last_seen_sec;
                 obj->clients[client_idx].short_id = backup->client_list[client_idx].short_id;
@@ -793,7 +816,7 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
         // initialize client list
         for (uint8_t client_idx = 0; client_idx < WG_MAC_NCP_MAX_CLIENT_COUNT; client_idx++)
         {
-            obj->clients[client_idx].is_valid = false;
+            obj->clients[client_idx].state = WG_MAC_NCP_CLIENT_INVALID;
         }
     }
 
@@ -832,7 +855,7 @@ wg_mac_ncp_error_code_t wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_d
     DRV_ASSERT(msg);
     DRV_ASSERT(msg->client);
 
-    if (!msg->client->is_valid)
+    if (msg->client->state != WG_MAC_NCP_CLIENT_JOINED)
     {
         return WG_MAC_NCP_NO_CLIENT_FOUND;
     }

@@ -57,6 +57,13 @@ typedef enum
     WG_MAC_NCP_CLIENT_LOST,
 } wg_mac_ncp_client_deport_reason_t;
 
+typedef enum
+{
+    WG_MAC_NCP_CLIENT_INVALID = 0,
+    WG_MAC_NCP_CLIENT_PENDING,
+    WG_MAC_NCP_CLIENT_JOINED,
+} wg_mac_ncp_client_state_t;
+
 typedef struct
 {
     uint8_t buffer[WG_MAC_NCP_MSG_BUFFER_SIZE];
@@ -67,11 +74,10 @@ typedef struct
 
 typedef struct
 {
-    bool is_valid;
+    wg_mac_ncp_client_state_t state;
     uint8_t short_id;
     uint64_t device_eui64;
     uint32_t last_seen_sec;
-    uint32_t next_retry_time_sec;
 
     uint8_t tx_seqid;
     uint8_t rx_seqid;
@@ -79,8 +85,9 @@ typedef struct
     struct
     {
         wg_mac_ncp_raw_msg_t prev_packet;
-        bool prev_packet_acked;
+        uint32_t next_retry_time_sec;
         uint8_t retry_counter;
+        bool prev_packet_acked;
     } retransmit;
 
     struct
@@ -99,7 +106,7 @@ typedef struct __attribute__((packed))
         uint64_t device_eui64;
         uint32_t last_seen_sec; // we are going to calculate the new last seen sec when we come back
         uint8_t short_id;
-        bool is_valid;
+        wg_mac_ncp_client_state_t state;
     } client_list[WG_MAC_NCP_MAX_CLIENT_COUNT];
 } wg_mac_ncp_backup_t;
 
@@ -123,11 +130,11 @@ typedef struct
 {
     uint64_t local_eui64;
     uint32_t max_heartbeat_period_sec;
-    uint32_t ack_window_sec;
+    uint16_t ack_window_sec;
+    uint16_t client_join_window_sec;
     uint16_t downlink_extended_rx_window_ms;
     uint8_t max_retries;
     bool auto_ack;
-    bool enable_join_delay;
 } wg_mac_ncp_config_t;
 
 typedef void (*wg_mac_ncp_on_client_joined)(void * obj, wg_mac_ncp_client_t * client);
@@ -140,6 +147,7 @@ typedef void (*wg_mac_ncp_on_downlink_packet_init)(void * obj, wg_mac_ncp_client
 typedef void (*wg_mac_ncp_on_downlink_packet_success)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_downlink_packet_fail)(void * obj, wg_mac_ncp_client_t * client, wg_mac_ncp_raw_msg_t * msg);
 typedef void (*wg_mac_ncp_on_backup_requested)(void * obj, wg_mac_ncp_backup_t * backup);
+typedef uint32_t (*wg_mac_ncp_on_join_delay_requested)(void * obj, wg_mac_ncp_client_t * client, int32_t rssi, int32_t quality);
 
 typedef struct
 {
@@ -181,6 +189,9 @@ typedef struct
         wg_mac_ncp_on_downlink_packet_init on_downlink_packet_init;
         wg_mac_ncp_on_downlink_packet_success on_downlink_packet_success;
         wg_mac_ncp_on_downlink_packet_fail on_downlink_packet_fail;
+
+        // bookkeeping
+        wg_mac_ncp_on_join_delay_requested on_join_delay_requested;
 
         // data backup
         wg_mac_ncp_on_backup_requested on_backup_requested;
