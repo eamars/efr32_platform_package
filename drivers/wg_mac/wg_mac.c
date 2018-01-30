@@ -569,7 +569,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
             wg_mac_on_rx_window_timeout
     );
 
-    // set radio to sleep default state
+    // set radio to default state (sleep)
     radio_set_opmode_sleep(obj->radio);
 
     // configure state machine
