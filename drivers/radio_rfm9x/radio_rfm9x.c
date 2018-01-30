@@ -24,10 +24,10 @@
 #define RFM9X_PRIVATE_SYNCWORD 0x12
 #define RFM9X_PUBLIC_SYNWORD 0x34
 
-extern const pio_map_t spi_mosi_map[];
-extern const pio_map_t spi_miso_map[];
-extern const pio_map_t spi_clk_map[];
-extern const pio_map_t spi_cs_map[];
+extern const pio_map_t usart_tx_map[];
+extern const pio_map_t usart_rx_map[];
+extern const pio_map_t usart_clk_map[];
+extern const pio_map_t usart_cs_map[];
 
 
 /**
@@ -858,10 +858,10 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
      * @brief Configure radio module
      */
     // find spi peripheral functions
-    DRV_ASSERT(find_pin_function(spi_miso_map, obj->miso, (void **) &usart_base, &miso_loc));
-    DRV_ASSERT(find_pin_function(spi_mosi_map, obj->mosi, NULL, &mosi_loc));
-    DRV_ASSERT(find_pin_function(spi_clk_map, obj->clk, NULL, &clk_loc));
-    DRV_ASSERT(find_pin_function(spi_cs_map, obj->cs, NULL, &cs_loc));
+    DRV_ASSERT(find_pin_function(usart_rx_map, obj->miso, (void **) &usart_base, &miso_loc));
+    DRV_ASSERT(find_pin_function(usart_tx_map, obj->mosi, NULL, &mosi_loc));
+    DRV_ASSERT(find_pin_function(usart_clk_map, obj->clk, NULL, &clk_loc));
+    DRV_ASSERT(find_pin_function(usart_cs_map, obj->cs, NULL, &cs_loc));
 
     // configure spi
     spi_init_data.port = usart_base;
