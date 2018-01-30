@@ -65,6 +65,12 @@ typedef enum
    IMU_EVENT_DOOR_CLOSE = 1,
 } imu_event_t;
 
+typedef enum
+{
+    IMU_ACCEL_INTERRUPT = 0,
+    IMU_MAG_INTERRUPT = 1,
+} imu_interrupt_mode_t;
+
 typedef struct __attribute__((packed))
 {
     uint16_t crc16;
@@ -91,7 +97,10 @@ typedef struct
     bool initialized;
     bool calibrated;
 
+    volatile uint8_t interrupt_flag;
+
 	imu_event_t door_state;
+    imu_interrupt_mode_t interrupt_mode;
     int16_t start_position;
     uint32_t vector;
     int16_t vector_angle;
@@ -107,8 +116,12 @@ typedef struct
 
     TaskHandle_t ImuCalHandler;
 
-    rawdata_t old_magdata; //Where the fuck is that used?
+    rawdata_t mag_data;
+    rawdata_t old_magdata;
     rawdata_t accel_data;
+    rawdata_t accel_origin;
+
+    uint32_t accel_vector;
 
     struct
     {
@@ -119,6 +132,8 @@ typedef struct
         uint16_t vector_threshold_open;
         float tmp_coef;
     } origin;
+
+
 
     struct
     {
@@ -138,16 +153,14 @@ char       FXOS8700CQ_GetChipMode(imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj);
+uint8_t       FXOS8700CQ_PollAccelerometer (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_HighPassFilter(imu_FXOS8700CQ_t * obj, char status);
 void       FXOS8700CQ_FullScaleRange(imu_FXOS8700CQ_t * obj, range_t range);
 void       FXOS8700CQ_SetAccelerometerDynamicRange(imu_FXOS8700CQ_t * obj, range_t range);
 
 void       FXOS8700CQ_ConfigureMagnetometer(imu_FXOS8700CQ_t * obj);
-uint8_t    FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data);
+uint8_t    FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_MagnetometerStatus(imu_FXOS8700CQ_t * obj);
-
-void       FXOS8700CQ_GetData(imu_FXOS8700CQ_t * obj, rawdata_t *accel_data, rawdata_t *magn_data);
 
 void       FXOS8700CQ_FIFOMode(imu_FXOS8700CQ_t * obj, FX_mode_t mode);
 char       FXOS8700CQ_GetODR(imu_FXOS8700CQ_t * obj);
@@ -162,15 +175,20 @@ void       FXOS8700CQ_ConfigureDoubleTapMode(imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * object);
 void       FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_Magnetic_Vector(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Magnetic_Vector_Interrupt_Calibration(imu_FXOS8700CQ_t * obj);
 int16_t    FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj);
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+
+void FXOS8700CQ_Imu_Accelerometer_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+void FXOS8700CQ_Imu_Magnetometer_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj);
+
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temperature, int16_t z_average);
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interrupt (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Calculate_Accel_Vector(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask);
