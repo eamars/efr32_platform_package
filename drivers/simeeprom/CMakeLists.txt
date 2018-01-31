@@ -13,6 +13,8 @@ FILE(GLOB STATIC_OBJECT static/*.o)
 INCLUDE_DIRECTORIES(
 		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins
 		${TARGET_ROOT_DIRECTORY}/platform/base/hal/plugin/sim-eeprom
+		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins/stack/include
+		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins/stack
 )
 
 # build library

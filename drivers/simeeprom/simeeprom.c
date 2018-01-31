@@ -15,6 +15,7 @@
 #include "drv_debug.h"
 #include "simeeprom.h"
 #include "sim-eeprom.h" // << silabs' code
+#include "error.h"
 
 #define BYTES_TO_WORDS(x) (((x) + 1) / 2)
 #define COUNTER_TOKEN_PAD        50
@@ -197,17 +198,18 @@ uint8_t halInternalFlashErase(uint8_t eraseType, uint32_t address)
     return 0;
 }
 
+
 void halSimEepromCallback(uint8_t status)
 {
     switch (status)
     {
-        case 0x43: // EMBER_SIM_EEPROM_ERASE_PAGE_GREEN
+        case EMBER_SIM_EEPROM_ERASE_PAGE_GREEN:
         {
             halSimEepromErasePage();
             break;
         }
-        case 0x44: // EMBER_SIM_EEPROM_ERASE_PAGE_RED // INTERNATIONALLY FALL THROUGH
-        case 0x45: // EMBER_SIM_EEPROM_FULL:
+        case EMBER_SIM_EEPROM_ERASE_PAGE_RED: // INTERNATIONALLY FALL THROUGH
+        case EMBER_SIM_EEPROM_FULL:
         {
             if (halSimEepromPagesRemainingToBeErased() > 0)
             {
@@ -216,17 +218,72 @@ void halSimEepromCallback(uint8_t status)
                 break;
             }
 
+            // If there are still pages to erase, then we have a situation where page
+            // rotation is stuck because live tokens still exist in the
+            // page we want to erase.  In this case we must do a repair to
+            // get all live tokens into one virtual page. [BugzId:14392]
+            // This bug pertains to SimEE2.
+
             // INTERNATIONALLY FALL THROUGH
+            __attribute__((fallthrough));
         }
-        case 0x46: // EMBER_ERR_FLASH_WRITE_INHIBITED // INTERNATIONALLY FALL THROUGH
-        case 0x47: // EMBER_ERR_FLASH_VERIFY_FAILED
+        case EMBER_ERR_FLASH_WRITE_INHIBITED: // INTERNATIONALLY FALL THROUGH
+        case EMBER_ERR_FLASH_VERIFY_FAILED:
         {
-            // TODO: Implement this
-            DRV_ASSERT(false);
+            // Something went wrong while writing a token.  There is stale data and the
+            // token the app expected to write did not get written.  Also there may
+            // now be "stray" data written in the flash that could inhibit future token
+            // writes.  To deal with stray/stale data, we must repair the Simulated
+            // EEPROM.  Because the expected token write failed and will not be retried,
+            // it is best to reset the chip and let normal boot sequences take over.
+            // Since halInternalSimEeRepair() could potentially result in another write
+            // failure, we use a simple semaphore to prevent recursion.
+
+            static bool repair_active = false;
+            if (!repair_active)
+            {
+                repair_active = true;
+                halInternalSimEeRepair(false);
+                switch (status)
+                {
+                    case EMBER_SIM_EEPROM_ERASE_PAGE_RED:
+                    case EMBER_SIM_EEPROM_FULL:
+                    {
+                        // Don't reboot - return to let SimEE code retry the token write
+                        // [BugzId:14392]
+                        break;
+                    }
+                    case EMBER_ERR_FLASH_VERIFY_FAILED:
+                    {
+                        software_reset(RESET_FLASH_VERIFY);
+                        break;
+                    }
+                    case EMBER_ERR_FLASH_WRITE_INHIBITED:
+                    {
+                        software_reset(RESET_FLASH_INHIBIT);
+                        break;
+                    }
+                    default:
+                    {
+                        DRV_ASSERT(false);
+                        break;
+                    }
+                }
+                repair_active = false;
+            }
+
             break;
         }
-        case 0x4d: // EMBER_SIM_EEPROM_REPAIRING
+        case EMBER_SIM_EEPROM_REPAIRING:
         {
+            // While there's nothing for an app to do when the SimEE is going to
+            // repair itself (SimEE has to be fully functional for the rest of the
+            // system to work), alert the application to the fact that repairing
+            // is occuring.  There are debugging scenarios where an app might want
+            // to know that repairing is happening; such as monitoring frequency.
+            // NOTE:  Common situations will trigger an expected repair, such as
+            //        using an erased chip or changing token definitions.
+
             break;
         }
         default:
