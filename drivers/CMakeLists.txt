@@ -23,7 +23,7 @@ SET(ENABLED_DRIVERS
 		simeeprom
 		gpcrc
 		mfg_hw_test
-		mbedtls
+
 
 		# Some legacy drivers
 		# -------------------
@@ -35,6 +35,7 @@ SET(ENABLED_DRIVERS
 		# simgbpr
 		# lorawan
 		# lora_phy
+		# mbedtls
 		)
 
 INCLUDE_DIRECTORIES(${TARGET_SPECIFIC_INCLUDE_DIRECTORY})
