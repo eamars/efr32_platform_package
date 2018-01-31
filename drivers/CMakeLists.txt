@@ -23,6 +23,7 @@ SET(ENABLED_DRIVERS
 		simeeprom
 		gpcrc
 		mfg_hw_test
+		mbedtls
 
 		# Some legacy drivers
 		# -------------------
