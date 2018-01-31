@@ -228,6 +228,9 @@ void halSimEepromCallback(uint8_t status)
 #if ((__GNUC__ >= 7) || (__GNUC__ == 7 && __GNUC_MINOR__ >= 1))
             // Note: fallthrough attribute is recently introduced in gcc7.1
             __attribute__((fallthrough));
+#else
+            // Refer: https://developers.redhat.com/blog/2017/03/10/wimplicit-fallthrough-in-gcc-7/
+            // FALLTHRU   <-- tells the compiler to fallthrough
 #endif
         }
         case EMBER_ERR_FLASH_WRITE_INHIBITED: // INTERNATIONALLY FALL THROUGH
