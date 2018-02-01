@@ -113,6 +113,7 @@ typedef struct
     uint32_t last_call;
     TaskHandle_t ImuTempHandler;
     int8_t temp;
+    int8_t init_temp;
 
     TaskHandle_t ImuCalHandler;
 

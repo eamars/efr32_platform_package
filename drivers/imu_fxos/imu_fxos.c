@@ -57,7 +57,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     DRV_ASSERT(obj);
     DRV_ASSERT(i2c_device);
 
-    obj->interrupt_flag = 1;
+    obj->interrupt_flag = 0;
 
     // do not reinitialize the imu driver
     if (obj->initialized)
@@ -103,49 +103,32 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     FXOS8700CQ_WriteByte(obj, XYZ_DATA_CFG, 0x02);    // +/- 4g accel range
 
     //M-cell config
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, 0x17);     // changed from 0x1F - reduce sample rate to save power g
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, 0x00);     //
-    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, 0x80);
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG1, 0x17);     // lowest OSR, hybrid mode
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG2, 0x80);     // Auto inc registers
+    FXOS8700CQ_WriteByte(obj, M_CTRL_REG3, 0x00);     // Nothing to see here
 
     // General config
     FXOS8700CQ_WriteByte(obj, TRIG_CFG, 0x00);        // No fifo used
     FXOS8700CQ_WriteByte(obj, CTRL_REG1, 0xF8);       // Super low power
     FXOS8700CQ_WriteByte(obj, CTRL_REG2, 0x10);       // Lowest power but higher noise
-    FXOS8700CQ_WriteByte(obj, CTRL_REG3, 0x04);       // Will wake on transient detect
-    FXOS8700CQ_WriteByte(obj, CTRL_REG4, 0x00);       // disables interrupts
+    FXOS8700CQ_WriteByte(obj, CTRL_REG3, 0x00);       // Will wake on transient detect
+    FXOS8700CQ_WriteByte(obj, CTRL_REG4, 0x00);       // Enables interrupts
     FXOS8700CQ_WriteByte(obj, CTRL_REG5, 0x00);       // Routed to INT1 pin
 
     FXOS8700CQ_WriteByte(obj, ASLP_COUNT, 0x06);
 
-
-    FXOS8700CQ_WriteByte(obj, A_VECM_CFG, 0x48);
-    FXOS8700CQ_WriteByte(obj, A_VECM_THS_MSB, 0x00);
-    FXOS8700CQ_WriteByte(obj, A_VECM_THS_LSB, 0x06);
+//    FXOS8700CQ_WriteByte(obj, A_VECM_CFG, 0x48);
+//    FXOS8700CQ_WriteByte(obj, A_VECM_THS_MSB, 0x00);
+//    FXOS8700CQ_WriteByte(obj, A_VECM_THS_LSB, 0x06);
 
     FXOS8700CQ_WriteByte(obj, HP_FILTER_CUTOFF, 0x00);
-
-    FXOS8700CQ_ActiveMode(obj);
-
-
-    obj->interrupt_mode = IMU_ACCEL_INTERRUPT;
-
-    // detect the existence of IMU
-
-    while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
-
-    FXOS8700CQ_Init_Interrupt(obj);
-    //xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler); // Was in init interrupt
-
-
-
-    obj->current_compass = 0;
-    obj->current_heading = 0;
 
     if (backup_pointer == NULL)
     {
         //Initialise from scratch - DOOR MUST BE CLOSED
         obj->origin.tmp_coef = 3.0; //initial guess for scaling factor of the imu z direction with temperature
         obj->door_state = IMU_EVENT_DOOR_CLOSE;
+        FXOS8700CQ_ActiveMode(obj);
         FXOS8700CQ_Calibrate(obj);
     }
     else
@@ -156,8 +139,28 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
         // When do the threshold get written?
     }
 
-    //Now get the current vector - check if open or closed
-    FXOS8700CQ_Calculate_Vector(obj);
+//    FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6);
+//    FXOS8700CQ_WriteByte(obj, M_VECM_CFG, (M_VECM_UPDM_MASK | M_VECM_EN_MASK| M_VECM_WAKE_EN_MASK| M_VECM_INIT_EN_MASK | M_VECM_INITM_MASK));//values do not update, vector enabled, procs wake up, interrupt on pin 2 enabled
+//    FXOS8700CQ_WriteByteArray(obj, M_VECM_THS_MSB, Vector_Threshold, 2);
+//    FXOS8700CQ_WriteByte(obj,M_VECM_CNT, M_VECTOR_DBNCE);
+
+    FXOS8700CQ_ActiveMode(obj);
+
+
+
+
+    // detect the existence of IMU
+
+    while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
+
+    obj->interrupt_mode = IMU_MAG_INTERRUPT; // this should be passed in
+    FXOS8700CQ_Init_Interrupt(obj);
+    //xTaskCreate((void *) ImuTempAdjustment, "temp_mon", 200, obj, 2, &obj->ImuTempHandler); // Was in init interrupt
+
+    obj->current_compass = 0;
+    obj->current_heading = 0;
+
+
 }
 
 void FXOS8700CQ_LoadBackup(imu_FXOS8700CQ_t * obj, imu_backup_t * backup_pointer)
@@ -242,8 +245,8 @@ uint8_t FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj)
 
 char FXOS8700CQ_GetTemperature(imu_FXOS8700CQ_t * obj)
 {
-    char temp = FXOS8700CQ_ReadByte(obj, TEMP);
-    return temp;
+    obj->temp = FXOS8700CQ_ReadByte(obj, TEMP);
+    return obj->temp;
 }
 
 /**
@@ -265,31 +268,6 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
     obj->accel_origin.z = obj->accel_data.z;
 
     obj->door_state = IMU_EVENT_DOOR_CLOSE;
-}
-
-/**
- * LEGACY - not currently being used
- *
- * Sets the threshold for the magnetometer interrupt as the origin + the threshold value
- * set the imu to interrupt on the x and z axis as if the device is upright on the door
- * with no debounce and no latching interrupt is on pin 1
- * @param obj Imu object
- */
-void FXOS8700CQ_Magnetic_Threshold_Setting(imu_FXOS8700CQ_t * obj)
-{
-    FXOS8700CQ_StandbyMode (obj);
-    uint8_t origin[6] = {0};
-
-    origin[1] = obj->origin.x_origin;
-    origin[0] = obj->origin.x_origin >> 8;
-    origin[3] = obj->origin.y_origin;
-    origin[2] = obj->origin.y_origin >> 8;
-    origin[5] = obj->origin.z_origin;
-    origin[4] = obj->origin.z_origin >> 8;
-
-    FXOS8700CQ_WriteByte(obj, M_THS_CFG, M_THS_ZEFE | M_THS_YEFE| M_THS_XEFE| M_THS_WAKE_EN | M_THS_INT_EN | M_THS_OAE);
-    FXOS8700CQ_WriteByteArray(obj, M_THS_X_MSB, origin, 6);
-    FXOS8700CQ_ActiveMode(obj);
 }
 
  /**
@@ -343,20 +321,14 @@ int16_t FXOS8700CQ_Get_Heading(imu_FXOS8700CQ_t *obj)
  */
 static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
-    obj->interrupt_flag = 0;
-    if (obj->interrupt_mode == IMU_MAG_INTERRUPT) {
-        FXOS8700CQ_Imu_Magnetometer_Int_Handler(pin, obj);
-    }
-    if (obj->interrupt_mode == IMU_ACCEL_INTERRUPT){
-        FXOS8700CQ_Imu_Accelerometer_Int_Handler(pin, obj);
-    }
+    obj->interrupt_flag = 1;
+    FXOS8700CQ_Imu_Magnetometer_Int_Handler(pin, obj);
 }
 
 void FXOS8700CQ_Imu_Accelerometer_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentially debouncing wont let the state change constantly
     {
-
         FXOS8700CQ_Calculate_Vector(obj);
 
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
@@ -391,12 +363,12 @@ void FXOS8700CQ_Imu_Magnetometer_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj
     bool interrupt_1 = 0;
     uint8_t Vector_Threshold[2] = {0};
 
-    interrupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
+    interrupt_1 = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2)); //used to be pin 2 - don't think it makes any difference
     if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentially debouncing wont let the state change constantly
     {
         // decided to only check for the high of the imu lin as there could be problems in the i2c line which will mess with results.
         // this may also remove some false positives that are only there for a very short time
-        if (interrupt_1 == true)
+        if (interrupt_1 == false)
         {
             obj->door_state = IMU_EVENT_DOOR_OPEN;
             //halSetLed(BOARDLED1);
@@ -410,8 +382,6 @@ void FXOS8700CQ_Imu_Magnetometer_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj
             Vector_Threshold[0] = obj->origin.vector_threshold_open >> 8 | 0x80;
             Vector_Threshold[1] = (uint8_t)obj->origin.vector_threshold_open ;
         }
-
-        //printf("int %lu, %lu\r\n", (unsigned long)obj->vector, (unsigned long)obj->door_state);
 
         if (obj->door_state != obj->last_event) // Statement seems defunct, this would always be true
         {
@@ -460,7 +430,7 @@ void FXOS8700CQ_Init_Interrupt (imu_FXOS8700CQ_t * obj)
     GPIOINT_Init();
     GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
     GPIO_ExtIntConfig(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2), PIO_PIN(obj->int_2),
-                      false /* raising edge */, true /* falling edge */, true /* enable now */);
+                      true /* raising edge */, true /* falling edge */, true /* enable now */);
 
     NVIC_ClearPendingIRQ(GPIO_ODD_IRQn);
     NVIC_EnableIRQ(GPIO_ODD_IRQn);
@@ -475,9 +445,16 @@ void FXOS8700CQ_Init_Interrupt (imu_FXOS8700CQ_t * obj)
  */
 static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 {
+    // My version
+    // Will basically just take 10 * (current temp - init temp) from vector value
+//    int8_t temp_change = 0;
+//    FXOS8700CQ_GetTemperature(obj); // updates obj->temp
+//
+//    temp_change = obj->init_temp - obj->temp;
+    
 	// initialize the task tick handler
 	portTickType xLastWakeTime;
-    int8_t temperature_imu = 0;
+    int8_t last_imu_temp = 0;
     int8_t temp_change = 0;
     int8_t last_temp_change = 0;
 
@@ -488,9 +465,9 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
 	xLastWakeTime = xTaskGetTickCount();
 	while (1)
 	{
-        temperature_imu = FXOS8700CQ_GetTemperature(obj);
+        FXOS8700CQ_GetTemperature(obj);
 
-        temp_change = temperature_imu - obj->temp;
+        temp_change = last_imu_temp - obj->temp;
         FXOS8700CQ_PollMagnetometer(obj);
 
         if ((max_z < obj->mag_data.z) && (obj->door_state == IMU_EVENT_DOOR_CLOSE))
@@ -504,8 +481,8 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             interrupt_check = (bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2));
             GPIOINT_CallbackUnRegister(PIO_PIN(obj->int_2));
             //While the door is closed the device tries to work out a factor that the z axis will change with temperature by. this also
-            //resets the orign.    This whole thing is very depenant on assuming tha the door is actually closed and not just almost closed/
-            //when the door is open the device will either use the inital guess or the calcualted value of the temperautre coeffcient.
+            //resets the origin.    This whole thing is very dependant on assuming tha the door is actually closed and not just almost closed/
+            //when the door is open the device will either use the inital guess or the calculated value of the temperautre coeffcient.
             if (obj->door_state == IMU_EVENT_DOOR_CLOSE)
             {
                 if (abs(temp_change + last_temp_change) >= 2 )
@@ -528,18 +505,18 @@ static void ImuTempAdjustment(imu_FXOS8700CQ_t * obj)
             FXOS8700CQ_ConfigureAccelerometer(obj);
             FXOS8700CQ_ConfigureMagnetometer(obj);
             while (FXOS8700CQ_ReadByte(obj, CTRL_REG2) & RST_MASK);
-            // change the orgin of the device depenant on temperature
+            // change the origin of the device depenant on temperature
             FXOS8700CQ_Magnetic_Vector_Interrupt_Calibration(obj);
             FXOS8700CQ_ActiveMode(obj);
             delay_ms(1000);
             GPIOINT_CallbackRegisterWithArgs(PIO_PIN(obj->int_2), (GPIOINT_IrqCallbackPtrWithArgs_t) FXOS8700CQ_Imu_Int_Handler, (void *) obj);
-            // checks if the interupt line has been changed and if it has go to the intterupt handler
+            // checks if the interrupt line has been changed and if it has go to the interrupt handler
             if (interrupt_check !=(bool) GPIO_PinInGet(PIO_PORT(obj->int_2), PIO_PIN(obj->int_2)))
             {
                 FXOS8700CQ_Imu_Int_Handler(PIO_PIN(obj->int_2), obj);
             }
             // Sets the temp to old temp and resets the z max and remembers the last temp change and temperature.
-            obj->temp = temperature_imu;
+            last_imu_temp = obj->temp;
             last_temp_change = temp_change;
             max_z = 0;
         }
@@ -651,8 +628,10 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
         }
         delay_ms(800);
     }
-    obj->origin.vector_threshold_open = (temp_vector * 2) + 40;
-    obj->origin.vector_threshold_closed = (temp_vector * 1.2) + 25;
+    obj->origin.vector_threshold_open = (temp_vector * 1.2) + 30;
+    obj->origin.vector_threshold_closed = temp_vector + 30;
+    FXOS8700CQ_Magnetic_Vector_Interrupt_Calibration(obj);
+    obj->init_temp = FXOS8700CQ_GetTemperature(obj);
     obj->temp = FXOS8700CQ_GetTemperature(obj);
     obj->calibrated = true;
 }
