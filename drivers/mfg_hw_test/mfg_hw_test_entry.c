@@ -117,8 +117,10 @@ __attribute__((naked))
 void mfg_default_handler(void)
 {
     asm(
+        // prevent nested interrupt
+        "cpsid i\n"
+
         // dump auto stacked value
-        "cpsid i\n" // prevent nested interrupt
         "tst lr, #4\n"
         "ite eq\n"
         "mrseq r0, msp\n"

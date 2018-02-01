@@ -10,6 +10,15 @@ FILE (GLOB SRC *.c)
 SET(EXT_SRC
 		)
 
+# include necessary directory
+INCLUDE_DIRECTORIES(
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/common
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/chip/efr32/rf/common/cortex
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/chip/efr32
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/protocol/ieee802154
+		${TARGET_ROOT_DIRECTORY}/platform/radio/rail_lib/plugin/pa-conversions
+)
+
 # build library
 ADD_LIBRARY (${LIB_NAME} ${SRC} ${EXT_SRC})
 

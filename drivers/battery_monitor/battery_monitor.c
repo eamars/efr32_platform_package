@@ -11,6 +11,7 @@
 #include "em_device.h"
 #include "em_cmu.h"
 #include "em_adc.h"
+#include "delay.h"
 
 
 #if BATTERY_MONITOR_USE_MUTEX == 1
@@ -90,6 +91,9 @@ uint16_t battery_monitor_read_raw_pri(battery_monitor_t * obj)
 
 	// enable load switch
 	GPIO_PinOutSet(PIO_PORT(obj->enable), PIO_PIN(obj->enable));
+
+	// give some delay between enabling load switch and adc measurement
+	delay_us(500);
 
 	// start adc conversion
 	ADC_Start(obj->adc_base, adcStartSingle);

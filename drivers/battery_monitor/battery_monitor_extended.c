@@ -34,7 +34,7 @@ static void battery_monitor_extended_daemon_thread(battery_monitor_extended_t * 
 	while (1)
 	{
 		obj->last_measured_voltage_mv = battery_monitor_read_mv((battery_monitor_t *) obj);
-        for (i=0; percent_table[i] < 	obj->last_measured_voltage_mv; i++)
+        for (i=0; percent_table[i] < obj->last_measured_voltage_mv; i++)
         {
           obj->bat_percentage = i + 1;
         }

@@ -130,7 +130,7 @@ static void radio_efr32_set_opmode_sleep_pri(radio_efr32_t * obj)
         }
 #endif
 
-        RAIL_Idle(obj->rail_handle, RAIL_IDLE, true);
+        RAIL_Idle(obj->rail_handle, RAIL_IDLE_FORCE_SHUTDOWN, true);
 
         obj->base.opmode = RADIO_OPMODE_SLEEP;
     }

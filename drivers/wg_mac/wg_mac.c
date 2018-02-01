@@ -330,10 +330,6 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 // however, tx_raw queue has higher priority than tx_data queue
                 QueueSetMemberHandle_t queue = xQueueSelectFromSet(obj->tx_queue_set, portMAX_DELAY);
 
-                // set information for retransmission
-                obj->retransmit.retry_counter = 0;
-                obj->retransmit.is_packet_clear = false;
-
                 if (queue == obj->tx_raw_packet_queue)
                 {
                     wg_mac_raw_msg_t raw_msg;
@@ -346,6 +342,12 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
                     // send to transceiver
                     wg_mac_send_raw_pri(obj, &raw_msg, true);
+
+                    // waiting for ack, unless specified
+                    obj->retransmit.is_packet_clear = false;
+
+                    // start retry counter
+                    obj->retransmit.retry_counter = 0;
                 }
                 else if (queue == obj->tx_data_packet_queue)
                 {
@@ -401,9 +403,6 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
                 // stay in tx state until tx is done
                 if (xSemaphoreTake(obj->fsm_tx_done, pdMS_TO_TICKS(WG_MAC_DEFAULT_TX_TIMEOUT_MS)))
                 {
-                    // waiting for ack, unless specified
-                    obj->retransmit.is_packet_clear = false;
-
                     // if previously doesn't require ack or the previous packet is an ack, we are not expecting an ack
                     subg_mac_header_t * header = (subg_mac_header_t *) obj->retransmit.prev_packet.buffer;
                     if (header->packet_type == SUBG_MAC_PACKET_CMD)
@@ -472,7 +471,7 @@ static void wg_mac_fsm_thread(wg_mac_t * obj)
 
                 // wait for packets to arrive
                 wg_mac_raw_msg_t rx_msg;
-                if (xQueueReceive(obj->rx_raw_packet_queue, &rx_msg, pdMS_TO_TICKS(100)))
+                if (xQueueReceive(obj->rx_raw_packet_queue, &rx_msg, pdMS_TO_TICKS(50)))
                 {
                     // validate the packet lenght
                     if (rx_msg.size < SUBG_MAC_HEADER_SIZE)
@@ -570,7 +569,7 @@ void wg_mac_init(wg_mac_t * obj, radio_t * radio, wg_mac_config_t * config)
             wg_mac_on_rx_window_timeout
     );
 
-    // set radio to sleep default state
+    // set radio to default state (sleep)
     radio_set_opmode_sleep(obj->radio);
 
     // configure state machine
