@@ -52,6 +52,10 @@ typedef struct __attribute__ ((packed)) {
     int8_t temp;        // -128,127
     uint8_t battery;    // scaled voltage
     uint16_t voltage;   // Raw ADC reading (mV)
+    int16_t mag_raw_x;  // Raw magnetometer X value
+    int16_t mag_raw_y;  // Raw magnetometer X value
+    int16_t mag_raw_z;  // Raw magnetometer Z value
+    uint32_t vector;    // IMU calculated vector
     /* ADD MORE DATA HERE */
 } wg_data_v1_extended_report_t;
 
