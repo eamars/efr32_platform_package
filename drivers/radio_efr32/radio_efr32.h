@@ -26,6 +26,11 @@
 
 typedef struct
 {
+
+} radio_efr32_config_t;
+
+typedef struct
+{
     radio_t base;
 
     // low level RAIL handle
