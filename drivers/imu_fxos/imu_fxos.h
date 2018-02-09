@@ -164,7 +164,7 @@ void       FXOS8700CQ_Cal_Scaling(imu_FXOS8700CQ_t *obj,int16_t temperature, int
 void       FXOS8700CQ_Door_State_Poll(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Init_Interupt (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj);
 
 void       FXOS8700CQ_ModifyBytes(imu_FXOS8700CQ_t * obj, char internal_addr, char value, char mask);
