@@ -22,9 +22,6 @@
 #include "queue.h"
 #include "task.h"
 
-
-
-
 static uint16_t temperature_tmp116_read_word_pri(temperature_tmp116_t * obj, uint8_t reg)
 {
 	uint16_t word;
@@ -223,8 +220,8 @@ static void temperature_tmp116_reader(temperature_tmp116_t * obj)
 	while(1)
 	{
 		temperature = temperature_tmp116_read_temperature(obj);
+
+		// TODO: give it a flexible interval between each measurement and put the value back to the object
 		vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(2000));
 	}
-
-
 }
