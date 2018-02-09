@@ -788,7 +788,7 @@ void FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t* obj)
  * poll the magnetomiter and calcutes the change in vector (the same way the the imu does and intterupt is driven by)
  * @param obj imu object
  */
-void FXOS8700CQ_Caclculate_Vector(imu_FXOS8700CQ_t * obj)
+void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
 {
     rawdata_t mag_raw;
     FXOS8700CQ_PollMagnetometer(obj,&mag_raw);
@@ -822,7 +822,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
     FXOS8700CQ_Set_Origin(obj);
     for (i =0;i <= 2; i++)
     {
-        FXOS8700CQ_Caclculate_Vector(obj);
+        FXOS8700CQ_Calculate_Vector(obj);
         if (temp_vector < obj->vector)
         {
             temp_vector = obj->vector;
