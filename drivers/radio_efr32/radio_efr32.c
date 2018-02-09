@@ -338,6 +338,9 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     DRV_ASSERT(RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
     DRV_ASSERT(RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
 
+    // configure sleep state
+    RAIL_ConfigSleep(radio_efr32_singleton_instance.rail_handle, RAIL_SLEEP_CONFIG_TIMERSYNC_ENABLED);
+
     // set default channel
     radio_efr32_set_channel(&radio_efr32_singleton_instance, 0);
 
