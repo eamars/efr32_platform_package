@@ -13,6 +13,7 @@ const pio_map_t usart_tx_map[] = {
         {PA2,  USART1, 2},
         {PC10, USART0, 15},
         {PA6,  USART2, 1},
+        {PA0,  USART0,  0},
         {NC  , NULL   , 0}
 };
 
@@ -22,6 +23,7 @@ const pio_map_t usart_rx_map[] = {
         {PA1,  USART1, 0},
         {PC9,  USART0, 13},
         {PA7,  USART2, 1},
+        {PA1,  USART0,  0},
         {NC  , NULL   , 0}
 };
 
