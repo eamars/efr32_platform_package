@@ -235,10 +235,6 @@ uint8_t FXOS8700CQ_PollMagnetometer (imu_FXOS8700CQ_t * obj, rawdata_t *mag_data
         delay_ms(500); // delay for the imu to get new values.
     }
     return (mag_data->x + mag_data->y + mag_data->z);
-
-
-
-
 }
 
 char FXOS8700CQ_MagnetometerStatus(imu_FXOS8700CQ_t * obj)

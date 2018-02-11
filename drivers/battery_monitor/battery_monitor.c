@@ -24,7 +24,6 @@ extern const pio_map_t adc_map[];
 
 void battery_monitor_init(battery_monitor_t * obj, pio_t probe, pio_t enable,
                           uint32_t vref_mv, float divider_ratio)
-
 {
 	DRV_ASSERT(obj);
 
