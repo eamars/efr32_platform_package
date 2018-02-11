@@ -40,8 +40,8 @@ extern uint32_t __AAT__begin;
 /*----------------------------------------------------------------------------
   Internal References
  *----------------------------------------------------------------------------*/
-void Default_Handler(void);                          /* Default empty handler */
-void Reset_Handler(void);                            /* Reset Handler */
+void Default_Handler(void) __attribute__((interrupt ("IRQ")));  /* Default empty handler */
+void Reset_Handler(void);                                       /* Reset Handler */
 extern void fault(void);
 extern int main (void);
 extern void __libc_init_array (void);
