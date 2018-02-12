@@ -28,7 +28,7 @@ void hw_test_1(void)
 
 }
 
-void mfg_main(void)
+void mfg_main(uint32_t * boot_flags)
 {
     // clear the reset info
     reset_info_clear();
