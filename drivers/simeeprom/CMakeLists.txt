@@ -11,10 +11,10 @@ FILE(GLOB STATIC_OBJECT static/*.o)
 
 # include necessary directory
 INCLUDE_DIRECTORIES(
-		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins
 		${TARGET_ROOT_DIRECTORY}/platform/base/hal/plugin/sim-eeprom
-		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins/stack/include
-		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.0/connect/plugins/stack
+		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.1/connect/plugins
+		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.1/connect/plugins/stack/include
+		${TARGET_ROOT_DIRECTORY}/protocol/flex_2.1/connect/plugins/stack
 )
 
 # build library
