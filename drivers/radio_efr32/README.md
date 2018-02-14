@@ -20,7 +20,7 @@ Modem
 - Deviation: 5 kHz
 - Baudrate Tolerance: 0 ppm
 - Shaping Filter: Gaussian
-- Shaping Filter Parameter  
+- Shaping Filter Parameter: 0.5
 - FSK symbol map: MAP0
 
 Packet
