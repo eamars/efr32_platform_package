@@ -460,7 +460,7 @@
 #define M_VECM_UPDM_MASK      0x10
 #define M_VECM_EN_MASK        0x08
 #define M_VECM_WAKE_EN_MASK   0x04
-#define M_VECM_INIT_EN_MASK   0x02
+#define M_VECM_INT_EN_MASK   0x02
 #define M_VECM_INIT_CFG_MASK  0x01
 /*
 **  MAG VECTOR THS MSB AND LSB Register
