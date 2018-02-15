@@ -19,10 +19,7 @@
 #include "timers.h"
 #endif
 
-
 #define RADIO_EFR32_MAX_BUF_LEN 512
-#define RADIO_EFR32_RX_FIFO_THRESHOLD 128
-#define RADIO_EFR32_TX_FIFO_THRESHOLD 128
 
 typedef struct
 {

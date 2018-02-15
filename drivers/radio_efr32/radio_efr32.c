@@ -21,6 +21,9 @@
 #define PA_DCDC_VOLTAGE                           (1800)
 #define PA_VBAT_VOLTAGE                           (3300)
 
+#define RADIO_EFR32_RX_FIFO_THRESHOLD 128
+#define RADIO_EFR32_TX_FIFO_THRESHOLD 128
+
 static radio_efr32_t radio_efr32_singleton_instance;
 static bool radio_efr32_initialized = false;
 
@@ -75,8 +78,8 @@ static void radio_efr32_rail_interrupt_handler_pri(RAIL_Handle_t rail_handle, RA
         {
             ((on_rx_done_handler_t) radio_efr32_singleton_instance.base.on_rx_done_cb.callback)(
                     radio_efr32_singleton_instance.base.on_rx_done_cb.args,
-                    rx_buffer + 1, // strip the packet lenght info
-                    actual_bytes_read - 1,
+                    rx_buffer + 2, // strip the packet lenght info
+                    actual_bytes_read - 2,
                     packet_details.rssi,
                     packet_details.lqi
             );
@@ -332,8 +335,8 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
 
     // set default transition state
     RAIL_StateTransitions_t transitions = {
-            .success = RAIL_RF_STATE_RX,
-            .error = RAIL_RF_STATE_RX
+            .success = RAIL_RF_STATE_IDLE,
+            .error = RAIL_RF_STATE_IDLE
     };
     DRV_ASSERT(RAIL_SetRxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
     DRV_ASSERT(RAIL_SetTxTransitions(radio_efr32_singleton_instance.rail_handle, &transitions) == RAIL_STATUS_NO_ERROR);
@@ -410,8 +413,8 @@ void radio_efr32_send_timeout(radio_efr32_t * obj, void * buffer, uint16_t size,
     RAIL_ResetFifo(obj->rail_handle, true, false);
 
     // write size
-    uint8_t frame_length = (uint8_t) size;
-    DRV_ASSERT(RAIL_WriteTxFifo(obj->rail_handle, &frame_length, sizeof(frame_length), true) == sizeof(frame_length));
+    uint16_t frame_length = size;
+    DRV_ASSERT(RAIL_WriteTxFifo(obj->rail_handle, (uint8_t *) &frame_length, sizeof(frame_length), true) == sizeof(frame_length));
 
     // write buffer
     DRV_ASSERT(RAIL_WriteTxFifo(obj->rail_handle, buffer, size, false) == size);
