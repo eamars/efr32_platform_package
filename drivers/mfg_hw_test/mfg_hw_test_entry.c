@@ -8,6 +8,7 @@
 #include BOARD_HEADER
 #include "application_header.h"
 #include "bootloader_api.h"
+#include "reset_info.h"
 
 extern uint32_t __load_start_data;
 extern uint32_t __data_start__;
@@ -22,7 +23,7 @@ void __libc_init_array (void);
 extern uint32_t __StackTop;
 void Default_Handler(void);
 
-void mfg_main(void);
+void mfg_main(uint32_t * boot_flags);
 void mfg_generic_irq_handler(uint32_t);
 
 void mfg_default_handler(void);
@@ -201,7 +202,7 @@ void mfg_reset_handler(void)
     __enable_irq();
 
     // call main
-    mfg_main();
+    mfg_main(((boot_info_map_t *) reset_info_read())->boot_flags);
 
     // trap here
     while (1)
