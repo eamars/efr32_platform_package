@@ -149,7 +149,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
 
     FXOS8700CQ_Set_Origin(obj);
     FXOS8700CQ_Calculate_Vector(obj);
-    obj->origin.vector = obj->origin.vector = sqrt((obj->origin.x_origin*obj->origin.x_origin) + (obj->origin.y_origin*obj->origin.y_origin)
+    obj->origin.vector = sqrt((obj->origin.x_origin*obj->origin.x_origin) + (obj->origin.y_origin*obj->origin.y_origin)
                                                    + (obj->origin.z_origin*obj->origin.z_origin));
 
     obj->last_temp = obj->origin.calibration_temp;
