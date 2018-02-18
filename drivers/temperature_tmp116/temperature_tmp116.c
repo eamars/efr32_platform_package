@@ -52,9 +52,6 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	DRV_ASSERT(obj);
 	DRV_ASSERT(i2c_device);
 
-	// reset dirty pin
-	obj->is_local_config_cache_dirty = false;
-
 	// assign i2c object
 	obj->i2c_device = i2c_device;
 
@@ -64,36 +61,37 @@ void temperature_tmp116_init(temperature_tmp116_t * obj, i2cdrv_t * i2c_device, 
 	// enable gpio clock
 	CMU_ClockEnable(cmuClock_GPIO, true);
 
-	// configure interrupt manager
-	GPIOINT_Init();
-	GPIOINT_CallbackRegister(PIO_PIN(obj->alert),temperature_tmp116_alert_isr_pri);
-
-	// configure port interrupt
-	GPIO_PinModeSet(PIO_PORT(obj->alert), PIO_PIN(obj->alert),
-	                gpioModeInput, 1 // <-- TMP_ALERT is open drained with pull up resister
-	);
-	GPIO_ExtIntConfig(PIO_PORT(obj->alert), PIO_PIN(obj->alert), PIO_PIN(obj->alert),
-	                  false, true, true
-	);
-
-	// apply default settings
-	// read configuration from sensor
-	temperature_tmp116_pull_config(obj);
-
 	// set default high threshold
 	temperature_tmp116_set_high_limit(obj, TEMPERATURE_TMP116_HIGH_LIMIT_DEFAULT);
 	temperature_tmp116_set_low_limit(obj, TEMPERATURE_TMP116_LOW_LIMIT_DEFAULT);
+#if 0
+    // fetch configuration
+    uint16_t config_word = temperature_tmp116_read_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION);
 
 	// enable alert mode (ALERT is then used to notify when temperature exceeded the threshold)
-	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_TNA_SHIFT);
+	BITS_CLEAR(config_word, 1 << _TMP116_REG_CONFIGURATION_TNA_SHIFT);
 
 	// set ALERT line active low
-	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_POL_SHIFT);
+	BITS_CLEAR(config_word, 1 << _TMP116_REG_CONFIGURATION_POL_SHIFT);
 
 	// configure ALERT to represent alert event
-	BITS_CLEAR(obj->local_config_cache, 1 << _TMP116_REG_CONFIGURATION_DRALERT_SHIFT);
+	BITS_CLEAR(config_word, 1 << _TMP116_REG_CONFIGURATION_DRALERT_SHIFT);
 
-	temperature_tmp116_push_config(obj);
+    // write back
+    temperature_tmp116_write_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION, config_word);
+#endif
+    // configure interrupt manager
+    GPIOINT_Init();
+    GPIOINT_CallbackRegister(PIO_PIN(obj->alert),temperature_tmp116_alert_isr_pri);
+
+    // configure port interrupt
+    GPIO_PinModeSet(PIO_PORT(obj->alert), PIO_PIN(obj->alert),
+                    gpioModeInputPull, 0 // TODO: configure the alert pin based on temperature settings
+    );
+    GPIO_ExtIntConfig(PIO_PORT(obj->alert), PIO_PIN(obj->alert), PIO_PIN(obj->alert),
+                      false, true, true
+    );
+
 
 	// creates the temperature adjusting queue (this is here instead of the init as the temp code needs the int to initialised first)
 	xTaskCreate((void *) temperature_tmp116_reader, "temp_reader", 200, obj, 2, NULL);
@@ -186,29 +184,6 @@ void temperature_tmp116_set_conversion_mode(temperature_tmp116_t * obj, temperat
 	// TODO: Finish this
 }
 
-
-void temperature_tmp116_pull_config(temperature_tmp116_t * obj)
-{
-	DRV_ASSERT(obj);
-
-	// you should never pull changes when local cache is dirty
-	DRV_ASSERT(!obj->is_local_config_cache_dirty);
-
-	obj->local_config_cache = temperature_tmp116_read_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION);
-}
-
-
-void temperature_tmp116_push_config(temperature_tmp116_t * obj)
-{
-	DRV_ASSERT(obj);
-
-	// only transmit data to sensor if the local cache is dirty
-	if (obj->is_local_config_cache_dirty)
-	{
-		temperature_tmp116_write_word_pri(obj, TMP116_REG_ADDR_CONFIGURATION, obj->local_config_cache);
-		obj->is_local_config_cache_dirty = false;
-	}
-}
 
 static void temperature_tmp116_reader(temperature_tmp116_t * obj)
 {

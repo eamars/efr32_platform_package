@@ -29,8 +29,6 @@ typedef struct
 {
 	i2cdrv_t * i2c_device;
 	pio_t alert;
-	uint16_t local_config_cache;
-	bool is_local_config_cache_dirty;
 } temperature_tmp116_t;
 
 typedef enum
@@ -56,9 +54,6 @@ float temperature_tmp116_get_low_limit(temperature_tmp116_t * obj);
 
 int16_t temperature_tmp116_read_temperature_raw(temperature_tmp116_t * obj);
 float temperature_tmp116_read_temperature(temperature_tmp116_t * obj);
-
-void temperature_tmp116_pull_config(temperature_tmp116_t * obj);
-void temperature_tmp116_push_config(temperature_tmp116_t * obj);
 
 void temperature_tmp116_set_conversion_mode(temperature_tmp116_t * obj, temperature_tmp116_functional_mode_t mode);
 static void temperature_tmp116_reader(temperature_tmp116_t * obj);
