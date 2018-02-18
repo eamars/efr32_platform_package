@@ -325,6 +325,10 @@ void Reset_Handler (void)
     // Initialise C library.
     __libc_init_array();
 
+    // Set all bits to preempt priority group, leave 0 bit for subpriority as suggested by FreeRTOS
+    // Note: https://www.freertos.org/RTOS-Cortex-M3-M4.html
+    NVIC_SetPriorityGrouping(0UL);
+
     // configure priority for CORE interrupts
     NVIC_SetPriority(NonMaskableInt_IRQn, 0);
     NVIC_SetPriority(HardFault_IRQn, 0);
@@ -391,9 +395,6 @@ void Reset_Handler (void)
     NVIC_SetPriority(LESENSE_IRQn, 4);
     NVIC_SetPriority(CRYPTO1_IRQn, 4);
     NVIC_SetPriority(TRNG0_IRQn, 4);
-
-    // Set all bits to preempt priority group, leave 0 bit for subpriority as suggested by FreeRTOS
-    NVIC_SetPriorityGrouping(0UL);
 
     // Enable Stack alignment and divide by zero trap
     SCB->CCR |= (SCB_CCR_STKALIGN_Msk | SCB_CCR_DIV_0_TRP_Msk);
