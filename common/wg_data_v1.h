@@ -11,7 +11,8 @@
 #ifndef _WG_DATA_V1_H
 #define _WG_DATA_V1_H
 
-
+#include <stdint.h>
+#include <stdbool.h>
 
 #define WG_DATA_V1_PROTOCOL_VERSION 1
 
@@ -56,6 +57,26 @@ typedef struct __attribute__ ((packed)) {
     int16_t mag_raw_y;  // Raw magnetometer X value
     int16_t mag_raw_z;  // Raw magnetometer Z value
     uint32_t vector;    // IMU calculated vector
+
+    struct
+    {
+        int16_t x_origin;
+        int16_t y_origin;
+        int16_t z_origin;
+
+        int16_t x_origin_compensated;
+        int16_t y_origin_compensated;
+        int16_t z_origin_compensated;
+
+        uint32_t vector;
+        uint16_t vector_threshold_closed;
+        uint16_t vector_threshold_open;
+        int8_t calibration_temp;
+        float x_tmp_coef;
+        float y_tmp_coef;
+        float z_tmp_coef;
+    } origin;
+
     /* ADD MORE DATA HERE */
 } wg_data_v1_extended_report_t;
 
