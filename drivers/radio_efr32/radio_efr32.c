@@ -368,6 +368,13 @@ radio_efr32_t * radio_efr32_init(const RAIL_ChannelConfig_t *channelConfigs[], b
     radio_efr32_singleton_instance.base.radio_recv_cb.callback = radio_efr32_recv_timeout;
     radio_efr32_singleton_instance.base.radio_recv_cb.args = &radio_efr32_singleton_instance;
 
+    // register radio property configurations
+    radio_efr32_singleton_instance.base.radio_get_tx_power_cb.callback = radio_efr32_get_tx_pwr_dbm;
+    radio_efr32_singleton_instance.base.radio_get_tx_power_cb.args = &radio_efr32_singleton_instance;
+
+    radio_efr32_singleton_instance.base.radio_set_tx_power_cb.callback = radio_efr32_set_tx_pwr_dbm;
+    radio_efr32_singleton_instance.base.radio_set_tx_power_cb.args = &radio_efr32_singleton_instance;
+
 #if USE_FREERTOS == 1
     // initialize timer
     radio_efr32_singleton_instance.rx_timeout_timer = xTimerCreate(

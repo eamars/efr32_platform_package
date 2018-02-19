@@ -412,6 +412,17 @@ void radio_rfm9x_set_modem(radio_rfm9x_t * obj, radio_rfm9x_modem_t modem)
 }
 
 
+void radio_rfm9x_set_tx_power(radio_rfm9x_t * obj, float power_dbm)
+{
+    radio_rfm9x_set_tx_power_use_rfo(obj, (int8_t) power_dbm, false);
+}
+
+float radio_rfm9x_get_tx_power(radio_rfm9x_t * obj)
+{
+    return (float) obj->config.tx_power;
+}
+
+
 void radio_rfm9x_set_tx_power_use_rfo(radio_rfm9x_t * obj, int8_t power_dbm, bool use_rfo)
 {
     DRV_ASSERT(obj);
@@ -844,6 +855,13 @@ void radio_rfm9x_init(radio_rfm9x_t * obj,
 
     obj->base.radio_recv_cb.callback = radio_rfm9x_recv_timeout;
     obj->base.radio_recv_cb.args = obj;
+
+    // register radio property configurations
+    obj->base.radio_get_tx_power_cb.callback = radio_rfm9x_get_tx_power;
+    obj->base.radio_get_tx_power_cb.args = obj;
+
+    obj->base.radio_set_tx_power_cb.callback = radio_rfm9x_set_tx_power;
+    obj->base.radio_set_tx_power_cb.args = obj;
 
 #if USE_FREERTOS == 1
     // initialize timer

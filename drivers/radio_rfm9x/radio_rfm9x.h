@@ -201,8 +201,9 @@ void radio_rfm9x_set_channel(radio_rfm9x_t * obj, uint32_t freq);
  * @param use_rfo do not use power amplifier
  */
 void radio_rfm9x_set_tx_power_use_rfo(radio_rfm9x_t * obj, int8_t power_dbm, bool use_rfo);
-#define radio_rfm9x_set_tx_power(obj, power_dbm) \
-        radio_rfm9x_set_tx_power_use_rfo((obj), (power_dbm), false)
+
+float radio_rfm9x_get_tx_power(radio_rfm9x_t * obj);
+void radio_rfm9x_set_tx_power(radio_rfm9x_t * obj, float power_dbm);
 
 /**
  * @brief Configure modem mode
