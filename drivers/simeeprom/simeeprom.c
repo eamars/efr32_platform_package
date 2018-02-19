@@ -346,6 +346,14 @@ void simeeprom_read(simeeprom_t * obj, uint8_t token, void * data, uint8_t len)
     halInternalSimEeGetData(data, token, 0, len);
 }
 
+const void * simeeprom_read_ptr(simeeprom_t * obj, uint8_t token, uint8_t len)
+{
+    void * ptr = NULL;
+    halInternalSimEeGetPtr(&ptr, token, 0, len);
+
+    return ptr;
+}
+
 void simeeprom_write(simeeprom_t * obj, uint8_t token, void * data, uint8_t len)
 {
     halInternalSimEeSetData(token, data, 0, len);
