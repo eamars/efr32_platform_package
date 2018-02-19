@@ -73,6 +73,17 @@ void simeeprom_init(simeeprom_t * obj);
 void simeeprom_read(simeeprom_t * obj, uint8_t token, void *data, uint8_t len);
 
 /**
+ * @brief Fetch data pointer from EEPROM
+ * @param obj SimEEPROM object
+ * @param token token id
+ * @param len the length of data in bytes
+ * @return pointer to the data
+ *
+ * Note: the return value is READ ONLY!
+ */
+const void * simeeprom_read_ptr(simeeprom_t * obj, uint8_t token, uint8_t len);
+
+/**
  * @brief Write data to EEPROM
  * @param obj SimEEPROM object
  * @param token token id
