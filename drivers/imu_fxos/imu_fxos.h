@@ -82,6 +82,7 @@ typedef struct __attribute__((packed))
 
 // prototype for the callback
 typedef void (*imu_fxos_on_backup_requested)(void * obj, imu_backup_t * backup);
+typedef void (*imu_fxos_on_temp_coef_write_requested)(void * obj, imu_tmp_coef_t * coef);
 
 typedef struct
 {
@@ -140,6 +141,7 @@ typedef struct
     struct
     {
         imu_fxos_on_backup_requested on_backup_requested;
+        imu_fxos_on_temp_coef_write_requested on_temp_coef_write_requested;
     } callbacks;
 
 } imu_FXOS8700CQ_t;
