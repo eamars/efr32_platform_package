@@ -75,6 +75,8 @@ typedef struct __attribute__((packed))
     float tmp_coef;
 } imu_backup_t;
 
+// prototype for the callback
+typedef void (*imu_fxos_on_backup_requested)(void * obj, imu_backup_t * backup);
 
 typedef struct
 {
@@ -129,6 +131,11 @@ typedef struct
         float z_tmp_coef;
     } origin;
 
+    // callbacks
+    struct
+    {
+        imu_fxos_on_backup_requested on_backup_requested;
+    } callbacks;
 
 } imu_FXOS8700CQ_t;
 
