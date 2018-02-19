@@ -118,3 +118,26 @@ void radio_recv_timeout(radio_t * obj, uint32_t timeout_ms)
         DRV_ASSERT(false);
     }
 }
+
+float radio_get_tx_power(radio_t * obj)
+{
+    if (obj->radio_get_tx_power_cb.callback)
+    {
+        return ((radio_get_tx_power_t) obj->radio_get_tx_power_cb.callback)(obj->radio_get_tx_power_cb.args);
+    }
+    {
+        DRV_ASSERT(false);
+        return 0.0f;
+    }
+}
+
+void radio_set_tx_power(radio_t * obj, float power_dbm)
+{
+    if (obj->radio_set_tx_power_cb.callback)
+    {
+        ((radio_set_tx_power_t) obj->radio_set_tx_power_cb.callback)(obj->radio_set_tx_power_cb.args, power_dbm);
+    }
+    {
+        DRV_ASSERT(false);
+    }
+}

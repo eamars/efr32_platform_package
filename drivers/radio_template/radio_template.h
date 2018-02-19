@@ -35,6 +35,10 @@ typedef void (*radio_set_opmode_tx_timeout_t)(void * obj, uint32_t timeout_ms);
 typedef void (*radio_send_timeout_t)(void * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
 typedef void (*radio_recv_timeout_t)(void * obj, uint32_t timeout_ms);
 
+// prototype for setting/getting radio properties
+typedef float (*radio_get_tx_power_t)(void * obj);
+typedef void (*radio_set_tx_power_t)(void * obj, float power_dbm);
+
 // generic radio opmode states
 typedef enum
 {
@@ -47,6 +51,9 @@ typedef enum
 // generic radio structure
 typedef struct
 {
+    // define generic radio opmode
+    radio_opmode_t opmode;
+
     // define radio callbacks
     radio_callback_t on_rx_done_cb;
     radio_callback_t on_rx_error_cb;
@@ -64,14 +71,21 @@ typedef struct
     radio_callback_t radio_send_cb;
     radio_callback_t radio_recv_cb;
 
-    // define generic radio opmode
-    radio_opmode_t opmode;
+    // define radio property configurations
+    radio_callback_t radio_get_tx_power_cb;
+    radio_callback_t radio_set_tx_power_cb;
+
 
 } radio_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static inline radio_opmode_t radio_get_opmode(radio_t * obj)
+{
+    return obj->opmode;
+}
 
 void radio_set_rx_done_handler(radio_t * obj, void * handler, void * args);
 void radio_set_rx_error_handler(radio_t * obj, void * handler, void * args);
@@ -84,13 +98,11 @@ void radio_set_opmode_sleep(radio_t * obj);
 void radio_set_opmode_rx_timeout(radio_t * obj, uint32_t timeout_ms);
 void radio_set_opmode_tx_timeout(radio_t * obj, uint32_t timeout_ms);
 
-static inline radio_opmode_t radio_get_opmode(radio_t * obj)
-{
-    return obj->opmode;
-}
-
 void radio_send_timeout(radio_t * obj, void * buffer, uint16_t size, uint32_t timeout_ms);
 void radio_recv_timeout(radio_t * obj, uint32_t timeout_ms);
+
+float radio_get_tx_power(radio_t * obj);
+void radio_set_tx_power(radio_t * obj, float power_dbm);
 
 #ifdef __cplusplus
 }
