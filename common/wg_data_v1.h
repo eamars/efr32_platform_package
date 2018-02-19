@@ -58,7 +58,7 @@ typedef struct __attribute__ ((packed)) {
     int16_t mag_raw_z;  // Raw magnetometer Z value
     uint32_t vector;    // IMU calculated vector
 
-    struct
+    struct __attribute__ ((packed))
     {
         int16_t x_origin;
         int16_t y_origin;
