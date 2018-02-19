@@ -67,12 +67,17 @@ typedef enum
 typedef struct __attribute__((packed))
 {
     uint16_t crc16;
-    int16_t x_origin;
-    int16_t y_origin;
-    int16_t z_origin;
     float x_tmp_coef;
     float y_tmp_coef;
     float z_tmp_coef;
+} imu_tmp_coef_t;
+
+typedef struct __attribute__((packed))
+{
+    uint16_t crc16;
+    int16_t x_origin;
+    int16_t y_origin;
+    int16_t z_origin;
 } imu_backup_t;
 
 // prototype for the callback
