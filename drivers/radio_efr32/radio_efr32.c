@@ -447,3 +447,17 @@ uint32_t radio_efr32_generate_random_number(radio_efr32_t * obj)
 
     return number;
 }
+
+
+float radio_efr32_get_tx_pwr_dbm(radio_efr32_t * obj)
+{
+    // power is represented as deci-dbm (1dBm = 10deci-dBm)
+    return RAIL_GetTxPowerDbm(obj->rail_handle) / 10.0f;
+}
+
+
+void radio_efr32_set_tx_pwr_dbm(radio_efr32_t * obj, float tx_pwr_dbm)
+{
+    // power is represented as deci-dbm (1dBm = 10deci-dBm)
+    RAIL_SetTxPowerDbm(obj->rail_handle, (RAIL_TxPower_t) (tx_pwr_dbm * 10));
+}
