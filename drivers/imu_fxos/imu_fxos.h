@@ -70,9 +70,9 @@ typedef struct __attribute__((packed))
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
-    uint16_t vector_threshold_closed;
-    uint16_t vector_threshold_open;
-    float tmp_coef;
+    float x_tmp_coef;
+    float y_tmp_coef;
+    float z_tmp_coef;
 } imu_backup_t;
 
 // prototype for the callback
@@ -108,7 +108,6 @@ typedef struct
 
     TaskHandle_t ImuCalHandler;
 
-    rawdata_t old_magdata;
     rawdata_t magdata;
     rawdata_t rawmagdata;
 
@@ -126,6 +125,7 @@ typedef struct
         uint16_t vector_threshold_closed;
         uint16_t vector_threshold_open;
         int8_t calibration_temp;
+        int8_t coefficient_calibration_temp;
         float x_tmp_coef;
         float y_tmp_coef;
         float z_tmp_coef;
