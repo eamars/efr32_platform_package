@@ -10,5 +10,5 @@ FILE (GLOB SRC *.c)
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency and build order
-ADD_DEPENDENCIES(${LIB_NAME} bootloader_api)
-TARGET_LINK_LIBRARIES(${LIB_NAME} bootloader_api)
+ADD_DEPENDENCIES(${LIB_NAME} bootloader_api imu_fxos)
+TARGET_LINK_LIBRARIES(${LIB_NAME} bootloader_api imu_fxos)

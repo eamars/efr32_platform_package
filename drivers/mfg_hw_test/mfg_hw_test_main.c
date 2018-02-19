@@ -8,6 +8,7 @@
 #include "reset_info.h"
 #include "mfg_hw_test.h"
 
+extern void mfg_imu_test(uint32_t * boot_flags);
 
 void mfg_generic_irq_handler(uint32_t ipsr)
 {
@@ -22,13 +23,14 @@ void mfg_generic_irq_handler(uint32_t ipsr)
 
 void mfg_main(uint32_t * boot_flags)
 {
+    uint32_t mfg_entry = boot_flags[0];
+
     // clear the reset info
     reset_info_clear();
 
-    uint32_t mfg_entry = boot_flags[0];
     switch (mfg_entry)
     {
-        case 0:
+        case MFG_TEST_ALL:
         {
             // this is the first default entry for mfg mode.
             // to jump to next mfg mode, we can call with api
@@ -37,18 +39,24 @@ void mfg_main(uint32_t * boot_flags)
             // make sure the code will never go though this point
             break;
         }
-        case 127:
+        case MFG_TEST_I2C:
         {
-            // say 127 is the imu temperature coefficient calibration
-            // do something
-            // write to eeprom
-            // reset
+            mfg_hw_test_reboot_to_enter(mfg_entry + 1);
+            break;
+        }
+        case MFG_TEST_IMU:
+        {
+            mfg_imu_test(boot_flags);
+            mfg_hw_test_reboot_to_enter(mfg_entry + 1);
             break;
         }
 
         default:
+        {
             break;
+        }
     }
+
 
     while (1)
     {
