@@ -125,6 +125,7 @@ typedef struct
         uint16_t vector_threshold_closed;
         uint16_t vector_threshold_open;
         int8_t calibration_temp;
+        int8_t coefficient_calibration_temp;
         float x_tmp_coef;
         float y_tmp_coef;
         float z_tmp_coef;
