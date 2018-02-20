@@ -22,6 +22,10 @@
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
+#define DEFAULT_VECTOR_THRESHOLD_OPEN   70
+#define DEFAULT_VECTOR_THRESHOLD_CLOSE   30
+
+
  /***************************TYPES*********************************/
 
 typedef enum
@@ -102,6 +106,9 @@ typedef struct
     uint32_t raw_vector;
     int16_t vector_angle;
 
+    uint8_t counter;
+    bool saved_origin;
+
     int16_t current_compass; // The current angle
     int16_t current_heading; // The heading away from calibrated angle
 
@@ -131,11 +138,31 @@ typedef struct
         uint16_t vector_threshold_closed;
         uint16_t vector_threshold_open;
         int8_t calibration_temp;
-        int8_t coefficient_calibration_temp;
+
         float x_tmp_coef;
         float y_tmp_coef;
         float z_tmp_coef;
     } origin;
+
+    struct
+    {
+        int16_t x_origin;
+        int16_t y_origin;
+        int16_t z_origin;
+
+        int16_t x_origin_compensated;
+        int16_t y_origin_compensated;
+        int16_t z_origin_compensated;
+
+        uint32_t vector;
+        uint16_t vector_threshold_closed;
+        uint16_t vector_threshold_open;
+        int8_t calibration_temp;
+
+        float x_tmp_coef;
+        float y_tmp_coef;
+        float z_tmp_coef;
+    } temporary_origin;
 
     // callbacks
     struct
@@ -148,11 +175,12 @@ typedef struct
 
 
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
-                            imu_backup_t * backup_pointer);
+                            imu_backup_t * backup_pointer, imu_tmp_coef_t * tmp_coef_pointer);
 char       FXOS8700CQ_ReadStatusReg(imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_ActiveMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_StandbyMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_SetTmpCoeff(imu_FXOS8700CQ_t * obj, float x, float y, float z);
 
 void       FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj);
 

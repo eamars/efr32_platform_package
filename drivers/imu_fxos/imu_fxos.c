@@ -32,18 +32,27 @@
 #include "queue.h"
 #include "task.h"
 #include "semphr.h"
+#include "board.h"
 
 SemaphoreHandle_t xSemaphoreOriginReset = NULL;
 
 void FXOS8700CQ_vTaskResetOrigin(imu_FXOS8700CQ_t * obj);
 void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj);
+void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj);
+void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj);
 
 void FXOS8700CQ_Reset_Origin(imu_FXOS8700CQ_t * obj);
+void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj);
 
+
+/**
+ * Sets the open and closed threshold values in IMU object, may have some temperature dependence.
+ * @param obj imu object
+ */
 void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj)
 {
-    obj->origin.vector_threshold_open = (obj->vector * 1.5) + 60;
-    obj->origin.vector_threshold_closed = (obj->vector * 1.2) + 40;
+    obj->origin.vector_threshold_open = DEFAULT_VECTOR_THRESHOLD_OPEN; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
+    obj->origin.vector_threshold_closed = DEFAULT_VECTOR_THRESHOLD_CLOSE; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
 }
 
 /**
@@ -54,10 +63,10 @@ void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj)
  * @param  int_1      immu interupt pin 1
  * @param  int_2      imu interupt pin 2
  * @param  address    I2C slave address, depending on hardware configuration
- * @return            if already intalised will not redinalise the
+ * @return            if already intalised will not reinitialise the
  */
 void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t enable, pio_t int_1, pio_t int_2, uint8_t address,
-                            imu_backup_t * backup_pointer)
+                            imu_backup_t * backup_pointer, imu_tmp_coef_t * tmp_coef_pointer)
 {
     uint16_t i = 0;
     // sanity check for pointers
@@ -80,6 +89,10 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->int_1 = int_1;
     obj->int_2 = int_2;
 
+    obj->origin.x_tmp_coef = 2.0;
+    obj->origin.y_tmp_coef = 2.0;
+    obj->origin.z_tmp_coef = 10.0;
+
     // assign hardware slave address
     obj->i2c_slave_addr = address;
 
@@ -87,15 +100,10 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     obj->current_compass = 0;
     obj->current_heading = 0;
 
-    // These coefficients are unique to each device - must be manually set
-    obj->origin.x_tmp_coef = 1.405;
-    obj->origin.y_tmp_coef = 1.858;
-    obj->origin.z_tmp_coef = 10.631;
-
 	// initialize door state and calibrate state
 	obj->door_state = IMU_EVENT_DOOR_CLOSE;
 
-    // Intalise queue
+    // Intialise queue
     obj->imu_event_queue = xQueueCreate(2, sizeof(imu_event_t));
 
     // Configure load switch pins
@@ -104,7 +112,7 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
     // Ensures driver isn't accidentally reinitialised
     obj->initialized = true;
 
-    FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK);                    //Reset sensor, and wait for reboot to complete
+    FXOS8700CQ_WriteByte(obj, CTRL_REG2, RST_MASK); // Reset sensor, and wait for reboot to complete
     delay_ms(20);
     FXOS8700CQ_StandbyMode(obj);
 
@@ -122,16 +130,85 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     FXOS8700CQ_ActiveMode(obj);
 
-    FXOS8700CQ_Calibrate(obj);
+    if(backup_pointer == NULL)
+    {
+        delay_ms(2000); // Wait for movement to stop due to button press
+        FXOS8700CQ_Calibrate(obj);
+    }
 
-    xTaskCreate((void *) FXOS8700CQ_vTaskResetOrigin, "Reset_Origin", 300, obj, 1, NULL);
-    xTaskCreate((void *) FXOS8700CQ_vTaskCheckTemp, "Check_Temp", 300, obj, 1, NULL);
+//    if(tmp_coef_pointer == NULL)
+//    {
+//        FXOS8700CQ_AutoTemperatureCoefficientFinder(obj);
+//    }
+
+    xTaskCreate((void *) FXOS8700CQ_vTaskResetOrigin, "Reset_Origin", 300, obj, 2, NULL);
+    xTaskCreate((void *) FXOS8700CQ_vTaskCheckTemp, "Check_Temp", 300, obj, 2, NULL);
 
     FXOS8700CQ_Init_Interrupt(obj);
 }
 
 /**
- * calibrates the thresholds dependant on the current vector of the imu. this can be used to pull the gate to the maximum allowed and claibrating. show
+ * Finds the temperature coefficients for a device. Gets the xyz values for a given temperature and waits for the
+ * device to be heated up by 20 degrees until it takes another reading. the coefficients can then be worked out for
+ * each axis and saved to eeprom.
+ * @param obj imu object
+ */
+void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj)
+{
+    int16_t x_init;
+    int16_t y_init;
+    int16_t z_init;
+    float temp_init;
+
+
+    int16_t x_final;
+    int16_t y_final;
+    int16_t z_final;
+    float temp_final;
+
+    while(!FXOS8700CQ_PollMagnetometer(obj));
+
+    x_init = obj->rawmagdata.x;
+    y_init = obj->rawmagdata.y;
+    z_init = obj->rawmagdata.z;
+
+    temp_init = FXOS8700CQ_GetTemperature(obj);
+
+    bool led_state = true;
+
+    while(1)
+    {
+        if(temp_init + 20 < FXOS8700CQ_GetTemperature(obj))
+        {
+            break;
+        }
+        led_toggle(2, led_state);
+        led_state = !led_state;
+        delay_ms(100);
+    }
+
+    led_toggle(2, false); // Make sure LED is turned off
+
+    delay_ms(10000); // Wait 10 seconds for heat to evenly distribute through device
+
+    temp_final = FXOS8700CQ_GetTemperature(obj);
+
+
+
+    while(!FXOS8700CQ_PollMagnetometer(obj));
+
+    x_final = obj->rawmagdata.x;
+    y_final = obj->rawmagdata.y;
+    z_final = obj->rawmagdata.z;
+
+
+    obj->origin.x_tmp_coef = fabs((x_final - x_init) / (temp_final - temp_init));
+    obj->origin.y_tmp_coef = fabs((y_final - y_init) / (temp_final - temp_init));
+    obj->origin.z_tmp_coef = fabs((z_final - z_init) / (temp_final - temp_init));
+};
+
+/**
+ * Sets origin and thresholds for the IMU interrupts.
  * @param obj imu object
  */
 void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
@@ -225,6 +302,14 @@ char FXOS8700CQ_GetTemperature(imu_FXOS8700CQ_t * obj)
     return temp;
 }
 
+
+void FXOS8700CQ_SetTmpCoeff(imu_FXOS8700CQ_t * obj, float x, float y, float z)
+{
+    obj->origin.x_tmp_coef = x;
+    obj->origin.y_tmp_coef = y;
+    obj->origin.z_tmp_coef = z;
+}
+
 /**
  * Sets the origin - needed for the magnetometer vector magnitude interrupt
  * @param obj imu object
@@ -252,28 +337,45 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
 
     //FXOS8700CQ_ActiveMode (obj);
     obj->origin.calibration_temp = FXOS8700CQ_GetTemperature(obj);
+
+    FXOS8700CQ_SaveBackup(obj);
 }
 
 /**
  * Resets the origin - taking an average of the last value and the current value to avoid drastic changes
  * @param obj imu object
  */
-void FXOS8700CQ_Reset_Origin(imu_FXOS8700CQ_t * obj)
+void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj)
 {
     while (!(FXOS8700CQ_PollMagnetometer(obj)));
-    obj->origin.x_origin = (obj->rawmagdata.x + obj->origin.x_origin) / 2; // Stops any crazy changes taking place
-    obj->origin.y_origin = (obj->rawmagdata.y + obj->origin.y_origin) / 2;
-    obj->origin.z_origin = (obj->rawmagdata.z + obj->origin.z_origin) / 2;
+    obj->temporary_origin.x_origin = (obj->rawmagdata.x + obj->origin.x_origin) / 2; // Stops any crazy changes taking place
+    obj->temporary_origin.y_origin = (obj->rawmagdata.y + obj->origin.y_origin) / 2;
+    obj->temporary_origin.z_origin = (obj->rawmagdata.z + obj->origin.z_origin) / 2;
 
-    obj->origin.x_origin_compensated =  obj->origin.x_origin;
-    obj->origin.y_origin_compensated =  obj->origin.y_origin;
-    obj->origin.z_origin_compensated =  obj->origin.z_origin;
+    obj->temporary_origin.x_origin_compensated =  obj->origin.x_origin;
+    obj->temporary_origin.y_origin_compensated =  obj->origin.y_origin;
+    obj->temporary_origin.z_origin_compensated =  obj->origin.z_origin;
 
+    obj->temporary_origin.calibration_temp = FXOS8700CQ_GetTemperature(obj); //Seems to be 0 on first read
 
-    obj->start_position = 180.0 * atan2(obj->origin.x_origin, obj->origin.z_origin) / (float)M_PI;
-    obj->door_state = IMU_EVENT_DOOR_CLOSE;
+    obj->saved_origin = true;
+}
 
-    obj->origin.calibration_temp = FXOS8700CQ_GetTemperature(obj); //Seems to be 0 on first read
+void FXOS8700CQ_Reset_Origin(imu_FXOS8700CQ_t * obj)
+{
+    obj->origin.x_origin = obj->temporary_origin.x_origin;
+    obj->origin.y_origin = obj->temporary_origin.y_origin;
+    obj->origin.z_origin = obj->temporary_origin.z_origin;
+
+    obj->origin.x_origin_compensated = obj->temporary_origin.x_origin_compensated;
+    obj->origin.y_origin_compensated = obj->temporary_origin.y_origin_compensated;
+    obj->origin.z_origin_compensated = obj->temporary_origin.z_origin_compensated;
+
+    obj->origin.calibration_temp =  obj->temporary_origin.calibration_temp ;//Seems to be 0 on first read
+
+    FXOS8700CQ_Magnetic_Vector(obj);
+
+    obj->saved_origin = false;
 }
 
  /**
@@ -356,7 +458,6 @@ void FXOS8700CQ_Magnetic_Temperature_Compensation(imu_FXOS8700CQ_t * obj)
                               + (obj->origin.z_origin_compensated*obj->origin.z_origin_compensated));
 
     FXOS8700CQ_WriteByteArray(obj, M_VECM_INITX_MSB, ref, 6); // Sets the new origin
-
     FXOS8700CQ_ActiveMode (obj);
 }
 
@@ -372,6 +473,7 @@ void FXOS8700CQ_vTaskResetOrigin(imu_FXOS8700CQ_t * obj)
         // Will leave this off for now, if the origin resets at the wrong time it can seriously muck things up.
 //        delay_ms(1000);
 //        FXOS8700CQ_Reset_Origin(obj);
+        FXOS8700CQ_SaveBackup(obj);
     }
 }
 
@@ -390,6 +492,7 @@ void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
 
     while (1)
     {
+        obj->counter = obj->counter + 1;
         obj->temp = FXOS8700CQ_GetTemperature(obj);
         if(obj->temp != obj->last_temp)
         {
@@ -397,7 +500,22 @@ void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
             FXOS8700CQ_Magnetic_Temperature_Compensation(obj);
         }
         obj->last_temp = obj->temp;
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10000));
+
+        if(obj->counter > 1 && obj->door_state == IMU_EVENT_DOOR_CLOSE) // If it's been more than 5 seconds since last door event
+        {
+            if(obj->saved_origin == true) // If its been more than 5 seconds since saving the last origin
+            {
+                FXOS8700CQ_Reset_Origin(obj);
+            }
+            FXOS8700CQ_Save_Origin(obj);
+        } else
+        {
+            obj->saved_origin = false;
+        }
+
+        FXOS8700CQ_SaveBackup(obj);
+
+        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(5000));
     }
 }
 
@@ -447,6 +565,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 
             xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
             obj->last_event = obj->door_state;
+            obj->counter = 0;
         }
 
         obj->last_temp = obj->temp;
@@ -493,6 +612,23 @@ void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
 
     obj->vector = sqrt((dx*dx) + (dy*dy) + (dz*dz));
 }
+
+void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj)
+{
+//    if (obj->callbacks.on_backup_requested) {
+//        imu_backup_t backup = {
+//                .x_origin = obj->origin.x_origin,
+//                .y_origin = obj->origin.y_origin,
+//                .z_origin = obj->origin.z_origin,
+//
+//                .x_tmp_coef = obj->origin.x_tmp_coef,
+//                .y_tmp_coef = obj->origin.y_tmp_coef,
+//                .z_tmp_coef = obj->origin.z_tmp_coef
+//        };
+//        obj->callbacks.on_backup_requested(obj, &backup);
+//    }
+}
+
 
 void FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char value)
 {
