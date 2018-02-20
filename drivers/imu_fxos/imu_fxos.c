@@ -342,7 +342,7 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
 }
 
 /**
- * Resets the origin - taking an average of the last value and the current value to avoid drastic changes
+ * Saves the origin but doesn't write anything to the IMU
  * @param obj imu object
  */
 void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj)
@@ -361,6 +361,10 @@ void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj)
     obj->saved_origin = true;
 }
 
+/**
+ * Writes the temporary values from SaveOrigin to the IMU
+ * @param obj imu object
+ */
 void FXOS8700CQ_Reset_Origin(imu_FXOS8700CQ_t * obj)
 {
     obj->origin.x_origin = obj->temporary_origin.x_origin;
@@ -480,7 +484,8 @@ void FXOS8700CQ_vTaskResetOrigin(imu_FXOS8700CQ_t * obj)
 /**
  * Checks the temperature periodically and recalibrates if necessary - this is needed incase the door is left in the open
  * state for a long time and the temperature changes, causing the vector to drift further from the origin and potentially
- * meaning the next close event won't be detected.
+ * meaning the next close event won't be detected. Also, if the door has been closed for a while, the origin is saved.
+ * If the door remains closed, the origin is reset - this prevents the origin being reset during an event.
  * @param obj IMU object
  */
 void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
@@ -492,7 +497,7 @@ void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
 
     while (1)
     {
-        obj->counter = obj->counter + 1;
+        obj->counter = obj->counter + 1; // This is reset to 0 each time the door state changes
         obj->temp = FXOS8700CQ_GetTemperature(obj);
         if(obj->temp != obj->last_temp)
         {
@@ -505,15 +510,15 @@ void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
         {
             if(obj->saved_origin == true) // If its been more than 5 seconds since saving the last origin
             {
-                FXOS8700CQ_Reset_Origin(obj);
+                FXOS8700CQ_Reset_Origin(obj); // Resets the vector interrupt
             }
-            FXOS8700CQ_Save_Origin(obj);
+            FXOS8700CQ_Save_Origin(obj); // Saves the origin but doesn't change the values in the IMU
         } else
         {
-            obj->saved_origin = false;
+            obj->saved_origin = false; // If there has jut been a door event, then the saved origin data could be invalid
         }
 
-        FXOS8700CQ_SaveBackup(obj);
+        FXOS8700CQ_SaveBackup(obj); // A change to the origin may have taken place, so save that data.
 
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(5000));
     }
@@ -565,7 +570,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 
             xQueueSendFromISR(obj->imu_event_queue, &obj->door_state,NULL);
             obj->last_event = obj->door_state;
-            obj->counter = 0;
+            obj->counter = 0; // Tells the vTaskCheckTemp that a door event has just occurred
         }
 
         obj->last_temp = obj->temp;
@@ -613,6 +618,11 @@ void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
     obj->vector = sqrt((dx*dx) + (dy*dy) + (dz*dz));
 }
 
+/**
+ * Saves a backup of the important origin parameters (that can only be reset when the door is guaranteed to be shut)
+ * this is called when any of those parameters change.
+ * @param obj imu object
+ */
 void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj)
 {
 //    if (obj->callbacks.on_backup_requested) {
