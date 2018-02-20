@@ -35,6 +35,11 @@ typedef enum {
 } wg_data_v1_packet_type_t;
 
 typedef enum {
+    WG_DATA_CALIBRATE_IMU_VECTOR = 0,
+    WG_DATA_CALIBRATE_IMU_TEMP = 1,
+} wg_data_v1_calibrate_type_t;
+
+typedef enum {
     WG_DATA_SETTING_ID_REPORT_CONFIG    = 0,  // Config for data reports (type,period,etc.)
     WG_DATA_SETTING_ID_LED_MODE         = 1,  // LED configuration (on,off,radio,etc.)
     WG_DATA_SETTING_ID_IMU_TEMP_COEFF   = 2,  // Config for IMU temperature coefficients (float)(x,y,z)
