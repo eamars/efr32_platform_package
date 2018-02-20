@@ -85,8 +85,8 @@ typedef struct __attribute__((packed))
 } imu_backup_t;
 
 // prototype for the callback
-typedef void (*imu_fxos_on_backup_requested)(void * obj, imu_backup_t * backup);
-typedef void (*imu_fxos_on_temp_coef_write_requested)(void * obj, imu_tmp_coef_t * coef);
+typedef void (*imu_fxos_on_backup_origin_requested)(void * obj, imu_backup_t * backup);
+typedef void (*imu_fxos_on_backup_coefficient_requested)(void * obj, imu_tmp_coef_t * coef);
 
 typedef struct
 {
@@ -168,8 +168,8 @@ typedef struct
     // callbacks
     struct
     {
-        imu_fxos_on_backup_requested on_backup_requested;
-        imu_fxos_on_temp_coef_write_requested on_temp_coef_write_requested;
+        imu_fxos_on_backup_origin_requested on_backup_origin_requested;
+        imu_fxos_on_backup_coefficient_requested on_backup_coefficient_requested;
     } callbacks;
 
 } imu_FXOS8700CQ_t;
@@ -207,6 +207,18 @@ void       FXOS8700CQ_WriteByte(imu_FXOS8700CQ_t * obj, char internal_addr, char
 void       FXOS8700CQ_WriteByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, uint8_t* buffer, char length);
 char       FXOS8700CQ_ReadByte(imu_FXOS8700CQ_t * obj, char internal_addr);
 void       FXOS8700CQ_ReadByteArray(imu_FXOS8700CQ_t * obj, char internal_addr, char *buffer, uint32_t length);
+
+/**
+ * @brief Backup origin information after calibration
+ * @param obj the IMU object
+ */
+void FXOS8700CQ_Backup_Origin(imu_FXOS8700CQ_t * obj);
+
+/**
+ * @brief Backup temperature compensation coefficient for IMU chip
+ * @param obj the IMU object
+ */
+void FXOS8700CQ_Backup_Coefficient(imu_FXOS8700CQ_t * obj);
 
 #endif // USE_FREERTOS == 1
 
