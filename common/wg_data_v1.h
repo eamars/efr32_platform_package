@@ -35,10 +35,10 @@ typedef enum {
 } wg_data_v1_packet_type_t;
 
 typedef enum {
-    WG_DATA_SETTING_ID_REPORT_CONFIG,   // Config for data reports (type,period,etc.)
-    WG_DATA_SETTING_ID_LED_MODE,        // LED configuration (on,off,radio,etc.)
-    WG_DATA_SETTING_ID_IMU_TEMP_COEFF,  // Config for IMU temperature coefficients (float)(x,y,z)
-    WG_DATA_SETTING_ID_RADIO_CONFIG,    // Config for the radio driver (txpwr,freq,etc.)
+    WG_DATA_SETTING_ID_REPORT_CONFIG    = 0,  // Config for data reports (type,period,etc.)
+    WG_DATA_SETTING_ID_LED_MODE         = 1,  // LED configuration (on,off,radio,etc.)
+    WG_DATA_SETTING_ID_IMU_TEMP_COEFF   = 2,  // Config for IMU temperature coefficients (float)(x,y,z)
+    WG_DATA_SETTING_ID_RADIO_CONFIG     = 3,  // Config for the radio driver (txpwr,freq,etc.)
 } wg_data_v1_setting_id_t;
 
 typedef struct __attribute__ ((packed)) {
@@ -49,8 +49,8 @@ typedef struct __attribute__ ((packed)) {
 } wg_data_v1_setting_report_config_t;
 
 typedef struct __attribute__ ((packed)) {
-    uint8_t led_mode;   // Which mode to configure the LED flashing
-    uint32_t led_period; // Period for LED flashing (milliseconds)
+    uint8_t led_mode;       // Which mode to configure the LED flashing
+    uint32_t led_period;    // Period for LED flashing (milliseconds)
 } wg_data_v1_setting_led_mode_t;
 
 typedef struct __attribute__ ((packed)) {
@@ -149,14 +149,14 @@ typedef struct __attribute__ ((packed)) {
 // WG_DATA_PACKET_SETTINGS_COMMAND - Configure device settings, e.g. WG_DATA_SETTING_ID_REPORT_CONFIG
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
-    uint8_t settings_id;        // ID of setting that we are configuring
+    uint8_t settings_id;    // ID of setting that we are configuring
     uint8_t payload[16];    // Values to use for setting (maximum 16 bytes)
 } wg_data_v1_settings_command_t;
 
 // WG_DATA_PACKET_SETTINGS_REPORT - Follows a SETTINGS_COMMAND, or SETTINGS_REQUEST
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
-    uint8_t settings_id;        // ID of setting that we are reporting
+    uint8_t settings_id;    // ID of setting that we are reporting
     uint8_t payload[16];    // Current values for setting (maximum 16 bytes)
 } wg_data_v1_settings_report_t;
 
@@ -166,7 +166,7 @@ typedef struct wg_data_v1_settings_request_t {
     uint8_t settings_id;        // ID of setting that we are requesting
 } wg_data_v1_settings_request_t;
 
-// WG_DATA_PACKET_DEBUG_REPORT -,  // Extended boot debug message. Misc data.
+// WG_DATA_PACKET_DEBUG_REPORT - Extended boot debug message. Misc data.
 typedef struct __attribute__ ((packed)) {
     wg_data_v1_packet_header_t header;
     //TODO Add debug data here
