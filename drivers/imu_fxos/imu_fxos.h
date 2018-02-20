@@ -144,6 +144,7 @@ typedef struct
         float z_tmp_coef;
     } origin;
 
+    // The temporary origin struct is used for resetting the origin
     struct
     {
         int16_t x_origin;
