@@ -729,4 +729,48 @@ void FXOS8700CQ_Vector_Angle(imu_FXOS8700CQ_t* obj)
     obj->vector_angle = (int16_t)(r2d2 * rad);
 }
 
+
+void FXOS8700CQ_Backup_Origin(imu_FXOS8700CQ_t * obj)
+{
+    DRV_ASSERT(obj);
+
+    // do anything only if backup handler is configured
+    if (obj->callbacks.on_backup_origin_requested)
+    {
+        // create a backup object on stack
+        imu_backup_t backup;
+        memset(&backup, 0x0, sizeof(imu_backup_t));
+
+        // fill data
+        backup.x_origin = obj->origin.x_origin;
+        backup.y_origin = obj->origin.y_origin;
+        backup.z_origin = obj->origin.z_origin;
+
+        // call backup handler
+        obj->callbacks.on_backup_origin_requested(obj, &backup);
+    }
+}
+
+
+void FXOS8700CQ_Backup_Coefficient(imu_FXOS8700CQ_t * obj)
+{
+    DRV_ASSERT(obj);
+
+    // do anything only if backup handler is configured
+    if (obj->callbacks.on_backup_coefficient_requested)
+    {
+        // create a backuo object on stack
+        imu_tmp_coef_t backup;
+        memset(&backup, 0x0, sizeof(imu_tmp_coef_t));
+
+        // fill data
+        backup.x_tmp_coef = obj->origin.x_tmp_coef;
+        backup.y_tmp_coef = obj->origin.y_tmp_coef;
+        backup.z_tmp_coef = obj->origin.z_tmp_coef;
+
+        // call backup handler
+        obj->callbacks.on_backup_coefficient_requested(obj, &backup);
+    }
+}
+
 #endif // USE_FREERTOS == 1
