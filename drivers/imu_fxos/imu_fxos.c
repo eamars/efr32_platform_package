@@ -176,6 +176,8 @@ void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj)
 
     bool led_state = true;
 
+    uint8_t counter = 0;
+
     while(1)
     {
         if(temp_init + 20 < FXOS8700CQ_GetTemperature(obj))
@@ -184,6 +186,11 @@ void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj)
         }
         led_toggle(2, led_state);
         led_state = !led_state;
+        counter = counter + 1;
+        if(counter >= 6000)
+        {
+            break;
+        }
         delay_ms(100);
     }
 
