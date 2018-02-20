@@ -877,6 +877,7 @@ void wg_mac_ncp_backup(wg_mac_ncp_t * obj)
             }
         }
 
+        // call backup handler
         obj->callbacks.on_backup_requested(obj, &backup);
     }
 }
