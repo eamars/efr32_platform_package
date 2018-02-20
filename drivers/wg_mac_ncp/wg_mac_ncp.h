@@ -226,6 +226,15 @@ wg_mac_ncp_client_t * wg_mac_ncp_find_client_with_short_id(wg_mac_ncp_t * obj, u
 void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * config, wg_mac_ncp_backup_t * backup);
 
 /**
+ * @brief Initialize call ncp to backup the critical data to eeprom
+ * @param obj the NCP object
+ *
+ * Note: corresponding backup handler @see on_backup_requested need to be configured so that
+ * data can be written to EEPROM eventually.
+ */
+void wg_mac_ncp_backup(wg_mac_ncp_t * obj);
+
+/**
  * @brief Send bytes to transceiver
  * @param obj the NCP object
  * @param msg the message, contains destination address

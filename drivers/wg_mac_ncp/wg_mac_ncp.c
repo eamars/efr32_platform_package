@@ -849,6 +849,39 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
     xTaskCreate((void *) wg_mac_ncp_state_machine_thread, "ncp_t", 500, obj, 3, &obj->state_machine_thread);
 }
 
+
+void wg_mac_ncp_backup(wg_mac_ncp_t * obj)
+{
+    DRV_ASSERT(obj);
+
+    // do anything only if backup handler is configured
+    if (obj->callbacks.on_backup_requested)
+    {
+        // create a backup object on the stack
+        wg_mac_ncp_backup_t backup;
+        memset(&backup, 0x0, sizeof(wg_mac_ncp_backup_t));
+
+        // fill ncp data
+        backup.sec_since_start = obj->sec_since_start;
+
+        // fill client data
+        for (uint8_t idx = 0; idx < WG_MAC_NCP_MAX_CLIENT_COUNT; idx++)
+        {
+            // look for valid clients
+            if (obj->clients[idx].state == WG_MAC_NCP_CLIENT_JOINED)
+            {
+                backup.client_list[idx].device_eui64 = obj->clients[idx].device_eui64;
+                backup.client_list[idx].last_seen_sec = obj->clients[idx].last_seen_sec;
+                backup.client_list[idx].short_id = obj->clients[idx].short_id;
+                backup.client_list[idx].state = obj->clients[idx].state;
+            }
+        }
+
+        obj->callbacks.on_backup_requested(obj, &backup);
+    }
+}
+
+
 wg_mac_ncp_error_code_t wg_mac_ncp_send_timeout(wg_mac_ncp_t * obj, wg_mac_ncp_downlink_msg_t * msg, uint32_t timeout_ms)
 {
     DRV_ASSERT(obj);
