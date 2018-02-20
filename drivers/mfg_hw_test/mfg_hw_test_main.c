@@ -4,6 +4,7 @@
  * @date 29/Jan/2018
  * @author Ran Bao
  */
+#include <string.h>
 #include "em_device.h"
 #include "reset_info.h"
 #include "mfg_hw_test.h"
@@ -21,12 +22,31 @@ void mfg_generic_irq_handler(uint32_t ipsr)
 }
 
 
-void mfg_main(uint32_t * boot_flags)
+void mfg_hw_test_wdog(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_dcdc(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_hfxo(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_lfxo(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_gpio(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_led(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_button(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_uart(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_i2c(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_spi(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_imu(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_temp_sensor(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_on_board_radio(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+void mfg_hw_test_off_board_radio(uint32_t boot_flags[4]) __attribute__((weak, alias("mfg_hw_test_default")));
+
+void mfg_main(uint32_t * boot_flags_ptr)
 {
-    uint32_t mfg_entry = boot_flags[0];
+    // keep a copy of boot flags
+    uint32_t boot_flags[4];
+    memcpy(&boot_flags, boot_flags_ptr, sizeof(boot_flags));
 
     // clear the reset info
     reset_info_clear();
+
+    uint32_t mfg_entry = boot_flags[0];
 
     switch (mfg_entry)
     {
@@ -39,18 +59,76 @@ void mfg_main(uint32_t * boot_flags)
             // make sure the code will never go though this point
             break;
         }
+        case MFG_TEST_WDOG:
+        {
+            mfg_hw_test_wdog(boot_flags);
+            break;
+        }
+        case MFG_TEST_DCDC:
+        {
+            mfg_hw_test_dcdc(boot_flags);
+            break;
+        }
+        case MFG_TEST_HFXO:
+        {
+            mfg_hw_test_hfxo(boot_flags);
+            break;
+        }
+        case MFG_TEST_LFXO:
+        {
+            mfg_hw_test_lfxo(boot_flags);
+            break;
+        }
+        case MFG_TEST_GPIO:
+        {
+            mfg_hw_test_gpio(boot_flags);
+            break;
+        }
+        case MFG_TEST_LED:
+        {
+            mfg_hw_test_led(boot_flags);
+            break;
+        }
+        case MFG_TEST_BUTTON:
+        {
+            mfg_hw_test_button(boot_flags);
+            break;
+        }
+        case MFG_TEST_UART:
+        {
+            mfg_hw_test_uart(boot_flags);
+            break;
+        }
         case MFG_TEST_I2C:
         {
-            mfg_hw_test_reboot_to_enter(mfg_entry + 1);
+            mfg_hw_test_i2c(boot_flags);
+            break;
+        }
+        case MFG_TEST_SPI:
+        {
+            mfg_hw_test_spi(boot_flags);
             break;
         }
         case MFG_TEST_IMU:
         {
-            mfg_imu_test(boot_flags);
-            mfg_hw_test_reboot_to_enter(mfg_entry + 1);
+            mfg_hw_test_imu(boot_flags);
             break;
         }
-
+        case MFG_TEST_TEMP_SENSOR:
+        {
+            mfg_hw_test_temp_sensor(boot_flags);
+            break;
+        }
+        case MFG_TEST_ON_BOARD_RADIO:
+        {
+            mfg_hw_test_on_board_radio(boot_flags);
+            break;
+        }
+        case MFG_TEST_OFF_BOARD_RADIO:
+        {
+            mfg_hw_test_off_board_radio(boot_flags);
+            break;
+        }
         default:
         {
             break;
@@ -64,3 +142,9 @@ void mfg_main(uint32_t * boot_flags)
     }
 }
 
+void mfg_hw_test_default(uint32_t boot_flags[4])
+{
+    uint32_t mfg_entry = boot_flags[0];
+
+    mfg_hw_test_reboot_to_enter(mfg_entry + 1);
+}
