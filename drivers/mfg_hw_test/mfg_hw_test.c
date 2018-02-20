@@ -34,6 +34,9 @@ void mfg_hw_test_irq_register(IRQn_Type irq, void * handler, bool enable)
     // disable the interrupt before entering
     NVIC_DisableIRQ(irq);
 
+    // clear any pending ones
+    NVIC_ClearPendingIRQ(irq);
+
     // replace the entry
     dynamic_vectors[irq_id] = handler;
 

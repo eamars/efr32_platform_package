@@ -176,7 +176,7 @@ void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj)
 
     bool led_state = true;
 
-    uint8_t counter = 0;
+    uint16_t counter = 0;
 
     while(1)
     {
