@@ -212,7 +212,7 @@ irq_handler_t dynamic_vector_table[] =
  * that jump to normal loader at latter location can be considered as an better choice.
  */
 void loader(void);
-__attribute__ ((section(".tiny_loader"))) __attribute__ ((naked)) __attribute__ ((optimize("-O0")))
+__attribute__ ((naked, section(".tiny_loader"), optimize("O0")))
 void tiny_loader(void)
 {
 #if USE_TINY_LOADER == 1
@@ -239,7 +239,7 @@ void tiny_loader(void)
  *
  * Note: no stack is allocated for this function
  */
-__attribute__ ((section(".loader"))) __attribute__ ((naked)) __attribute__ ((optimize("-O0")))
+__attribute__ ((naked, aligned(4), section(".loader"), optimize("O0")))
 void loader(void)
 {
     /**
@@ -277,7 +277,7 @@ volatile uint32_t priority;
  *
  * Note: no stack is allocated for this function
  */
-__attribute__ ((naked)) __attribute__ ((optimize("-O0")))
+__attribute__ ((naked, optimize("O0")))
 void Reset_Handler (void)
 {
     // Use static vector table for handling core fault event when coping variables
