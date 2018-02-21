@@ -319,8 +319,6 @@ uint8_t halInternalSimEeStartup(bool forceRebuildAll)
             size += BYTES_TO_WORDS(COUNTER_TOKEN_PAD);
         }
 
-        DEBUG_PRINT("Creator: 0x%02x, Words: %d\r\n", tokenCreators[i], (uint16_t)(arraySize * (1 + size)));
-
         if (arraySize != 1)
         {
             ptrCache[1] = (uint16_t) indexSkip;
@@ -328,7 +326,6 @@ uint8_t halInternalSimEeStartup(bool forceRebuildAll)
         }
     }
 
-    DEBUG_PRINT("SimEE data: %d words of %d max ,tokenCount: %d\r\n", (uint16_t) *totalTokenStorage, (uint16_t)(SIMEE_BTS_SIZE_B/2), (uint16_t)TOKEN_COUNT);
     checkForSimEe2();
 
     return halInternalSimEeStartupCore(forceRebuildAll, lookupCache);
