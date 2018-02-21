@@ -41,6 +41,10 @@ typedef enum
     INST_INVALID = 0xff
 } bootloader_instruction_t;
 
+typedef struct __attribute__ ((packed))
+{
+    uint32_t aat_addr;
+} hatch_boot_info_t;
 
 typedef struct
 {
