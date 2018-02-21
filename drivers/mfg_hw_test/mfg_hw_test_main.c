@@ -9,8 +9,6 @@
 #include "reset_info.h"
 #include "mfg_hw_test.h"
 
-extern void mfg_imu_test(uint32_t * boot_flags);
-
 void mfg_generic_irq_handler(uint32_t ipsr)
 {
     IRQn_Type irqno = (IRQn_Type) ((ipsr & 0x1ff) - 16);

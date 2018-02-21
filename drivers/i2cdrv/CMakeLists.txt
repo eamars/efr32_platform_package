@@ -10,5 +10,5 @@ FILE (GLOB SRC *.c)
 ADD_LIBRARY (${LIB_NAME} ${SRC})
 
 # add dependency and build order
-# ADD_DEPENDENCIES(${LIB_NAME} emlib emdrv)
-TARGET_LINK_LIBRARIES(${LIB_NAME} drivers)
+ADD_DEPENDENCIES(${LIB_NAME} mfg_hw_test)
+TARGET_LINK_LIBRARIES(${LIB_NAME} drivers mfg_hw_test)
