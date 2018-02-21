@@ -139,6 +139,9 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
         obj->origin.x_origin = backup_pointer->x_origin;
         obj->origin.y_origin = backup_pointer->y_origin;
         obj->origin.z_origin = backup_pointer->z_origin;
+        obj->origin.calibration_temp = backup_pointer->calibration_temp;
+        obj->origin.vector_threshold_closed = backup_pointer->vector_threshold_closed;
+        obj->origin.vector_threshold_open = backup_pointer->vector_threshold_open;
     }
 
     if(tmp_coef_pointer == NULL)
@@ -752,6 +755,8 @@ void FXOS8700CQ_Backup_Origin(imu_FXOS8700CQ_t * obj)
         backup.y_origin = obj->origin.y_origin;
         backup.z_origin = obj->origin.z_origin;
         backup.calibration_temp = obj->origin.calibration_temp;
+        backup.vector_threshold_closed = obj->origin.vector_threshold_closed;
+        backup.vector_threshold_open = obj->origin.vector_threshold_open;
 
         // call backup handler
         obj->callbacks.on_backup_origin_requested(obj, &backup);

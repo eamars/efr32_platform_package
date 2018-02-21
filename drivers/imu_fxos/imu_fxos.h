@@ -83,7 +83,8 @@ typedef struct __attribute__((packed))
     int16_t y_origin;
     int16_t z_origin;
     int8_t calibration_temp;
-
+    uint16_t vector_threshold_closed;
+    uint16_t vector_threshold_open;
 } imu_backup_t;
 
 // prototype for the callback
