@@ -28,10 +28,13 @@ typedef enum
     MFG_TEST_TEMP_SENSOR,
     MFG_TEST_ON_BOARD_RADIO,
     MFG_TEST_OFF_BOARD_RADIO,
+
+    MFG_TEST_OK = 0xFE,
+    MFG_TEST_ERROR = 0xFF,
 } mfg_test_entry_list_e;
 
 // MFG API
-void mfg_hw_test_reboot_to_enter(uint32_t entry);
+void mfg_hw_test_reboot_to_enter(uint32_t entry, bool contineous);
 void mfg_hw_test_irq_register(IRQn_Type irq, void * handler, bool enable);
 
 // MFG Test Entries

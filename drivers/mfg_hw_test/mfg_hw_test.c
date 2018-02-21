@@ -13,11 +13,12 @@ extern irq_handler_t mfg_test_vector_table[];
 extern uint32_t __DYNAMIC_VTOR__begin;
 extern uint32_t __DYNAMIC_VTOR__end;
 
-void mfg_hw_test_reboot_to_enter(uint32_t entry)
+void mfg_hw_test_reboot_to_enter(uint32_t entry, bool contineous)
 {
     // use first boot flag to indicate the entry
     boot_info_map_t * boot_info_map = (boot_info_map_t *) reset_info_read();
     boot_info_map->boot_flags[0] = entry;
+    boot_info_map->boot_flags[1] = contineous ? 1 : 0;
 
     // reboot to mfg vector table
     reboot_to_addr((uint32_t) mfg_test_vector_table);
