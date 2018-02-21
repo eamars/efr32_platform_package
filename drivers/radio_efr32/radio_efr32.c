@@ -141,10 +141,23 @@ static void radio_efr32_set_opmode_tx_timeout_pri(radio_efr32_t * obj, uint32_t 
 {
     DRV_ASSERT(obj);
 
+    static RAIL_CsmaConfig_t csma_config = {
+            .csmaMinBoExp = 3,
+            .csmaMaxBoExp = 5,
+            .csmaTries = 5,
+            .ccaThreshold = -75,
+            .ccaBackoff = 320,
+            .ccaDuration = 128,
+            .csmaTimeout = 0,
+    };
+
     if (obj->base.opmode != RADIO_OPMODE_TX)
     {
         // call RAIL API to enter Tx mode
-        DRV_ASSERT(RAIL_StartTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, NULL) == RAIL_STATUS_NO_ERROR);
+        DRV_ASSERT(
+                RAIL_StartCcaCsmaTx(obj->rail_handle, obj->channel, RAIL_TX_OPTIONS_DEFAULT, &csma_config, NULL) ==
+                        RAIL_STATUS_NO_ERROR
+        );
 
 #if USE_FREERTOS == 1
         if (timeout_ms != 0)
