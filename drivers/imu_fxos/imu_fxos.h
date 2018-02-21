@@ -22,8 +22,8 @@
 #define M_VECTOR_DBNCE        0
 #define POLL_THRESH           10
 
-#define DEFAULT_VECTOR_THRESHOLD_OPEN   70
-#define DEFAULT_VECTOR_THRESHOLD_CLOSE   30
+#define DEFAULT_VECTOR_THRESHOLD_OPEN   100
+#define DEFAULT_VECTOR_THRESHOLD_CLOSE   50
 
 
  /***************************TYPES*********************************/
@@ -82,6 +82,8 @@ typedef struct __attribute__((packed))
     int16_t x_origin;
     int16_t y_origin;
     int16_t z_origin;
+    int8_t calibration_temp;
+
 } imu_backup_t;
 
 // prototype for the callback
@@ -183,6 +185,7 @@ char       FXOS8700CQ_StandbyMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_SetTmpCoeff(imu_FXOS8700CQ_t * obj, float x, float y, float z);
 void       FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj);
+void       FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int open_thresh, int closed_thresh);
 
 void       FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj);
 

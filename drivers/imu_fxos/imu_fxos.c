@@ -38,21 +38,19 @@ SemaphoreHandle_t xSemaphoreOriginReset = NULL;
 
 void FXOS8700CQ_vTaskResetOrigin(imu_FXOS8700CQ_t * obj);
 void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj);
-void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj);
-void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj);
 
 void FXOS8700CQ_Reset_Origin(imu_FXOS8700CQ_t * obj);
 void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj);
 
 
 /**
- * Sets the open and closed threshold values in IMU object, may have some temperature dependence.
+ * Sets the open and closed threshold values in IMU object, may have some temperature dependence, needs testing
  * @param obj imu object
  */
-void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj)
+void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int open_thresh, int closed_thresh)
 {
-    obj->origin.vector_threshold_open = DEFAULT_VECTOR_THRESHOLD_OPEN; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
-    obj->origin.vector_threshold_closed = DEFAULT_VECTOR_THRESHOLD_CLOSE; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
+    obj->origin.vector_threshold_open = open_thresh; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
+    obj->origin.vector_threshold_closed = closed_thresh; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
 }
 
 /**
@@ -132,14 +130,33 @@ void  FXOS8700CQ_Initialize(imu_FXOS8700CQ_t * obj, i2cdrv_t * i2c_device, pio_t
 
     if(backup_pointer == NULL)
     {
+        // If there is no saved data, calibrate - door must be shut
         delay_ms(2000); // Wait for movement to stop due to button press
         FXOS8700CQ_Calibrate(obj);
+    } else
+    {
+        // Load from the eeprom
+        obj->origin.x_origin = backup_pointer->x_origin;
+        obj->origin.y_origin = backup_pointer->y_origin;
+        obj->origin.z_origin = backup_pointer->z_origin;
     }
 
-//    if(tmp_coef_pointer == NULL)
-//    {
-//        FXOS8700CQ_AutoTemperatureCoefficientFinder(obj);
-//    }
+    if(tmp_coef_pointer == NULL)
+    {
+        // Write default values - can be calibrated manually with remote command
+        obj->origin.x_tmp_coef = 2.0;
+        obj->origin.x_tmp_coef = 2.0;
+        obj->origin.x_tmp_coef = 10.0;
+    } else
+    {
+        // Load from the eeprom
+        obj->origin.x_tmp_coef = tmp_coef_pointer->x_tmp_coef;
+        obj->origin.x_tmp_coef = tmp_coef_pointer->y_tmp_coef;
+        obj->origin.x_tmp_coef = tmp_coef_pointer->z_tmp_coef;
+    }
+    FXOS8700CQ_Backup_Coefficient(obj);
+    FXOS8700CQ_Calibrate(obj);
+
 
     xTaskCreate((void *) FXOS8700CQ_vTaskResetOrigin, "Reset_Origin", 300, obj, 2, NULL);
     xTaskCreate((void *) FXOS8700CQ_vTaskCheckTemp, "Check_Temp", 300, obj, 2, NULL);
@@ -212,6 +229,9 @@ void FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj)
     obj->origin.x_tmp_coef = fabs((x_final - x_init) / (temp_final - temp_init));
     obj->origin.y_tmp_coef = fabs((y_final - y_init) / (temp_final - temp_init));
     obj->origin.z_tmp_coef = fabs((z_final - z_init) / (temp_final - temp_init));
+
+    FXOS8700CQ_Calibrate(obj); // The heat often makes the door think its open, recalibrate and as the device cools the
+                               // origin will periodically reset.
 };
 
 /**
@@ -237,7 +257,7 @@ void FXOS8700CQ_Calibrate(imu_FXOS8700CQ_t * obj)
 
     obj->last_temp = obj->origin.calibration_temp; // last temp used to determine temp change
 
-    FXOS8700CQ_SetThresholds(obj); // Set the thresholds for the VECM interrupts
+    FXOS8700CQ_SetThresholds(obj, DEFAULT_VECTOR_THRESHOLD_OPEN, DEFAULT_VECTOR_THRESHOLD_CLOSE); // Set the thresholds for the VECM interrupts
     FXOS8700CQ_Magnetic_Vector(obj); // Writes the thresholds and origin to the registers in the IMU
 }
 
@@ -345,7 +365,7 @@ void FXOS8700CQ_Set_Origin(imu_FXOS8700CQ_t * obj)
     //FXOS8700CQ_ActiveMode (obj);
     obj->origin.calibration_temp = FXOS8700CQ_GetTemperature(obj);
 
-    FXOS8700CQ_SaveBackup(obj);
+    FXOS8700CQ_Backup_Origin(obj);
 }
 
 /**
@@ -484,7 +504,7 @@ void FXOS8700CQ_vTaskResetOrigin(imu_FXOS8700CQ_t * obj)
         // Will leave this off for now, if the origin resets at the wrong time it can seriously muck things up.
 //        delay_ms(1000);
 //        FXOS8700CQ_Reset_Origin(obj);
-        FXOS8700CQ_SaveBackup(obj);
+        FXOS8700CQ_Backup_Origin(obj);
     }
 }
 
@@ -525,7 +545,7 @@ void FXOS8700CQ_vTaskCheckTemp(imu_FXOS8700CQ_t * obj)
             obj->saved_origin = false; // If there has jut been a door event, then the saved origin data could be invalid
         }
 
-        FXOS8700CQ_SaveBackup(obj); // A change to the origin may have taken place, so save that data.
+        FXOS8700CQ_Backup_Origin(obj); // A change to the origin may have taken place, so save that data.
 
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(5000));
     }
@@ -542,7 +562,7 @@ static void FXOS8700CQ_Imu_Int_Handler(uint8_t pin, imu_FXOS8700CQ_t * obj)
 {
     obj->last_event = obj->door_state;
     uint8_t Vector_Threshold[2] = {0};
-    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 500 ) // essentialy debouncing, wont let the state change constantly
+    if (abs(xTaskGetTickCountFromISR() - obj->last_call) >= 100 ) // essentialy debouncing, wont let the state change constantly
     {
         // Was this because of a temp change?
         obj->temp = FXOS8700CQ_GetTemperature(obj);
@@ -623,27 +643,6 @@ void FXOS8700CQ_Calculate_Vector(imu_FXOS8700CQ_t * obj)
 
 
     obj->vector = sqrt((dx*dx) + (dy*dy) + (dz*dz));
-}
-
-/**
- * Saves a backup of the important origin parameters (that can only be reset when the door is guaranteed to be shut)
- * this is called when any of those parameters change.
- * @param obj imu object
- */
-void FXOS8700CQ_SaveBackup(imu_FXOS8700CQ_t * obj)
-{
-//    if (obj->callbacks.on_backup_requested) {
-//        imu_backup_t backup = {
-//                .x_origin = obj->origin.x_origin,
-//                .y_origin = obj->origin.y_origin,
-//                .z_origin = obj->origin.z_origin,
-//
-//                .x_tmp_coef = obj->origin.x_tmp_coef,
-//                .y_tmp_coef = obj->origin.y_tmp_coef,
-//                .z_tmp_coef = obj->origin.z_tmp_coef
-//        };
-//        obj->callbacks.on_backup_requested(obj, &backup);
-//    }
 }
 
 
@@ -752,6 +751,7 @@ void FXOS8700CQ_Backup_Origin(imu_FXOS8700CQ_t * obj)
         backup.x_origin = obj->origin.x_origin;
         backup.y_origin = obj->origin.y_origin;
         backup.z_origin = obj->origin.z_origin;
+        backup.calibration_temp = obj->origin.calibration_temp;
 
         // call backup handler
         obj->callbacks.on_backup_origin_requested(obj, &backup);
