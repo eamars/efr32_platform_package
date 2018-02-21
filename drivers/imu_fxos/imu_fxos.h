@@ -185,7 +185,7 @@ char       FXOS8700CQ_StandbyMode (imu_FXOS8700CQ_t * obj);
 char       FXOS8700CQ_ID (imu_FXOS8700CQ_t * obj);
 void       FXOS8700CQ_SetTmpCoeff(imu_FXOS8700CQ_t * obj, float x, float y, float z);
 void       FXOS8700CQ_AutoTemperatureCoefficientFinder(imu_FXOS8700CQ_t * obj);
-void       FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int open_thresh, int closed_thresh);
+void       FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int16_t open_thresh, int16_t closed_thresh);
 
 void       FXOS8700CQ_ConfigureAccelerometer(imu_FXOS8700CQ_t * obj);
 

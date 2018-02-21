@@ -67,7 +67,7 @@ typedef struct __attribute__ ((packed)) {
 
 typedef struct __attribute__ ((packed)) {
     uint16_t open;
-    uint16_t close;
+    uint16_t closed;
 } wg_data_v1_setting_imu_vect_thresh_t;
 
 typedef struct __attribute__ ((packed)) {

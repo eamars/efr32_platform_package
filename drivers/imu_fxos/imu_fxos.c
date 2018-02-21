@@ -47,7 +47,7 @@ void FXOS8700CQ_Save_Origin(imu_FXOS8700CQ_t * obj);
  * Sets the open and closed threshold values in IMU object, may have some temperature dependence, needs testing
  * @param obj imu object
  */
-void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int open_thresh, int closed_thresh)
+void FXOS8700CQ_SetThresholds(imu_FXOS8700CQ_t * obj, int16_t open_thresh, int16_t closed_thresh)
 {
     obj->origin.vector_threshold_open = open_thresh; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
     obj->origin.vector_threshold_closed = closed_thresh; // * fabs((obj->temp - obj->origin.calibration_temp) + 1) * 0.5;
