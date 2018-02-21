@@ -43,7 +43,8 @@ typedef enum {
     WG_DATA_SETTING_ID_REPORT_CONFIG    = 0,  // Config for data reports (type,period,etc.)
     WG_DATA_SETTING_ID_LED_MODE         = 1,  // LED configuration (on,off,radio,etc.)
     WG_DATA_SETTING_ID_IMU_TEMP_COEFF   = 2,  // Config for IMU temperature coefficients (float)(x,y,z)
-    WG_DATA_SETTING_ID_RADIO_CONFIG     = 3,  // Config for the radio driver (txpwr,freq,etc.)
+    WG_DATA_SETTING_ID_IMU_VECT_THRESH  = 3,  // Config for IMU vector thresholds (uint16_t)(open,close)
+    WG_DATA_SETTING_ID_RADIO_CONFIG     = 4,  // Config for the radio driver (txpwr,freq,etc.)
 } wg_data_v1_setting_id_t;
 
 typedef struct __attribute__ ((packed)) {
@@ -63,6 +64,11 @@ typedef struct __attribute__ ((packed)) {
     float y_temp_coeff;
     float z_temp_coeff;
 } wg_data_v1_setting_imu_temp_coeff_t;
+
+typedef struct __attribute__ ((packed)) {
+    uint16_t open;
+    uint16_t close;
+} wg_data_v1_setting_imu_vect_thresh_t;
 
 typedef struct __attribute__ ((packed)) {
     uint8_t radio_txpower;  // transmit power for radio
