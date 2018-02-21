@@ -804,10 +804,14 @@ void wg_mac_ncp_init(wg_mac_ncp_t * obj, radio_t * radio, wg_mac_ncp_config_t * 
             // only copy the valid client
             if (backup->client_list[client_idx].state == WG_MAC_NCP_CLIENT_JOINED)
             {
+                memset(&obj->clients[client_idx], 0, sizeof(wg_mac_ncp_client_t));
+
                 obj->clients[client_idx].state = WG_MAC_NCP_CLIENT_JOINED;
                 obj->clients[client_idx].device_eui64 = backup->client_list[client_idx].device_eui64;
                 obj->clients[client_idx].last_seen_sec = backup->client_list[client_idx].last_seen_sec;
                 obj->clients[client_idx].short_id = backup->client_list[client_idx].short_id;
+                obj->clients[client_idx].retransmit.prev_packet_acked = true;
+                obj->clients[client_idx].downlink.downlink_state = WG_MAC_NCP_DOWNLINK_EMPTY;
             }
         }
     }
